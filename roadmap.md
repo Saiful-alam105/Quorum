@@ -17,99 +17,31 @@ Verification → Merge Score → PR Comment → PostgreSQL
 Do not begin the chatbot, dashboard, or optional features before the
 core pipeline and evaluation harness work.
 
-------------------------------------------------------------------------
-
 ## 1. Tech Stack
 
-  ------------------------------------------------------------------------
-  Layer             Technology        Cost               Why
-  ----------------- ----------------- ------------------ -----------------
-  Language          Python 3.12/3.13  Free               One language for
-                                                         backend, AST
-                                                         parsing,
-                                                         orchestration,
-                                                         GitHub
-                                                         integration and
-                                                         tests
+| Layer | Technology | Cost | Why |
+|---|---|---|---|
+| **Language** | Python 3.12/3.13 | Free | One language for backend, AST parsing, orchestration, GitHub integration, and tests |
+| **Backend** | FastAPI | Free / Open Source | Receives GitHub webhooks and provides the backend API |
+| **Server** | Uvicorn | Free / Open Source | Runs the FastAPI application |
+| **LLM** | Ollama + Qwen2.5-Coder 7B | Free / Local | Runs the coding model locally without API charges |
+| **LLM API** | Ollama Local API | Free / Local | Allows Python to communicate with the local model over HTTP |
+| **GitHub** | GitHub App + Webhooks + REST API | Free | Receives PR events, retrieves PR data, and posts review comments |
+| **Security Analysis** | Semgrep Community CLI | Free | Produces deterministic security findings used as evidence |
+| **Code Parsing** | Python `ast` | Free | Extracts modified functions and structural code context |
+| **Testing** | pytest | Free / Open Source | Runs generated tests |
+| **Coverage** | pytest-cov | Free / Open Source | Measures test coverage changes |
+| **Sandbox** | Docker | Free for intended personal/student use | Isolates generated test execution |
+| **Database** | PostgreSQL | Free / Open Source | Stores repositories, PRs, analysis runs, and chat history |
+| **ORM** | SQLAlchemy | Free / Open Source | Provides database access from Python |
+| **Migrations** | Alembic | Free / Open Source | Manages database schema migrations |
+| **HTTP** | httpx | Free / Open Source | Handles GitHub and local API communication |
+| **Validation** | Pydantic | Free / Open Source | Validates application data and API schemas |
+| **Version Control** | Git + GitHub | Free | Source control and team collaboration |
+| **CI** | GitHub Actions | Free within limits | Automated testing and quality checks |
+| **Webhook Development** | Cloudflare Quick Tunnel | Free | Exposes local FastAPI server to GitHub during development |
+| **UI** | GitHub PR Comments | Free | No separate frontend is required |
 
-  Backend           FastAPI           Free/Open Source   Receives GitHub
-                                                         webhooks and
-                                                         provides the
-                                                         backend API
-
-  Server            Uvicorn           Free/Open Source   Runs FastAPI
-
-  LLM               Ollama +          Free/local         Runs the coding
-                    Qwen2.5-Coder 7B                     model locally
-                                                         without API
-                                                         charges
-
-  LLM API           Ollama local API  Free/local         Lets Python call
-                                                         the local model
-                                                         over HTTP
-
-  GitHub            GitHub App +      Free for this      Receives PR
-                    Webhooks + REST   project            events and posts
-                    API                                  comments
-
-  Security analysis Semgrep Community Free               Produces
-                    CLI                                  deterministic
-                                                         security findings
-                                                         used as evidence
-
-  Code parsing      Python `ast`      Free               Extracts modified
-                                                         functions and
-                                                         structural
-                                                         context
-
-  Testing           pytest            Free/Open Source   Runs generated
-                                                         tests
-
-  Coverage          pytest-cov        Free/Open Source   Measures coverage
-                                                         changes
-
-  Sandbox           Docker            Free for the       Isolates
-                                      intended           generated test
-                                      personal/student   execution
-                                      use                
-
-  Database          PostgreSQL        Free/Open Source   Stores
-                                                         repositories,
-                                                         PRs, analysis
-                                                         runs and chat
-                                                         history
-
-  ORM               SQLAlchemy        Free/Open Source   Database access
-                                                         from Python
-
-  Migrations        Alembic           Free/Open Source   Database schema
-                                                         migrations
-
-  HTTP              httpx             Free/Open Source   GitHub and local
-                                                         API communication
-
-  Validation        Pydantic          Free/Open Source   Validates
-                                                         application data
-
-  Version control   Git + GitHub      Free               Source control
-                                                         and collaboration
-
-  CI                GitHub Actions    Free within GitHub Automated testing
-                                      limits             and quality
-                                                         checks
-
-  Webhook           Cloudflare Quick  Free for           Exposes local
-  development       Tunnel            development        FastAPI to GitHub
-                                                         during
-                                                         development
-
-  UI                GitHub PR         Free               No separate
-                    comments                             frontend is
-                                                         required
-
-  Deployment        Local machine for Free               Avoids paid
-                    MVP/demo                             hosting
-  ------------------------------------------------------------------------
 
 ### LLM choice
 
