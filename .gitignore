@@ -1,0 +1,158 @@
+# ==============================
+# Python
+# ==============================
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ==============================
+# Environment & Secrets
+# ==============================
+
+.env
+.env.*
+!.env.example
+
+# GitHub App private keys
+*.pem
+*.key
+
+# API keys / credentials
+secrets/
+credentials/
+*.secret
+
+# ==============================
+# Testing
+# ==============================
+
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# ==============================
+# Type Checking / Linters
+# ==============================
+
+.mypy_cache/
+.pyre/
+.ruff_cache/
+
+# ==============================
+# IDE / Editors
+# ==============================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ==============================
+# OS Files
+# ==============================
+
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ==============================
+# Logs
+# ==============================
+
+*.log
+logs/
+
+# ==============================
+# Local Database / Data
+# ==============================
+
+*.sqlite
+*.sqlite3
+*.db
+
+# Local PostgreSQL data
+postgres_data/
+
+# ==============================
+# Docker
+# ==============================
+
+docker-data/
+.docker/
+
+# ==============================
+# AI / LLM
+# ==============================
+
+# Local model files
+*.gguf
+*.safetensors
+models/
+
+# ==============================
+# Temporary Files
+# ==============================
+
+tmp/
+temp/
+*.tmp
+*.temp
+
+# ==============================
+# Generated Files
+# ==============================
+
+generated/
+artifacts/
+
+# ==============================
+# Evaluation Outputs
+# ==============================
+
+evaluation/results/
+evaluation/generated/
+
+# Keep evaluation documentation
+!evaluation/README.md
+
+# ==============================
+# Coverage / Reports
+# ==============================
+
+reports/
+coverage.xml
+
+# ==============================
+# Jupyter
+# ==============================
+
+.ipynb_checkpoints/
+
+# ==============================
+# Project-specific
+# ==============================
+
+# Never commit cloned/test repositories
+workspace/
+repos/
+cloned_repos/
+
+# Sandbox temporary files
+sandbox/tmp/
