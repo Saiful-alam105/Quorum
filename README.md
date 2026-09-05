@@ -396,7 +396,7 @@ Suggested dashboard content:
 │ Pull Requests│  Repositories   Reviews   Warnings           │
 │ Reviews      │      12           8          2                │
 │ Ask Quorum   │                                               │
-│ Settings     │ Recent Reviews                                │
+│ Settings     │ Recent Reviews                             |
 │              │ ┌───────────────────────────────────────────┐ │
 │              │ │ PR #42  Add authentication       82/100  │ │
 │              │ │ Security ⚠ Tests ✓ Coverage ✓            │ │
@@ -405,7 +405,7 @@ Suggested dashboard content:
 │              │ │ Security ✓ Tests ✓ Coverage ✓            │ │
 │              │ └───────────────────────────────────────────┘ │
 └──────────────┴──────────────────────────────────────────────┘
-```
+
 
 The final dashboard must use real backend data rather than hardcoded demo statistics.
 

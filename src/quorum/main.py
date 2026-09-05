@@ -17,12 +17,14 @@ SUPPORTED_ACTIONS = {"opened", "reopened", "synchronize"}
 def read_root() -> dict[str, str]:
     return {
         "name": "Quorum",
+
         "description": "AI-powered Pull Request reviewer",
         "version": app.version,
     }
 
 
 @app.get("/health")
+
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
@@ -46,5 +48,4 @@ async def github_webhook(request: Request) -> JSONResponse:
 
     return JSONResponse(
         status_code=202,
-        content={"status": "accepted", "event": event, "action": action},
-    )
+        content={"status": "accepted", "event": event, "action": action},)
