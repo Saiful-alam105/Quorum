@@ -4,6 +4,7 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from quorum.auth.routes import router as auth_router
 from quorum.config import settings
 from quorum.github.webhook import verify_signature
 
@@ -12,6 +13,8 @@ app = FastAPI(
     description="AI-powered Pull Request reviewer",
     version="0.1.0",
 )
+
+app.include_router(auth_router)
 
 SUPPORTED_EVENTS = {"ping", "pull_request"}
 SUPPORTED_ACTIONS = {"opened", "reopened", "synchronize"}
