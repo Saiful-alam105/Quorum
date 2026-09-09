@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 os.environ["GITHUB_WEBHOOK_SECRET"] = "test-secret"
+os.environ["DATABASE_URL"] = "sqlite://"
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
