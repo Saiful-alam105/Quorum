@@ -20,11 +20,11 @@ Quorum is an AI-powered GitHub Pull Request review system with a web dashboard a
 ```powershell
 .\.venv\Scripts\Activate.ps1      # activate venv (Python 3.13.7; deps installed)
 pip install -r requirements.txt   # install deps
-uvicorn src.quorum.main:app --reload
+uvicorn --app-dir src quorum.main:app --reload
 pytest
 ```
 
-- `uvicorn src.quorum.main:app --reload` works from the repo root without install. Tests import `quorum` via a `sys.path` shim in `tests/conftest.py`; add packaging config (`pyproject.toml`/`setup.py`) when it becomes necessary (roadmap Phase 1 DoD is `uvicorn quorum.main:app`).
+- `uvicorn --app-dir src quorum.main:app --reload` works from the repo root without install (start from `D:\Quorum` so `.env` is found; `src` must be on the Python path for `import quorum` to work). Tests import `quorum` via a `sys.path` shim in `tests/conftest.py`; add packaging config (`pyproject.toml`/`setup.py`) when it becomes necessary (roadmap Phase 1 DoD is `uvicorn quorum.main:app`).
 - `requirements.txt` is a `pip freeze`-style pinned list for the declared stack only (FastAPI, uvicorn, pydantic, httpx, pytest, pytest-cov, python-dotenv). Keep it aligned with roadmap §4; add DB/semgrep/docker deps only in their phases.
 
 ## Hard rules (roadmap §6 do-not list, §17 frontend rules, §22 security principles)
