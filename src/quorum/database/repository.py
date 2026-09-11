@@ -49,6 +49,10 @@ def upsert_pull_request(
     return pull_request
 
 
+def list_repositories(db: Session) -> list[Repository]:
+    return list(db.scalars(select(Repository).order_by(Repository.full_name)))
+
+
 def get_repository_by_full_name(db: Session, full_name: str) -> Repository | None:
     return db.scalar(
         select(Repository).where(Repository.full_name == full_name)
