@@ -67,3 +67,7 @@ pytest
 - Keep GitHub → Orchestrator → Analysis → Agents → Sandbox → Synthesis separated.
 - Use FastAPI `BackgroundTasks` for background work; no external task queues.
 - Git: work on `feature/*` branches, not `main`; small commits; never commit `.env`, `*.pem`/`*.key`, or local model files (`.gitignore` already covers these).
+- Quorum is a multi-user web application integrated with GitHub. Keep the two auth concepts separate: GitHub **OAuth** authenticates the user ("who is this user?"); GitHub **App installation/authorization** controls repository access ("which repositories can Quorum analyze?").
+- Associate repositories/reviews with the correct Quorum user and enforce user-level repository/review access isolation.
+- Users are never expected to install or run Quorum's analysis components. The Security Agent, Test Writer Agent, Semgrep, Docker sandbox, and LLM/Ollama infrastructure belong to the Quorum backend runtime; running them locally is a development/demo detail only.
+- Preserve the existing architecture and roadmap unless explicitly instructed otherwise; do not add local-user installation requirements to the product workflow.

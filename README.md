@@ -27,6 +27,19 @@ Quorum reviews Pull Requests with specialized AI agents (static-analysis evidenc
 
 > Features beyond the currently implemented phases are planned by `roadmap.md`. Until the analysis pipeline exists, the dashboard's analysis views show honest "not yet available" states rather than fake data.
 
+## How Users Use Quorum
+
+1. Open the Quorum Web Dashboard.
+2. Sign in with GitHub (GitHub OAuth authenticates the user).
+3. Install/authorize the Quorum GitHub App.
+4. Select the repositories Quorum is allowed to access.
+5. Quorum receives Pull Request events automatically from GitHub.
+6. Quorum runs its existing analysis pipeline on the Pull Request.
+7. The user sees security findings, generated-test results, coverage, and the Merge Readiness result in the dashboard and as GitHub PR feedback.
+8. The user can ask questions about the review through Ask Quorum.
+
+> Users do not need to install Quorum or its analysis components locally. The Quorum backend runs the analysis infrastructure. Local installation is only relevant to Quorum development/self-hosted development environments.
+
 ## Architecture
 
 ```text

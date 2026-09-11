@@ -67,19 +67,56 @@ User authorizes Quorum/GitHub App for repositories
 Quorum Dashboard
 ```
 
+### End-User Workflow
+
+The intended end-user experience (this clarifies the existing architecture; it does not change it):
+
+```text
+New User
+   ↓
+Open the Quorum Web Dashboard
+   ↓
+Sign in with GitHub  (GitHub OAuth authenticates the user)
+   ↓
+Install/authorize the Quorum GitHub App and select repositories
+   ↓
+Open or update a Pull Request in GitHub
+   ↓
+GitHub sends the PR webhook to Quorum
+   ↓
+Quorum's backend/orchestrator processes the PR
+   ↓
+Security Agent, Test Writer Agent, sandboxed tests, coverage,
+and Merge Readiness pipeline run (existing backend pipeline)
+   ↓
+Results are stored through the existing backend/database architecture
+   ↓
+Results appear in the Quorum Web Dashboard and as GitHub PR feedback
+   ↓
+User can use Ask Quorum to ask questions about the review
+```
+
+### Where Quorum's analysis components run
+
+Users do **not** install or run Quorum, Ollama, Semgrep, Docker, or the AI agents on their own machines. Those components are part of the Quorum backend/infrastructure and execute there. For local development or a student demonstration, Quorum may run these components on the developer's machine — that is a development/deployment detail and is **not** a requirement for normal Quorum users.
+
 Keep these concepts separate:
 
-### Login / identity
+### Login / identity — GitHub OAuth
 
 Answers:
 
 > Who is this user?
 
-### GitHub App authorization
+GitHub **OAuth** authenticates the person using Quorum and establishes their Quorum identity.
+
+### Repository access — GitHub App installation/authorization
 
 Answers:
 
-> Which repositories can Quorum access and review?
+> Which repositories is Quorum allowed to access and analyze?
+
+GitHub **App installation/authorization** grants Quorum access to a chosen set of repositories. It is a separate step from login.
 
 Use the minimum GitHub permissions required by the application.
 
@@ -353,6 +390,11 @@ Implement:
 - [ ] GitHub App/repository authorization flow.
 - [ ] Secure backend-side token handling.
 - [ ] Install the App on a test repository.
+- [ ] Quorum user/account association (persist the authenticated GitHub user).
+- [ ] GitHub App installation/authorization flow (the user installs the App and selects repositories).
+- [ ] Map GitHub installations/repositories to the correct Quorum user.
+- [ ] User-level repository/review access isolation.
+- [ ] GitHub App uninstall/revocation handling.
 
 Milestone:
 
