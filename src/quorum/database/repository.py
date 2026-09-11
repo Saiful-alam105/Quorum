@@ -1,10 +1,58 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from quorum.database.models import PullRequest, Repository
+from quorum.database.models import PullRequest, Repository, User
 
 
-def upsert_repository(db: Session, data: dict) -> Repository | None:
+def upsert_user(
+    db: Session,
+    github_id: int | None,
+    username: str | None,
+    avatar_url: str | None = None,
+    github_installation_id: int | None = None,
+) -> User | None:
+    if github_id is None:
+        return None
+
+    user = db.scalar(select(User).where(User.github_id == github_id))
+    if user is None:
+        user = User(github_id=github_id)
+        db.add(user)
+
+    if username is not None:
+        user.username = username
+    if avatar_url is not None:
+        user.avatar_url = avatar_url
+    if github_installation_id is not None:
+        user.github_installation_id = github_installation_id
+    db.commit()
+    return user
+
+
+def revoke_installation(
+    db: Session,
+    installation_id: int | None,
+    account_id: int | None = None,
+) -> int:
+    revoked = 0
+    if installation_id is not None:
+        for user in db.scalars(
+            select(User).where(User.github_installation_id == installation_id)
+        ):
+            user.github_installation_id = None
+            revoked += 1
+    if account_id is not None:
+        for user in db.scalars(select(User).where(User.github_id == account_id)):
+            if user.github_installation_id is not None:
+                user.github_installation_id = None
+                revoked += 1
+    db.commit()
+    return revoked
+
+
+def upsert_repository(
+    db: Session, data: dict, user_id: int | None = None
+) -> Repository | None:
     github_id = data.get("id")
     if github_id is None:
         return None
@@ -21,6 +69,8 @@ def upsert_repository(db: Session, data: dict) -> Repository | None:
     repository.name = data.get("name", "")
     repository.full_name = data.get("full_name", "")
     repository.is_private = bool(data.get("private", False))
+    if user_id is not None:
+        repository.user_id = user_id
     db.commit()
     return repository
 
@@ -87,3 +137,74 @@ def get_pull_request(db: Session, github_id: int) -> PullRequest | None:
 
 def get_pull_request_by_id(db: Session, pull_request_id: int) -> PullRequest | None:
     return db.get(PullRequest, pull_request_id)
+
+
+def get_user_by_github_id(db: Session, github_id: int | None) -> User | None:
+    if github_id is None:
+        return None
+    return db.scalar(select(User).where(User.github_id == github_id))
+
+
+def get_user_by_installation(db: Session, installation_id: int | None) -> User | None:
+    if installation_id is None:
+        return None
+    return db.scalar(
+        select(User).where(User.github_installation_id == installation_id)
+    )
+
+
+def list_repositories_for_user(db: Session, user_id: int) -> list[Repository]:
+    return list(
+        db.scalars(
+            select(Repository)
+            .where(Repository.user_id == user_id)
+            .order_by(Repository.full_name)
+        )
+    )
+
+
+def get_repository_for_user(
+    db: Session, repository_id: int, user_id: int
+) -> Repository | None:
+    return db.scalar(
+        select(Repository).where(
+            Repository.id == repository_id, Repository.user_id == user_id
+        )
+    )
+
+
+def list_pull_requests_for_user(db: Session, user_id: int) -> list[PullRequest]:
+    return list(
+        db.scalars(
+            select(PullRequest)
+            .join(Repository, PullRequest.repository_id == Repository.id)
+            .where(Repository.user_id == user_id)
+            .order_by(PullRequest.id.desc())
+        )
+    )
+
+
+def list_repository_pull_requests_for_user(
+    db: Session, repository_id: int, user_id: int
+) -> list[PullRequest]:
+    return list(
+        db.scalars(
+            select(PullRequest)
+            .join(Repository, PullRequest.repository_id == Repository.id)
+            .where(
+                PullRequest.repository_id == repository_id,
+                Repository.user_id == user_id,
+            )
+            .order_by(PullRequest.number.desc())
+        )
+    )
+
+
+def get_pull_request_for_user(
+    db: Session, pull_request_id: int, user_id: int
+) -> PullRequest | None:
+    return db.scalar(
+        select(PullRequest)
+        .join(Repository, PullRequest.repository_id == Repository.id)
+        .where(PullRequest.id == pull_request_id, Repository.user_id == user_id)
+    )

@@ -31,6 +31,36 @@ def test_webhook_ping() -> None:
     assert response.json()["event"] == "ping"
 
 
+def test_webhook_installation_event_acknowledged() -> None:
+    body = json.dumps(
+        {"action": "created", "installation": {"id": 555}}
+    ).encode()
+    response = client.post(
+        "/webhooks/github",
+        headers={
+            "X-GitHub-Event": "installation",
+            "X-Hub-Signature-256": sign_body(body),
+        },
+        content=body,
+    )
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "event": "installation"}
+
+
+def test_webhook_installation_repositories_event_acknowledged() -> None:
+    body = json.dumps({"action": "added"}).encode()
+    response = client.post(
+        "/webhooks/github",
+        headers={
+            "X-GitHub-Event": "installation_repositories",
+            "X-Hub-Signature-256": sign_body(body),
+        },
+        content=body,
+    )
+    assert response.status_code == 200
+    assert response.json()["event"] == "installation_repositories"
+
+
 def test_webhook_supported_pull_request_action() -> None:
     body = json.dumps({"action": "opened"}).encode()
     response = client.post(

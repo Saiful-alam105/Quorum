@@ -9,7 +9,12 @@ from quorum.api.routes import router as api_router
 from quorum.auth.routes import router as auth_router
 from quorum.config import settings
 from quorum.database.base import get_db
-from quorum.database.repository import upsert_pull_request, upsert_repository
+from quorum.database.repository import (
+    get_user_by_installation,
+    revoke_installation,
+    upsert_pull_request,
+    upsert_repository,
+)
 from quorum.github.webhook import verify_signature
 
 app = FastAPI(
@@ -21,7 +26,12 @@ app = FastAPI(
 app.include_router(auth_router)
 app.include_router(api_router)
 
-SUPPORTED_EVENTS = {"ping", "pull_request"}
+SUPPORTED_EVENTS = {
+    "ping",
+    "pull_request",
+    "installation",
+    "installation_repositories",
+}
 SUPPORTED_ACTIONS = {"opened", "reopened", "synchronize"}
 
 
@@ -55,6 +65,23 @@ async def github_webhook(
     if event == "ping":
         return JSONResponse(status_code=200, content={"status": "ok", "event": "ping"})
 
+    if event in ("installation", "installation_repositories"):
+        payload = json.loads(raw_body)
+        if event == "installation":
+            action = payload.get("action") if isinstance(payload, dict) else None
+            if action == "deleted":
+                installation = payload.get("installation") or {}
+                account = installation.get("account") or {}
+                revoke_installation(
+                    db,
+                    installation_id=installation.get("id"),
+                    account_id=account.get("id"),
+                )
+        return JSONResponse(
+            status_code=200,
+            content={"status": "ok", "event": event},
+        )
+
     payload: Any = json.loads(raw_body)
     action = payload.get("action") if isinstance(payload, dict) else None
     if action not in SUPPORTED_ACTIONS:
@@ -64,7 +91,15 @@ async def github_webhook(
         )
 
     if isinstance(payload, dict):
-        repository = upsert_repository(db, payload.get("repository") or {})
+        installation = payload.get("installation") or {}
+        owner = get_user_by_installation(
+            db, installation.get("id") if isinstance(installation, dict) else None
+        )
+        repository = upsert_repository(
+            db,
+            payload.get("repository") or {},
+            user_id=owner.id if owner is not None else None,
+        )
         if repository is not None:
             upsert_pull_request(db, payload.get("pull_request") or {}, repository)
 

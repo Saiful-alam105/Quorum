@@ -1,11 +1,22 @@
 import secrets
 
-from fastapi import APIRouter, Cookie, HTTPException, Request, Response
+from fastapi import (
+    APIRouter,
+    Cookie,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+)
 from fastapi.responses import JSONResponse, RedirectResponse
+from sqlalchemy.orm import Session
 
 from quorum.auth.github_oauth import build_authorize_url, exchange_code, get_github_user
 from quorum.auth.sessions import create_session, delete_session, get_session
 from quorum.config import settings
+from quorum.database.base import get_db
+from quorum.database.repository import upsert_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -39,6 +50,8 @@ async def callback(
     code: str,
     state: str,
     oauth_state: str | None = Cookie(default=None),
+    installation_id: int | None = Query(default=None),
+    db: Session = Depends(get_db),
 ) -> Response:
     if not oauth_state or oauth_state != state:
         raise HTTPException(status_code=400, detail="Invalid OAuth state")
@@ -52,6 +65,14 @@ async def callback(
         user = await get_github_user(access_token)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"OAuth failed: {e}")
+
+    upsert_user(
+        db,
+        github_id=user.get("id"),
+        username=user.get("login"),
+        avatar_url=user.get("avatar_url"),
+        github_installation_id=installation_id,
+    )
 
     session_token = create_session({
         "github_id": user.get("id"),
