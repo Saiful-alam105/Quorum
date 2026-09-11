@@ -1,13 +1,40 @@
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
 
 from quorum.auth.sessions import clear_all_sessions
+from quorum.database.base import Base, get_db
+from quorum.database.models import User
 from quorum.main import app
 import quorum.auth.routes as routes_module
 import quorum.config as config_module
 
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def db_session() -> Session:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(bind=engine)
+    session = Session(bind=engine)
+
+    def override_get_db():
+        yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        yield session
+    finally:
+        app.dependency_overrides.clear()
+        session.close()
+        engine.dispose()
 
 
 def setup_function() -> None:
@@ -163,3 +190,57 @@ def test_logout_without_session() -> None:
     response = client.post("/auth/logout")
     assert response.status_code == 200
     assert response.json()["status"] == "logged_out"
+
+
+def test_callback_persists_user(
+    mock_github_config: None, monkeypatch: pytest.MonkeyPatch, db_session: Session
+) -> None:
+    async def mock_exchange(client_id: str, client_secret: str, code: str) -> str:
+        return "mock-access-token"
+
+    async def mock_get_user(access_token: str) -> dict:
+        return {
+            "id": 12345,
+            "login": "testuser",
+            "avatar_url": "https://example.com/avatar.png",
+        }
+
+    monkeypatch.setattr(routes_module, "exchange_code", mock_exchange)
+    monkeypatch.setattr(routes_module, "get_github_user", mock_get_user)
+
+    login_response = client.get("/auth/login")
+    state = login_response.cookies.get("oauth_state")
+
+    callback_response = client.get(f"/auth/callback?code=test-code&state={state}")
+    assert callback_response.status_code in (200, 302)
+
+    user = db_session.scalar(select(User).where(User.github_id == 12345))
+    assert user is not None
+    assert user.username == "testuser"
+    assert user.avatar_url == "https://example.com/avatar.png"
+
+
+def test_callback_updates_existing_user(
+    mock_github_config: None, monkeypatch: pytest.MonkeyPatch, db_session: Session
+) -> None:
+    db_session.add(User(github_id=12345, username="old-name", avatar_url=None))
+    db_session.commit()
+
+    async def mock_exchange(client_id: str, client_secret: str, code: str) -> str:
+        return "mock-access-token"
+
+    async def mock_get_user(access_token: str) -> dict:
+        return {"id": 12345, "login": "new-name"}
+
+    monkeypatch.setattr(routes_module, "exchange_code", mock_exchange)
+    monkeypatch.setattr(routes_module, "get_github_user", mock_get_user)
+
+    login_response = client.get("/auth/login")
+    state = login_response.cookies.get("oauth_state")
+
+    callback_response = client.get(f"/auth/callback?code=test-code&state={state}")
+    assert callback_response.status_code in (200, 302)
+
+    users = db_session.scalars(select(User).where(User.github_id == 12345)).all()
+    assert len(users) == 1
+    assert users[0].username == "new-name"

@@ -1,7 +1,29 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from quorum.database.models import PullRequest, Repository
+from quorum.database.models import PullRequest, Repository, User
+
+
+def upsert_user(
+    db: Session,
+    github_id: int | None,
+    username: str | None,
+    avatar_url: str | None = None,
+) -> User | None:
+    if github_id is None:
+        return None
+
+    user = db.scalar(select(User).where(User.github_id == github_id))
+    if user is None:
+        user = User(github_id=github_id)
+        db.add(user)
+
+    if username is not None:
+        user.username = username
+    if avatar_url is not None:
+        user.avatar_url = avatar_url
+    db.commit()
+    return user
 
 
 def upsert_repository(db: Session, data: dict) -> Repository | None:
