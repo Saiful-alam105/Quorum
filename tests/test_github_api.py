@@ -1,13 +1,14 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from quorum.github.api import (
+    create_pr_comment,
+    get_authenticated_user,
+    get_pr_comments,
+    get_pr_diff,
+    get_pr_files,
+    get_pull_request,
     get_repositories,
     get_repository,
-    get_pull_request,
-    get_pr_files,
-    get_pr_diff,
-    get_pr_comments,
-    create_pr_comment,
 )
 
 
@@ -72,6 +73,29 @@ class TestGetRepositories:
             result = await get_repositories(mock_token)
 
             assert result == []
+
+
+class TestGetAuthenticatedUser:
+    @pytest.mark.asyncio
+    async def test_get_authenticated_user_success(self, mock_token):
+        mock_response = {
+            "id": 12345,
+            "login": "octocat",
+        }
+
+        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value = mock_client
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.get.return_value = _make_mock_response(json_data=mock_response)
+
+            result = await get_authenticated_user(mock_token)
+
+            assert result == mock_response
+            mock_client.get.assert_called_once()
+            call_args = mock_client.get.call_args
+            assert "/user" in call_args[0][0]
+            assert call_args[1]["headers"]["Authorization"] == f"Bearer {mock_token}"
 
 
 class TestGetRepository:
