@@ -141,6 +141,8 @@ Do not add paid LLM APIs to the MVP.
 
 # 5. Repository Structure
 
+> **Current (actual) structure:** the repository is still a flat tree with `src/quorum/` + `frontend/`; it evolves toward the target layout below as phases require it. Backend packages currently present: `api/` (dashboard REST API), `auth/` (GitHub OAuth + sessions), `database/` (models, engine, repository), `github/` (API client, App JWT, webhook). The frontend lives in `frontend/` (React/Vite/TypeScript/Tailwind/shadcn). Tests live in `tests/`.
+
 Maintain one main GitHub repository:
 
 ```text
@@ -247,7 +249,38 @@ Before implementing a task, the coding agent should:
 
 # 7. 70-Day Roadmap
 
+### Current implementation status
+
+This section reflects the actual repository state (verified against the source, tests, Alembic migrations, and the running local PostgreSQL database). Statuses distinguish **implemented**, **partially implemented**, **verified**, **not yet verified**, **not started**, and **intentionally deferred**.
+
+| Phase | Status |
+| --- | --- |
+| Phase 0 — Project Setup | Partially implemented (repository, Python environment, FastAPI backend, README/roadmap, `.env.example`, `.gitignore`, `requirements.txt` exist; Docker/Ollama/local model/CI not yet set up) |
+| Phase 1 — FastAPI Skeleton | Implemented and tested (`GET /`, `GET /health`, `POST /webhooks/github`) |
+| Phase 2 — GitHub App + Authentication | Implemented; OAuth login/callback/me/logout and App private-key/JWT verified manually against GitHub; webhook signature covered by automated tests (live webhook delivery via tunnel not yet exercised) |
+| Phase 3 — GitHub API Layer | Implemented (all 9 functions) with mocked tests; not yet consumed by the pipeline |
+| Phase 4 — PostgreSQL | Implemented and verified against local PostgreSQL (migration `303b9ed314cd` applied; tables/PKs/FKs confirmed) |
+| Phase 5 — Orchestrator | Not started |
+| Phase 6 — Diff + AST Analysis | Not started |
+| Phase 7 — Context Window Management | Not started |
+| Phase 8 — Semgrep Security Analysis | Not started |
+| Phase 9 — LLM Layer | Not started |
+| Phase 10 — Security Review Agent | Not started |
+| Phase 11 — Docker Sandbox | Not started |
+| Phase 12 — Test Writer Agent | Not started |
+| Phase 13 — Result Synthesis + Merge Readiness | Not started |
+| Phase 14 — GitHub Review Comment | Not started |
+| Phase 15 — Dashboard Backend API | Partially implemented — read API subset exists (`/api/me`, `/api/repositories`, `/api/repositories/{id}`, `/api/repositories/{id}/pull-requests`, `/api/pull-requests`, `/api/pull-requests/{id}`) |
+| Phase 16 — Quorum Web Dashboard | In progress — implemented early (see execution-order note in §16); Chunks 0–8 complete on `feature/web-dashboard` |
+| Phase 17 — Ask Quorum | Intentionally deferred until the analysis/chat backend exists |
+| Phase 18 — Evaluation Harness | Not started |
+| Phase 19 — Hardening + Final Demo | Not started |
+
+**Execution order:** Phase 16 (Web Dashboard) is being implemented **early**, in parallel, immediately after PostgreSQL (Phase 4), on the `feature/web-dashboard` branch. It remains conceptually Phase 16; see the note in §16.
+
 ## Phase 0 — Project Setup (Day 1)
+
+> **Status:** Partially implemented — repository, Python environment, FastAPI backend structure, README/roadmap, `.env.example`, `.gitignore`, and `requirements.txt` exist. Docker, Ollama, a supported local coding model, and CI are not yet set up.
 
 Tasks:
 
@@ -280,6 +313,8 @@ React/Vite ✓
 
 # Phase 1 — FastAPI Skeleton (Days 2–3)
 
+> **Status:** Implemented and tested — `GET /`, `GET /health`, and `POST /webhooks/github` (with HMAC signature verification) exist with tests.
+
 Create:
 
 ```text
@@ -301,6 +336,8 @@ works and `/health` returns HTTP 200.
 ---
 
 # Phase 2 — GitHub App + Authentication (Days 4–8)
+
+> **Status:** Implemented. GitHub OAuth login (`/auth/login`, `/auth/callback`, `/auth/me`, `/auth/logout`), App private-key loading, and JWT generation were manually verified against GitHub. Webhook signature verification is covered by automated tests; live webhook delivery via a tunnel is not yet exercised. Repository authorization is partially implemented — login identifies the user, but the App↔repository access surface is not yet exposed to the dashboard.
 
 Implement:
 
@@ -333,6 +370,8 @@ Quorum identifies user/repositories
 
 # Phase 3 — GitHub API Layer (Days 9–11)
 
+> **Status:** Implemented — all 9 functions exist (`get_installation_token`, `get_authenticated_user`, `get_repositories`, `get_repository`, `get_pull_request`, `get_pr_files`, `get_pr_diff`, `get_pr_comments`, `create_pr_comment`) with mocked tests. They are not yet consumed by any pipeline stage; HTTP routes are not required until later phases.
+
 Implement a GitHub service layer for:
 
 ```text
@@ -356,6 +395,8 @@ The backend can authenticate, read repositories/PRs, and post a test PR comment.
 ---
 
 # Phase 4 — PostgreSQL (Days 12–14)
+
+> **Status:** Implemented and verified — SQLAlchemy models for all 8 tables, Alembic migration `303b9ed314cd`, and webhook persistence exist. The migration was applied to a local PostgreSQL instance; tables, primary keys, and foreign keys were confirmed. PostgreSQL runs locally on port 5432.
 
 Create initial models for:
 
@@ -728,6 +769,8 @@ GitHub comment
 
 # Phase 15 — Quorum Web Dashboard Backend API (Days 50–52)
 
+> **Status:** Partially implemented (built in parallel with the early dashboard work). The read API subset below is implemented and used by the dashboard: `GET /api/me`, `GET /api/repositories`, `GET /api/repositories/{id}`, `GET /api/repositories/{id}/pull-requests`, `GET /api/pull-requests`, `GET /api/pull-requests/{id}`. The remaining endpoints (analysis, security, tests, coverage, reviews, chat) are not implemented yet.
+
 Before building the React pages, expose backend APIs for the frontend.
 
 Initial endpoints:
@@ -765,6 +808,8 @@ Rules:
 ---
 
 # Phase 16 — Quorum Web Dashboard (Days 53–58)
+
+> **Execution-order note:** Phase 16 is being implemented **early**, in parallel with the remaining backend work, immediately after PostgreSQL (Phase 4), on the `feature/web-dashboard` branch. It remains conceptually Phase 16 — the dashboard is a required MVP feature and the visual control center for the pipeline. Dashboard Chunks 0–8 are complete (foundation, layout/nav, read API, repositories, repository detail/PR list, login/auth, dashboard overview, PR review details, settings). The Ask Quorum UI is intentionally deferred until the chatbot/analysis backend exists.
 
 The dashboard is now a required MVP feature.
 
@@ -1458,6 +1503,8 @@ backup demo video
 | M11 | 63 | Ask Quorum |
 | M12 | 67 | Evaluation |
 | M13 | 70 | Hardening + Final Demo |
+
+> **Progress note:** M1 (FastAPI skeleton) is complete. M2 (GitHub App + GitHub API) is largely complete — the App/OAuth flow is verified and the full API layer is implemented. M3 (Database + Orchestrator) is half complete — the database part is implemented and verified; the Orchestrator is the next phase to build. M10 (Quorum Web Dashboard) is in progress early (Chunks 0–8 complete) because Phase 16 is being executed ahead of its conceptual position.
 
 ---
 
