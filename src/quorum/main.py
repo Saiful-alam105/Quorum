@@ -5,6 +5,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
+from quorum.api.routes import router as api_router
 from quorum.auth.routes import router as auth_router
 from quorum.config import settings
 from quorum.database.base import get_db
@@ -18,6 +19,7 @@ app = FastAPI(
 )
 
 app.include_router(auth_router)
+app.include_router(api_router)
 
 SUPPORTED_EVENTS = {"ping", "pull_request"}
 SUPPORTED_ACTIONS = {"opened", "reopened", "synchronize"}

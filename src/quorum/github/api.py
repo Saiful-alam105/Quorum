@@ -17,6 +17,19 @@ async def get_repositories(token: str) -> list[dict]:
         return response.json()
 
 
+async def get_authenticated_user(token: str) -> dict:
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"{GITHUB_API_BASE}/user",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+            },
+        )
+        response.raise_for_status()
+        return response.json()
+
+
 async def get_repository(token: str, owner: str, repo: str) -> dict:
     async with httpx.AsyncClient() as client:
         response = await client.get(

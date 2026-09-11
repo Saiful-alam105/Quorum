@@ -49,6 +49,30 @@ def upsert_pull_request(
     return pull_request
 
 
+def list_repositories(db: Session) -> list[Repository]:
+    return list(db.scalars(select(Repository).order_by(Repository.full_name)))
+
+
+def get_repository_by_id(db: Session, repository_id: int) -> Repository | None:
+    return db.get(Repository, repository_id)
+
+
+def list_pull_requests_by_repository(
+    db: Session, repository_id: int
+) -> list[PullRequest]:
+    return list(
+        db.scalars(
+            select(PullRequest)
+            .where(PullRequest.repository_id == repository_id)
+            .order_by(PullRequest.number.desc())
+        )
+    )
+
+
+def list_pull_requests(db: Session) -> list[PullRequest]:
+    return list(db.scalars(select(PullRequest).order_by(PullRequest.id.desc())))
+
+
 def get_repository_by_full_name(db: Session, full_name: str) -> Repository | None:
     return db.scalar(
         select(Repository).where(Repository.full_name == full_name)
@@ -59,3 +83,7 @@ def get_pull_request(db: Session, github_id: int) -> PullRequest | None:
     return db.scalar(
         select(PullRequest).where(PullRequest.github_id == github_id)
     )
+
+
+def get_pull_request_by_id(db: Session, pull_request_id: int) -> PullRequest | None:
+    return db.get(PullRequest, pull_request_id)
