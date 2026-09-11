@@ -8,7 +8,7 @@ from sqlalchemy.pool import StaticPool
 
 from conftest import sign_body
 from quorum.database.base import Base, get_db
-from quorum.database.models import PullRequest
+from quorum.database.models import PullRequest, User
 from quorum.database.repository import get_pull_request, get_repository_by_full_name
 from quorum.main import app
 
@@ -136,3 +136,74 @@ class TestRepositoryGetters:
     def test_getters_return_none_when_missing(self, db_session: Session) -> None:
         assert get_repository_by_full_name(db_session, "missing/foo") is None
         assert get_pull_request(db_session, 999) is None
+
+
+class TestInstallationRevocation:
+    def test_installation_deleted_revokes_user(
+        self, client: TestClient, db_session: Session
+    ) -> None:
+        db_session.add(
+            User(github_id=555, username="octocat", github_installation_id=777)
+        )
+        db_session.commit()
+
+        body = json.dumps(
+            {"action": "deleted", "installation": {"id": 777, "account": {"id": 555}}}
+        ).encode()
+        response = client.post(
+            "/webhooks/github",
+            headers={"X-GitHub-Event": "installation", "X-Hub-Signature-256": sign_body(body)},
+            content=body,
+        )
+        assert response.status_code == 200
+
+        user = db_session.scalar(select(User).where(User.github_id == 555))
+        assert user is not None
+        assert user.github_installation_id is None
+
+    def test_installation_created_does_not_revoke(
+        self, client: TestClient, db_session: Session
+    ) -> None:
+        db_session.add(
+            User(github_id=555, username="octocat", github_installation_id=777)
+        )
+        db_session.commit()
+
+        body = json.dumps(
+            {"action": "created", "installation": {"id": 777, "account": {"id": 555}}}
+        ).encode()
+        response = client.post(
+            "/webhooks/github",
+            headers={"X-GitHub-Event": "installation", "X-Hub-Signature-256": sign_body(body)},
+            content=body,
+        )
+        assert response.status_code == 200
+
+        user = db_session.scalar(select(User).where(User.github_id == 555))
+        assert user is not None
+        assert user.github_installation_id == 777
+
+    def test_installation_deleted_invalid_signature_does_not_revoke(
+        self, client: TestClient, db_session: Session
+    ) -> None:
+        db_session.add(
+            User(github_id=555, username="octocat", github_installation_id=777)
+        )
+        db_session.commit()
+
+        body = json.dumps(
+            {"action": "deleted", "installation": {"id": 777, "account": {"id": 555}}}
+        ).encode()
+        response = client.post(
+            "/webhooks/github",
+            headers={
+                "X-GitHub-Event": "installation",
+                "X-Hub-Signature-256": "sha256=deadbeef",
+            },
+            content=body,
+        )
+        assert response.status_code == 401
+
+        user = db_session.scalar(select(User).where(User.github_id == 555))
+        assert user is not None
+        assert user.github_installation_id == 777

@@ -29,6 +29,27 @@ def upsert_user(
     return user
 
 
+def revoke_installation(
+    db: Session,
+    installation_id: int | None,
+    account_id: int | None = None,
+) -> int:
+    revoked = 0
+    if installation_id is not None:
+        for user in db.scalars(
+            select(User).where(User.github_installation_id == installation_id)
+        ):
+            user.github_installation_id = None
+            revoked += 1
+    if account_id is not None:
+        for user in db.scalars(select(User).where(User.github_id == account_id)):
+            if user.github_installation_id is not None:
+                user.github_installation_id = None
+                revoked += 1
+    db.commit()
+    return revoked
+
+
 def upsert_repository(db: Session, data: dict) -> Repository | None:
     github_id = data.get("id")
     if github_id is None:
