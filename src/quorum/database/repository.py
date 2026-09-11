@@ -50,7 +50,9 @@ def revoke_installation(
     return revoked
 
 
-def upsert_repository(db: Session, data: dict) -> Repository | None:
+def upsert_repository(
+    db: Session, data: dict, user_id: int | None = None
+) -> Repository | None:
     github_id = data.get("id")
     if github_id is None:
         return None
@@ -67,6 +69,8 @@ def upsert_repository(db: Session, data: dict) -> Repository | None:
     repository.name = data.get("name", "")
     repository.full_name = data.get("full_name", "")
     repository.is_private = bool(data.get("private", False))
+    if user_id is not None:
+        repository.user_id = user_id
     db.commit()
     return repository
 
@@ -133,3 +137,74 @@ def get_pull_request(db: Session, github_id: int) -> PullRequest | None:
 
 def get_pull_request_by_id(db: Session, pull_request_id: int) -> PullRequest | None:
     return db.get(PullRequest, pull_request_id)
+
+
+def get_user_by_github_id(db: Session, github_id: int | None) -> User | None:
+    if github_id is None:
+        return None
+    return db.scalar(select(User).where(User.github_id == github_id))
+
+
+def get_user_by_installation(db: Session, installation_id: int | None) -> User | None:
+    if installation_id is None:
+        return None
+    return db.scalar(
+        select(User).where(User.github_installation_id == installation_id)
+    )
+
+
+def list_repositories_for_user(db: Session, user_id: int) -> list[Repository]:
+    return list(
+        db.scalars(
+            select(Repository)
+            .where(Repository.user_id == user_id)
+            .order_by(Repository.full_name)
+        )
+    )
+
+
+def get_repository_for_user(
+    db: Session, repository_id: int, user_id: int
+) -> Repository | None:
+    return db.scalar(
+        select(Repository).where(
+            Repository.id == repository_id, Repository.user_id == user_id
+        )
+    )
+
+
+def list_pull_requests_for_user(db: Session, user_id: int) -> list[PullRequest]:
+    return list(
+        db.scalars(
+            select(PullRequest)
+            .join(Repository, PullRequest.repository_id == Repository.id)
+            .where(Repository.user_id == user_id)
+            .order_by(PullRequest.id.desc())
+        )
+    )
+
+
+def list_repository_pull_requests_for_user(
+    db: Session, repository_id: int, user_id: int
+) -> list[PullRequest]:
+    return list(
+        db.scalars(
+            select(PullRequest)
+            .join(Repository, PullRequest.repository_id == Repository.id)
+            .where(
+                PullRequest.repository_id == repository_id,
+                Repository.user_id == user_id,
+            )
+            .order_by(PullRequest.number.desc())
+        )
+    )
+
+
+def get_pull_request_for_user(
+    db: Session, pull_request_id: int, user_id: int
+) -> PullRequest | None:
+    return db.scalar(
+        select(PullRequest)
+        .join(Repository, PullRequest.repository_id == Repository.id)
+        .where(PullRequest.id == pull_request_id, Repository.user_id == user_id)
+    )

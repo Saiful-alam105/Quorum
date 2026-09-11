@@ -8,7 +8,7 @@ from sqlalchemy.pool import StaticPool
 
 from conftest import sign_body
 from quorum.database.base import Base, get_db
-from quorum.database.models import PullRequest, User
+from quorum.database.models import PullRequest, Repository, User
 from quorum.database.repository import get_pull_request, get_repository_by_full_name
 from quorum.main import app
 
@@ -139,6 +139,46 @@ class TestRepositoryGetters:
 
 
 class TestInstallationRevocation:
+    def test_webhook_maps_repository_to_installation_user(
+        self, client: TestClient, db_session: Session
+    ) -> None:
+        user = User(
+            github_id=777, username="octocat", github_installation_id=555
+        )
+        db_session.add(user)
+        db_session.commit()
+
+        body = json.dumps(
+            {
+                "action": "opened",
+                "installation": {"id": 555},
+                "repository": {
+                    "id": 401,
+                    "name": "hello-world",
+                    "full_name": "octocat/hello-world",
+                    "private": False,
+                    "owner": {"login": "octocat"},
+                },
+                "pull_request": {
+                    "id": 501,
+                    "number": 10,
+                    "title": "Add authentication",
+                    "state": "open",
+                    "user": {"login": "octocat"},
+                },
+            }
+        ).encode()
+        response = client.post(
+            "/webhooks/github", headers=_webhook_headers(body), content=body
+        )
+        assert response.status_code == 202
+
+        repo = db_session.scalar(
+            select(Repository).where(Repository.github_id == 401)
+        )
+        assert repo is not None
+        assert repo.user_id == user.id
+
     def test_installation_deleted_revokes_user(
         self, client: TestClient, db_session: Session
     ) -> None:

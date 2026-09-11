@@ -31,6 +31,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     chat_messages: Mapped[list["ChatMessage"]] = relationship(back_populates="user")
+    repositories: Mapped[list["Repository"]] = relationship(back_populates="user")
 
 
 class Repository(Base):
@@ -42,8 +43,12 @@ class Repository(Base):
     name: Mapped[str] = mapped_column(String(255))
     full_name: Mapped[str] = mapped_column(String(512), unique=True, index=True)
     is_private: Mapped[bool] = mapped_column(Boolean, default=False)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
+    user: Mapped[User | None] = relationship(back_populates="repositories")
     pull_requests: Mapped[list["PullRequest"]] = relationship(back_populates="repository")
 
 

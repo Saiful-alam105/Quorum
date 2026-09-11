@@ -10,6 +10,7 @@ from quorum.auth.routes import router as auth_router
 from quorum.config import settings
 from quorum.database.base import get_db
 from quorum.database.repository import (
+    get_user_by_installation,
     revoke_installation,
     upsert_pull_request,
     upsert_repository,
@@ -90,7 +91,15 @@ async def github_webhook(
         )
 
     if isinstance(payload, dict):
-        repository = upsert_repository(db, payload.get("repository") or {})
+        installation = payload.get("installation") or {}
+        owner = get_user_by_installation(
+            db, installation.get("id") if isinstance(installation, dict) else None
+        )
+        repository = upsert_repository(
+            db,
+            payload.get("repository") or {},
+            user_id=owner.id if owner is not None else None,
+        )
         if repository is not None:
             upsert_pull_request(db, payload.get("pull_request") or {}, repository)
 

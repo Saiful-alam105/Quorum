@@ -4,9 +4,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from quorum.auth.sessions import clear_all_sessions, create_session
+from quorum.auth.sessions import create_session
 from quorum.database.base import Base, get_db
-from quorum.database.models import PullRequest, Repository
+from quorum.database.models import PullRequest, Repository, User
 from quorum.main import app
 
 
@@ -27,6 +27,19 @@ def db_session():
 
 
 @pytest.fixture
+def user(db_session: Session) -> User:
+    test_user = User(github_id=1, username="testuser")
+    db_session.add(test_user)
+    db_session.commit()
+    return test_user
+
+
+@pytest.fixture
+def session_token(user: User) -> str:
+    return create_session({"github_id": 1, "username": "testuser"})
+
+
+@pytest.fixture
 def client(db_session: Session):
     def override_get_db():
         yield db_session
@@ -37,8 +50,22 @@ def client(db_session: Session):
     app.dependency_overrides.clear()
 
 
-def setup_function() -> None:
-    clear_all_sessions()
+def _auth(client: TestClient, token: str) -> dict:
+    return {"cookies": {"session": token}}
+
+
+def _add_repository(db_session: Session, user: User) -> Repository:
+    repo = Repository(
+        github_id=201,
+        owner="octocat",
+        name="hello-world",
+        full_name="octocat/hello-world",
+        is_private=False,
+        user_id=user.id,
+    )
+    db_session.add(repo)
+    db_session.commit()
+    return repo
 
 
 def test_api_me_unauthenticated(client: TestClient) -> None:
@@ -58,25 +85,25 @@ def test_api_me_authenticated(client: TestClient) -> None:
     assert response.json() == {"github_id": 12345, "username": "testuser"}
 
 
-def test_api_repositories_empty(client: TestClient) -> None:
+def test_api_repositories_requires_auth(client: TestClient) -> None:
     response = client.get("/api/repositories")
+    assert response.status_code == 401
+
+
+def test_api_repositories_empty(
+    client: TestClient, session_token: str
+) -> None:
+    response = client.get("/api/repositories", **_auth(client, session_token))
     assert response.status_code == 200
     assert response.json() == []
 
 
-def test_api_repositories_returns_stored(client: TestClient, db_session: Session) -> None:
-    db_session.add(
-        Repository(
-            github_id=201,
-            owner="octocat",
-            name="hello-world",
-            full_name="octocat/hello-world",
-            is_private=False,
-        )
-    )
-    db_session.commit()
+def test_api_repositories_returns_stored(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    _add_repository(db_session, user)
 
-    response = client.get("/api/repositories")
+    response = client.get("/api/repositories", **_auth(client, session_token))
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -85,7 +112,33 @@ def test_api_repositories_returns_stored(client: TestClient, db_session: Session
     assert data[0]["is_private"] is False
 
 
-def test_api_repositories_sorted_by_full_name(client: TestClient, db_session: Session) -> None:
+def test_api_repositories_only_returns_own(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    _add_repository(db_session, user)
+    other = User(github_id=2, username="other")
+    db_session.add(other)
+    db_session.commit()
+    db_session.add(
+        Repository(
+            github_id=202,
+            owner="other",
+            name="private-repo",
+            full_name="other/private-repo",
+            is_private=True,
+            user_id=other.id,
+        )
+    )
+    db_session.commit()
+
+    response = client.get("/api/repositories", **_auth(client, session_token))
+    data = response.json()
+    assert [item["full_name"] for item in data] == ["octocat/hello-world"]
+
+
+def test_api_repositories_sorted_by_full_name(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
     for github_id, full_name in [(2, "octocat/zeta"), (1, "octocat/alpha")]:
         db_session.add(
             Repository(
@@ -94,55 +147,73 @@ def test_api_repositories_sorted_by_full_name(client: TestClient, db_session: Se
                 name=full_name.split("/")[1],
                 full_name=full_name,
                 is_private=False,
+                user_id=user.id,
             )
         )
     db_session.commit()
 
-    response = client.get("/api/repositories")
-    assert response.status_code == 200
+    response = client.get("/api/repositories", **_auth(client, session_token))
     names = [item["full_name"] for item in response.json()]
     assert names == ["octocat/alpha", "octocat/zeta"]
 
 
-def _add_repository(db_session: Session) -> Repository:
-    repo = Repository(
-        github_id=201,
-        owner="octocat",
-        name="hello-world",
-        full_name="octocat/hello-world",
-        is_private=False,
-    )
-    db_session.add(repo)
-    db_session.commit()
-    return repo
+def test_api_repository_by_id(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_repository(db_session, user)
 
-
-def test_api_repository_by_id(client: TestClient, db_session: Session) -> None:
-    repo = _add_repository(db_session)
-
-    response = client.get(f"/api/repositories/{repo.id}")
+    response = client.get(f"/api/repositories/{repo.id}", **_auth(client, session_token))
     assert response.status_code == 200
     assert response.json()["full_name"] == "octocat/hello-world"
 
 
-def test_api_repository_by_id_not_found(client: TestClient) -> None:
-    response = client.get("/api/repositories/999999")
+def test_api_repository_by_id_not_found(
+    client: TestClient, session_token: str
+) -> None:
+    response = client.get("/api/repositories/999999", **_auth(client, session_token))
     assert response.status_code == 404
     assert response.json()["detail"] == "Repository not found"
 
 
-def test_api_repository_pull_requests_empty(client: TestClient, db_session: Session) -> None:
-    repo = _add_repository(db_session)
+def test_api_repository_by_id_not_owned(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    other = User(github_id=2, username="other")
+    db_session.add(other)
+    db_session.commit()
+    other_repo = Repository(
+        github_id=202,
+        owner="other",
+        name="private-repo",
+        full_name="other/private-repo",
+        is_private=True,
+        user_id=other.id,
+    )
+    db_session.add(other_repo)
+    db_session.commit()
 
-    response = client.get(f"/api/repositories/{repo.id}/pull-requests")
+    response = client.get(
+        f"/api/repositories/{other_repo.id}", **_auth(client, session_token)
+    )
+    assert response.status_code == 404
+
+
+def test_api_repository_pull_requests_empty(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_repository(db_session, user)
+
+    response = client.get(
+        f"/api/repositories/{repo.id}/pull-requests", **_auth(client, session_token)
+    )
     assert response.status_code == 200
     assert response.json() == []
 
 
 def test_api_repository_pull_requests_returns(
-    client: TestClient, db_session: Session
+    client: TestClient, db_session: Session, user: User, session_token: str
 ) -> None:
-    repo = _add_repository(db_session)
+    repo = _add_repository(db_session, user)
     db_session.add(
         PullRequest(
             github_id=301,
@@ -155,7 +226,9 @@ def test_api_repository_pull_requests_returns(
     )
     db_session.commit()
 
-    response = client.get(f"/api/repositories/{repo.id}/pull-requests")
+    response = client.get(
+        f"/api/repositories/{repo.id}/pull-requests", **_auth(client, session_token)
+    )
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -165,9 +238,9 @@ def test_api_repository_pull_requests_returns(
 
 
 def test_api_repository_pull_requests_sorted_by_number_desc(
-    client: TestClient, db_session: Session
+    client: TestClient, db_session: Session, user: User, session_token: str
 ) -> None:
-    repo = _add_repository(db_session)
+    repo = _add_repository(db_session, user)
     for number in (1, 3, 2):
         db_session.add(
             PullRequest(
@@ -181,27 +254,40 @@ def test_api_repository_pull_requests_sorted_by_number_desc(
         )
     db_session.commit()
 
-    response = client.get(f"/api/repositories/{repo.id}/pull-requests")
+    response = client.get(
+        f"/api/repositories/{repo.id}/pull-requests", **_auth(client, session_token)
+    )
     numbers = [item["number"] for item in response.json()]
     assert numbers == [3, 2, 1]
 
 
-def test_api_repository_pull_requests_not_found(client: TestClient) -> None:
-    response = client.get("/api/repositories/999999/pull-requests")
+def test_api_repository_pull_requests_not_found(
+    client: TestClient, session_token: str
+) -> None:
+    response = client.get(
+        "/api/repositories/999999/pull-requests", **_auth(client, session_token)
+    )
     assert response.status_code == 404
     assert response.json()["detail"] == "Repository not found"
 
 
-def test_api_pull_requests_empty(client: TestClient) -> None:
+def test_api_pull_requests_requires_auth(client: TestClient) -> None:
     response = client.get("/api/pull-requests")
+    assert response.status_code == 401
+
+
+def test_api_pull_requests_empty(
+    client: TestClient, session_token: str
+) -> None:
+    response = client.get("/api/pull-requests", **_auth(client, session_token))
     assert response.status_code == 200
     assert response.json() == []
 
 
 def test_api_pull_requests_returns_summaries(
-    client: TestClient, db_session: Session
+    client: TestClient, db_session: Session, user: User, session_token: str
 ) -> None:
-    repo = _add_repository(db_session)
+    repo = _add_repository(db_session, user)
     db_session.add(
         PullRequest(
             github_id=301,
@@ -214,7 +300,7 @@ def test_api_pull_requests_returns_summaries(
     )
     db_session.commit()
 
-    response = client.get("/api/pull-requests")
+    response = client.get("/api/pull-requests", **_auth(client, session_token))
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -223,9 +309,9 @@ def test_api_pull_requests_returns_summaries(
 
 
 def test_api_pull_requests_sorted_by_id_desc(
-    client: TestClient, db_session: Session
+    client: TestClient, db_session: Session, user: User, session_token: str
 ) -> None:
-    repo = _add_repository(db_session)
+    repo = _add_repository(db_session, user)
     for i in (1, 2, 3):
         db_session.add(
             PullRequest(
@@ -239,13 +325,15 @@ def test_api_pull_requests_sorted_by_id_desc(
         )
     db_session.commit()
 
-    response = client.get("/api/pull-requests")
+    response = client.get("/api/pull-requests", **_auth(client, session_token))
     ids = [item["id"] for item in response.json()]
     assert ids == sorted(ids, reverse=True)
 
 
-def test_api_pull_request_by_id(client: TestClient, db_session: Session) -> None:
-    repo = _add_repository(db_session)
+def test_api_pull_request_by_id(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_repository(db_session, user)
     pull_request = PullRequest(
         github_id=301,
         repository_id=repo.id,
@@ -257,7 +345,9 @@ def test_api_pull_request_by_id(client: TestClient, db_session: Session) -> None
     db_session.add(pull_request)
     db_session.commit()
 
-    response = client.get(f"/api/pull-requests/{pull_request.id}")
+    response = client.get(
+        f"/api/pull-requests/{pull_request.id}", **_auth(client, session_token)
+    )
     assert response.status_code == 200
     data = response.json()
     assert data["number"] == 7
@@ -266,7 +356,42 @@ def test_api_pull_request_by_id(client: TestClient, db_session: Session) -> None
     assert data["repository_full_name"] == "octocat/hello-world"
 
 
-def test_api_pull_request_by_id_not_found(client: TestClient) -> None:
-    response = client.get("/api/pull-requests/999999")
+def test_api_pull_request_by_id_not_found(
+    client: TestClient, session_token: str
+) -> None:
+    response = client.get("/api/pull-requests/999999", **_auth(client, session_token))
     assert response.status_code == 404
     assert response.json()["detail"] == "Pull request not found"
+
+
+def test_api_pull_request_not_owned(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    other = User(github_id=2, username="other")
+    db_session.add(other)
+    db_session.commit()
+    other_repo = Repository(
+        github_id=202,
+        owner="other",
+        name="private-repo",
+        full_name="other/private-repo",
+        is_private=True,
+        user_id=other.id,
+    )
+    db_session.add(other_repo)
+    db_session.commit()
+    other_pr = PullRequest(
+        github_id=302,
+        repository_id=other_repo.id,
+        number=9,
+        title="Private PR",
+        author="other",
+        state="open",
+    )
+    db_session.add(other_pr)
+    db_session.commit()
+
+    response = client.get(
+        f"/api/pull-requests/{other_pr.id}", **_auth(client, session_token)
+    )
+    assert response.status_code == 404
