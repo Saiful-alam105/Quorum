@@ -1,5 +1,15 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ""
 
+export class ApiError extends Error {
+  status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = "ApiError"
+    this.status = status
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     credentials: "include",
@@ -7,7 +17,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   })
 
   if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`)
+    throw new ApiError(response.status, `Request failed with status ${response.status}`)
   }
 
   return (await response.json()) as T
@@ -77,6 +87,10 @@ export type CurrentUser = {
 
 export function getCurrentUser(): Promise<CurrentUser> {
   return request<CurrentUser>("/auth/me")
+}
+
+export function getMe(): Promise<CurrentUser> {
+  return request<CurrentUser>("/api/me")
 }
 
 export type LoginUrl = {
