@@ -9,6 +9,7 @@ def upsert_user(
     github_id: int | None,
     username: str | None,
     avatar_url: str | None = None,
+    github_installation_id: int | None = None,
 ) -> User | None:
     if github_id is None:
         return None
@@ -22,6 +23,8 @@ def upsert_user(
         user.username = username
     if avatar_url is not None:
         user.avatar_url = avatar_url
+    if github_installation_id is not None:
+        user.github_installation_id = github_installation_id
     db.commit()
     return user
 

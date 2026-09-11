@@ -1,6 +1,14 @@
 import secrets
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
+from fastapi import (
+    APIRouter,
+    Cookie,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+)
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -42,6 +50,7 @@ async def callback(
     code: str,
     state: str,
     oauth_state: str | None = Cookie(default=None),
+    installation_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
 ) -> Response:
     if not oauth_state or oauth_state != state:
@@ -62,6 +71,7 @@ async def callback(
         github_id=user.get("id"),
         username=user.get("login"),
         avatar_url=user.get("avatar_url"),
+        github_installation_id=installation_id,
     )
 
     session_token = create_session({

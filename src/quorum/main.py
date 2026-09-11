@@ -21,7 +21,12 @@ app = FastAPI(
 app.include_router(auth_router)
 app.include_router(api_router)
 
-SUPPORTED_EVENTS = {"ping", "pull_request"}
+SUPPORTED_EVENTS = {
+    "ping",
+    "pull_request",
+    "installation",
+    "installation_repositories",
+}
 SUPPORTED_ACTIONS = {"opened", "reopened", "synchronize"}
 
 
@@ -54,6 +59,12 @@ async def github_webhook(
 
     if event == "ping":
         return JSONResponse(status_code=200, content={"status": "ok", "event": "ping"})
+
+    if event in ("installation", "installation_repositories"):
+        return JSONResponse(
+            status_code=200,
+            content={"status": "ok", "event": event},
+        )
 
     payload: Any = json.loads(raw_body)
     action = payload.get("action") if isinstance(payload, dict) else None

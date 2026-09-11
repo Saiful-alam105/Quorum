@@ -25,6 +25,9 @@ class User(Base):
     github_id: Mapped[int] = mapped_column(unique=True, index=True)
     username: Mapped[str] = mapped_column(String(255), index=True)
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    github_installation_id: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     chat_messages: Mapped[list["ChatMessage"]] = relationship(back_populates="user")

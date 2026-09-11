@@ -244,3 +244,28 @@ def test_callback_updates_existing_user(
     users = db_session.scalars(select(User).where(User.github_id == 12345)).all()
     assert len(users) == 1
     assert users[0].username == "new-name"
+
+
+def test_callback_persists_installation_id(
+    mock_github_config: None, monkeypatch: pytest.MonkeyPatch, db_session: Session
+) -> None:
+    async def mock_exchange(client_id: str, client_secret: str, code: str) -> str:
+        return "mock-access-token"
+
+    async def mock_get_user(access_token: str) -> dict:
+        return {"id": 12345, "login": "testuser"}
+
+    monkeypatch.setattr(routes_module, "exchange_code", mock_exchange)
+    monkeypatch.setattr(routes_module, "get_github_user", mock_get_user)
+
+    login_response = client.get("/auth/login")
+    state = login_response.cookies.get("oauth_state")
+
+    callback_response = client.get(
+        f"/auth/callback?code=test-code&state={state}&installation_id=555",
+    )
+    assert callback_response.status_code in (200, 302)
+
+    user = db_session.scalar(select(User).where(User.github_id == 12345))
+    assert user is not None
+    assert user.github_installation_id == 555
