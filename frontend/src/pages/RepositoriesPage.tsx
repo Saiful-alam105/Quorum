@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import { ExternalLink, FolderGit2, Lock } from "lucide-react"
 
 import { EmptyState } from "@/components/EmptyState"
@@ -15,10 +16,15 @@ type RepositoriesState =
 function RepositoryCard({ repository }: { repository: Repository }) {
   return (
     <li className="flex items-center justify-between gap-4 rounded-lg border border-border p-4">
-      <div className="min-w-0 space-y-1">
+      <Link
+        to={`/repositories/${repository.id}`}
+        className="min-w-0 space-y-1"
+      >
         <div className="flex items-center gap-2">
           <FolderGit2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span className="truncate font-medium">{repository.full_name}</span>
+          <span className="truncate font-medium transition-colors hover:text-primary hover:underline">
+            {repository.full_name}
+          </span>
           {repository.is_private ? (
             <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
               <Lock className="h-3 w-3" />
@@ -27,7 +33,7 @@ function RepositoryCard({ repository }: { repository: Repository }) {
           ) : null}
         </div>
         <p className="text-xs text-muted-foreground">Owner: {repository.owner}</p>
-      </div>
+      </Link>
       <a
         href={`https://github.com/${repository.full_name}`}
         target="_blank"

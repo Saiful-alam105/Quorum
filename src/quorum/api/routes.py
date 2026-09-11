@@ -1,10 +1,14 @@
 from fastapi import APIRouter, Cookie, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from quorum.api.schemas import RepositoryOut, UserOut
+from quorum.api.schemas import PullRequestOut, RepositoryOut, UserOut
 from quorum.auth.sessions import get_session
 from quorum.database.base import get_db
-from quorum.database.repository import list_repositories
+from quorum.database.repository import (
+    get_repository_by_id,
+    list_pull_requests_by_repository,
+    list_repositories,
+)
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -27,3 +31,28 @@ def read_current_user(session: str | None = Cookie(default=None)) -> UserOut:
 @router.get("/repositories", response_model=list[RepositoryOut])
 def read_repositories(db: Session = Depends(get_db)) -> list[RepositoryOut]:
     return [RepositoryOut.model_validate(repo) for repo in list_repositories(db)]
+
+
+@router.get("/repositories/{repository_id}", response_model=RepositoryOut)
+def read_repository(
+    repository_id: int, db: Session = Depends(get_db)
+) -> RepositoryOut:
+    repository = get_repository_by_id(db, repository_id)
+    if repository is None:
+        raise HTTPException(status_code=404, detail="Repository not found")
+    return RepositoryOut.model_validate(repository)
+
+
+@router.get(
+    "/repositories/{repository_id}/pull-requests",
+    response_model=list[PullRequestOut],
+)
+def read_repository_pull_requests(
+    repository_id: int, db: Session = Depends(get_db)
+) -> list[PullRequestOut]:
+    if get_repository_by_id(db, repository_id) is None:
+        raise HTTPException(status_code=404, detail="Repository not found")
+    return [
+        PullRequestOut.model_validate(pr)
+        for pr in list_pull_requests_by_repository(db, repository_id)
+    ]

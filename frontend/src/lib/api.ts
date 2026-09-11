@@ -32,3 +32,20 @@ export type Repository = {
 export function getRepositories(): Promise<Repository[]> {
   return request<Repository[]>("/api/repositories")
 }
+
+export function getRepository(id: number): Promise<Repository> {
+  return request<Repository>(`/api/repositories/${id}`)
+}
+
+export type PullRequest = {
+  id: number
+  github_id: number
+  number: number
+  title: string
+  author: string
+  state: string
+}
+
+export function getRepositoryPullRequests(id: number): Promise<PullRequest[]> {
+  return request<PullRequest[]>(`/api/repositories/${id}/pull-requests`)
+}

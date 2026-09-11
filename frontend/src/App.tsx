@@ -6,6 +6,7 @@ import DashboardPage from "@/pages/DashboardPage"
 import NotFoundPage from "@/pages/NotFoundPage"
 import PullRequestsPage from "@/pages/PullRequestsPage"
 import RepositoriesPage from "@/pages/RepositoriesPage"
+import RepositoryDetailPage from "@/pages/RepositoryDetailPage"
 import ReviewsPage from "@/pages/ReviewsPage"
 import SettingsPage from "@/pages/SettingsPage"
 
@@ -16,6 +17,10 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="repositories" element={<RepositoriesPage />} />
+          <Route
+            path="repositories/:repositoryId"
+            element={<RepositoryDetailPage />}
+          />
           <Route path="pull-requests" element={<PullRequestsPage />} />
           <Route path="reviews" element={<ReviewsPage />} />
           <Route path="ask-quorum" element={<AskQuorumPage />} />

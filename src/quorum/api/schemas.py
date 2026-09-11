@@ -15,3 +15,14 @@ class RepositoryOut(BaseModel):
     name: str
     full_name: str
     is_private: bool
+
+
+class PullRequestOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    github_id: int
+    number: int
+    title: str
+    author: str
+    state: str
