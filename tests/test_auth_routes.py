@@ -19,6 +19,7 @@ def mock_github_config(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(config_module.settings, "github_client_id", "test-client-id")
     monkeypatch.setattr(config_module.settings, "github_client_secret", "test-client-secret")
     monkeypatch.setattr(config_module.settings, "github_redirect_uri", "http://localhost:8000/auth/callback")
+    monkeypatch.setattr(config_module.settings, "frontend_url", "")
 
 
 def test_login_returns_authorize_url(mock_github_config: None) -> None:
@@ -73,6 +74,31 @@ def test_callback_success(mock_github_config: None, monkeypatch: pytest.MonkeyPa
     data = callback_response.json()
     assert data["username"] == "testuser"
     assert data["github_id"] == 12345
+    assert "session" in callback_response.cookies
+
+
+def test_callback_redirects_to_frontend_when_configured(
+    mock_github_config: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(config_module.settings, "frontend_url", "http://localhost:5173")
+
+    async def mock_exchange(client_id: str, client_secret: str, code: str) -> str:
+        return "mock-access-token"
+
+    async def mock_get_user(access_token: str) -> dict:
+        return {"id": 12345, "login": "testuser"}
+
+    monkeypatch.setattr(routes_module, "exchange_code", mock_exchange)
+    monkeypatch.setattr(routes_module, "get_github_user", mock_get_user)
+
+    login_response = client.get("/auth/login")
+    state = login_response.cookies.get("oauth_state")
+
+    callback_response = client.get(
+        f"/auth/callback?code=test-code&state={state}", follow_redirects=False
+    )
+    assert callback_response.status_code == 302
+    assert callback_response.headers["location"] == "http://localhost:5173/"
     assert "session" in callback_response.cookies
 
 

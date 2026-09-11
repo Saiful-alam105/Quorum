@@ -1,8 +1,9 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ""
 
-async function request<T>(path: string): Promise<T> {
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     credentials: "include",
+    ...init,
   })
 
   if (!response.ok) {
@@ -48,4 +49,25 @@ export type PullRequest = {
 
 export function getRepositoryPullRequests(id: number): Promise<PullRequest[]> {
   return request<PullRequest[]>(`/api/repositories/${id}/pull-requests`)
+}
+
+export type CurrentUser = {
+  github_id: number | null
+  username: string | null
+}
+
+export function getCurrentUser(): Promise<CurrentUser> {
+  return request<CurrentUser>("/auth/me")
+}
+
+export type LoginUrl = {
+  authorize_url: string
+}
+
+export function getLoginUrl(): Promise<LoginUrl> {
+  return request<LoginUrl>("/auth/login")
+}
+
+export function logout(): Promise<{ status: string }> {
+  return request<{ status: string }>("/auth/logout", { method: "POST" })
 }

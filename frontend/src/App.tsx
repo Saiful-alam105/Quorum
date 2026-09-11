@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom"
 import { AppLayout } from "@/components/AppLayout"
 import AskQuorumPage from "@/pages/AskQuorumPage"
 import DashboardPage from "@/pages/DashboardPage"
+import LoginPage from "@/pages/LoginPage"
 import NotFoundPage from "@/pages/NotFoundPage"
 import PullRequestsPage from "@/pages/PullRequestsPage"
 import RepositoriesPage from "@/pages/RepositoriesPage"
@@ -14,6 +15,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/login" element={<LoginPage />} />
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="repositories" element={<RepositoriesPage />} />

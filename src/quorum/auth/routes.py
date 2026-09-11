@@ -1,6 +1,7 @@
 import secrets
 
 from fastapi import APIRouter, Cookie, HTTPException, Request, Response
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from quorum.auth.github_oauth import build_authorize_url, exchange_code, get_github_user
 from quorum.auth.sessions import create_session, delete_session, get_session
@@ -35,15 +36,12 @@ async def login(response: Response) -> dict:
 @router.get("/callback")
 async def callback(
     request: Request,
-    response: Response,
     code: str,
     state: str,
     oauth_state: str | None = Cookie(default=None),
-) -> dict:
+) -> Response:
     if not oauth_state or oauth_state != state:
         raise HTTPException(status_code=400, detail="Invalid OAuth state")
-
-    response.delete_cookie("oauth_state")
 
     try:
         access_token = await exchange_code(
@@ -61,6 +59,16 @@ async def callback(
         "access_token": access_token,
     })
 
+    if settings.frontend_url:
+        response: Response = RedirectResponse(
+            url=f"{settings.frontend_url.rstrip('/')}/", status_code=302
+        )
+    else:
+        response = JSONResponse(
+            content={"username": user.get("login"), "github_id": user.get("id")}
+        )
+
+    response.delete_cookie("oauth_state")
     response.set_cookie(
         key="session",
         value=session_token,
@@ -69,7 +77,7 @@ async def callback(
         max_age=86400,
     )
 
-    return {"username": user.get("login"), "github_id": user.get("id")}
+    return response
 
 
 @router.get("/me")

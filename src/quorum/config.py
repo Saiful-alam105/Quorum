@@ -16,6 +16,7 @@ class Settings:
         self.github_redirect_uri: str = os.getenv(
             "GITHUB_REDIRECT_URI", "http://localhost:8000/auth/callback"
         )
+        self.frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
         self.database_url: str = os.getenv(
             "DATABASE_URL", "postgresql+psycopg://postgres:postgres@localhost:5432/quorum"
         )

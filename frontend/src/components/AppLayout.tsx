@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom"
 import { Activity } from "lucide-react"
 
+import { AuthStatus } from "@/components/AuthStatus"
 import { BackendStatus } from "@/components/BackendStatus"
 import { navItems } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
@@ -41,8 +42,9 @@ export function AppLayout() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-end border-b px-6">
+        <header className="flex h-16 items-center justify-end gap-3 border-b px-6">
           <BackendStatus />
+          <AuthStatus />
         </header>
 
         <main className="flex-1 p-6">
