@@ -10,9 +10,11 @@ import {
 import { EmptyState } from "@/components/EmptyState"
 import { ErrorState } from "@/components/ErrorState"
 import { LoadingState } from "@/components/LoadingState"
+import { SignInRequired } from "@/components/SignInRequired"
 import {
   getRepository,
   getRepositoryPullRequests,
+  isUnauthorized,
   type PullRequest,
   type Repository,
 } from "@/lib/api"
@@ -20,6 +22,7 @@ import { cn } from "@/lib/utils"
 
 type PageState =
   | { status: "loading" }
+  | { status: "auth-required" }
   | { status: "error"; message: string }
   | { status: "ready"; repository: Repository; pullRequests: PullRequest[] }
 
@@ -90,15 +93,19 @@ export default function RepositoryDetailPage() {
       .then(([repository, pullRequests]) =>
         setState({ status: "ready", repository, pullRequests }),
       )
-      .catch((error: unknown) =>
+      .catch((error: unknown) => {
+        if (isUnauthorized(error)) {
+          setState({ status: "auth-required" })
+          return
+        }
         setState({
           status: "error",
           message:
             error instanceof Error
               ? error.message
               : "Failed to load repository",
-        }),
-      )
+        })
+      })
   }, [id, repositoryId])
 
   useEffect(() => {
@@ -122,6 +129,8 @@ export default function RepositoryDetailPage() {
       {state.status === "error" ? (
         <ErrorState message={state.message} onRetry={load} />
       ) : null}
+
+      {state.status === "auth-required" ? <SignInRequired /> : null}
 
       {state.status === "ready" ? (
         <>

@@ -6,10 +6,12 @@ import { EmptyState } from "@/components/EmptyState"
 import { ErrorState } from "@/components/ErrorState"
 import { LoadingState } from "@/components/LoadingState"
 import { PageHeader } from "@/components/PageHeader"
-import { getRepositories, type Repository } from "@/lib/api"
+import { SignInRequired } from "@/components/SignInRequired"
+import { getRepositories, isUnauthorized, type Repository } from "@/lib/api"
 
 type RepositoriesState =
   | { status: "loading" }
+  | { status: "auth-required" }
   | { status: "error"; message: string }
   | { status: "ready"; repositories: Repository[] }
 
@@ -54,15 +56,19 @@ export default function RepositoriesPage() {
     setState({ status: "loading" })
     getRepositories()
       .then((repositories) => setState({ status: "ready", repositories }))
-      .catch((error: unknown) =>
+      .catch((error: unknown) => {
+        if (isUnauthorized(error)) {
+          setState({ status: "auth-required" })
+          return
+        }
         setState({
           status: "error",
           message:
             error instanceof Error
               ? error.message
               : "Failed to load repositories",
-        }),
-      )
+        })
+      })
   }, [])
 
   useEffect(() => {
@@ -83,6 +89,8 @@ export default function RepositoriesPage() {
       {state.status === "error" ? (
         <ErrorState message={state.message} onRetry={load} />
       ) : null}
+
+      {state.status === "auth-required" ? <SignInRequired /> : null}
 
       {state.status === "ready" && state.repositories.length === 0 ? (
         <EmptyState

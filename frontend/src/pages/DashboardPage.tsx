@@ -12,13 +12,15 @@ import { EmptyState } from "@/components/EmptyState"
 import { ErrorState } from "@/components/ErrorState"
 import { LoadingState } from "@/components/LoadingState"
 import { PageHeader } from "@/components/PageHeader"
+import { SignInRequired } from "@/components/SignInRequired"
 import { StatCard } from "@/components/StatCard"
-import { getPullRequests, getRepositories } from "@/lib/api"
+import { getPullRequests, getRepositories, isUnauthorized } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import type { PullRequestSummary } from "@/lib/api"
 
 type DashboardState =
   | { status: "loading" }
+  | { status: "auth-required" }
   | { status: "error"; message: string }
   | {
       status: "ready"
@@ -90,13 +92,17 @@ export default function DashboardPage() {
           pullRequests,
         }),
       )
-      .catch((error: unknown) =>
+      .catch((error: unknown) => {
+        if (isUnauthorized(error)) {
+          setState({ status: "auth-required" })
+          return
+        }
         setState({
           status: "error",
           message:
             error instanceof Error ? error.message : "Failed to load dashboard",
-        }),
-      )
+        })
+      })
   }, [])
 
   useEffect(() => {
@@ -117,6 +123,8 @@ export default function DashboardPage() {
       {state.status === "error" ? (
         <ErrorState message={state.message} onRetry={load} />
       ) : null}
+
+      {state.status === "auth-required" ? <SignInRequired /> : null}
 
       {state.status === "ready" ? (
         <>

@@ -6,9 +6,9 @@ import { ErrorState } from "@/components/ErrorState"
 import { LoadingState } from "@/components/LoadingState"
 import { PageHeader } from "@/components/PageHeader"
 import {
-  ApiError,
   getMe,
   getRepositories,
+  isUnauthorized,
   logout,
   type CurrentUser,
   type Repository,
@@ -29,13 +29,22 @@ export default function SettingsPage() {
       try {
         user = await getMe()
       } catch (error) {
-        if (error instanceof ApiError && error.status === 401) {
+        if (isUnauthorized(error)) {
           user = null
         } else {
           throw error
         }
       }
-      const repositories = await getRepositories()
+      let repositories: Repository[] = []
+      if (user) {
+        try {
+          repositories = await getRepositories()
+        } catch (error) {
+          if (!isUnauthorized(error)) {
+            throw error
+          }
+        }
+      }
       setState({ status: "ready", user, repositories })
     } catch (error) {
       setState({

@@ -4,11 +4,13 @@ import { ArrowLeft, ExternalLink, GitPullRequest } from "lucide-react"
 
 import { ErrorState } from "@/components/ErrorState"
 import { LoadingState } from "@/components/LoadingState"
-import { getPullRequest, type PullRequestSummary } from "@/lib/api"
+import { SignInRequired } from "@/components/SignInRequired"
+import { getPullRequest, isUnauthorized, type PullRequestSummary } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 type PageState =
   | { status: "loading" }
+  | { status: "auth-required" }
   | { status: "error"; message: string }
   | { status: "ready"; pullRequest: PullRequestSummary }
 
@@ -43,15 +45,19 @@ export default function PullRequestDetailPage() {
     setState({ status: "loading" })
     getPullRequest(id)
       .then((pullRequest) => setState({ status: "ready", pullRequest }))
-      .catch((error: unknown) =>
+      .catch((error: unknown) => {
+        if (isUnauthorized(error)) {
+          setState({ status: "auth-required" })
+          return
+        }
         setState({
           status: "error",
           message:
             error instanceof Error
               ? error.message
               : "Failed to load pull request",
-        }),
-      )
+        })
+      })
   }, [id, pullRequestId])
 
   useEffect(() => {
@@ -79,6 +85,8 @@ export default function PullRequestDetailPage() {
       {state.status === "error" ? (
         <ErrorState message={state.message} onRetry={load} />
       ) : null}
+
+      {state.status === "auth-required" ? <SignInRequired /> : null}
 
       {state.status === "ready" ? (
         <>
