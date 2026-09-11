@@ -1,11 +1,17 @@
 from fastapi import APIRouter, Cookie, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from quorum.api.schemas import PullRequestOut, RepositoryOut, UserOut
+from quorum.api.schemas import (
+    PullRequestOut,
+    PullRequestSummaryOut,
+    RepositoryOut,
+    UserOut,
+)
 from quorum.auth.sessions import get_session
 from quorum.database.base import get_db
 from quorum.database.repository import (
     get_repository_by_id,
+    list_pull_requests,
     list_pull_requests_by_repository,
     list_repositories,
 )
@@ -31,6 +37,28 @@ def read_current_user(session: str | None = Cookie(default=None)) -> UserOut:
 @router.get("/repositories", response_model=list[RepositoryOut])
 def read_repositories(db: Session = Depends(get_db)) -> list[RepositoryOut]:
     return [RepositoryOut.model_validate(repo) for repo in list_repositories(db)]
+
+
+@router.get("/pull-requests", response_model=list[PullRequestSummaryOut])
+def read_pull_requests(db: Session = Depends(get_db)) -> list[PullRequestSummaryOut]:
+    pull_requests: list[PullRequestSummaryOut] = []
+    for pull_request in list_pull_requests(db):
+        pull_requests.append(
+            PullRequestSummaryOut(
+                id=pull_request.id,
+                github_id=pull_request.github_id,
+                number=pull_request.number,
+                title=pull_request.title,
+                author=pull_request.author,
+                state=pull_request.state,
+                repository_full_name=(
+                    pull_request.repository.full_name
+                    if pull_request.repository is not None
+                    else None
+                ),
+            )
+        )
+    return pull_requests
 
 
 @router.get("/repositories/{repository_id}", response_model=RepositoryOut)

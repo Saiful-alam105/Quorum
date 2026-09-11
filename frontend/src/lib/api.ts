@@ -51,6 +51,20 @@ export function getRepositoryPullRequests(id: number): Promise<PullRequest[]> {
   return request<PullRequest[]>(`/api/repositories/${id}/pull-requests`)
 }
 
+export type PullRequestSummary = {
+  id: number
+  github_id: number
+  number: number
+  title: string
+  author: string
+  state: string
+  repository_full_name: string | null
+}
+
+export function getPullRequests(): Promise<PullRequestSummary[]> {
+  return request<PullRequestSummary[]>("/api/pull-requests")
+}
+
 export type CurrentUser = {
   github_id: number | null
   username: string | null

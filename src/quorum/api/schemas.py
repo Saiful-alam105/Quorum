@@ -26,3 +26,13 @@ class PullRequestOut(BaseModel):
     title: str
     author: str
     state: str
+
+
+class PullRequestSummaryOut(BaseModel):
+    id: int
+    github_id: int
+    number: int
+    title: str
+    author: str
+    state: str
+    repository_full_name: str | None

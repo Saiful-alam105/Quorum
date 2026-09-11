@@ -190,3 +190,55 @@ def test_api_repository_pull_requests_not_found(client: TestClient) -> None:
     response = client.get("/api/repositories/999999/pull-requests")
     assert response.status_code == 404
     assert response.json()["detail"] == "Repository not found"
+
+
+def test_api_pull_requests_empty(client: TestClient) -> None:
+    response = client.get("/api/pull-requests")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_api_pull_requests_returns_summaries(
+    client: TestClient, db_session: Session
+) -> None:
+    repo = _add_repository(db_session)
+    db_session.add(
+        PullRequest(
+            github_id=301,
+            repository_id=repo.id,
+            number=7,
+            title="Add authentication",
+            author="octocat",
+            state="open",
+        )
+    )
+    db_session.commit()
+
+    response = client.get("/api/pull-requests")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["number"] == 7
+    assert data[0]["repository_full_name"] == "octocat/hello-world"
+
+
+def test_api_pull_requests_sorted_by_id_desc(
+    client: TestClient, db_session: Session
+) -> None:
+    repo = _add_repository(db_session)
+    for i in (1, 2, 3):
+        db_session.add(
+            PullRequest(
+                github_id=300 + i,
+                repository_id=repo.id,
+                number=i,
+                title=f"PR {i}",
+                author="octocat",
+                state="open",
+            )
+        )
+    db_session.commit()
+
+    response = client.get("/api/pull-requests")
+    ids = [item["id"] for item in response.json()]
+    assert ids == sorted(ids, reverse=True)

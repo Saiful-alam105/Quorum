@@ -69,6 +69,10 @@ def list_pull_requests_by_repository(
     )
 
 
+def list_pull_requests(db: Session) -> list[PullRequest]:
+    return list(db.scalars(select(PullRequest).order_by(PullRequest.id.desc())))
+
+
 def get_repository_by_full_name(db: Session, full_name: str) -> Repository | None:
     return db.scalar(
         select(Repository).where(Repository.full_name == full_name)
