@@ -242,3 +242,31 @@ def test_api_pull_requests_sorted_by_id_desc(
     response = client.get("/api/pull-requests")
     ids = [item["id"] for item in response.json()]
     assert ids == sorted(ids, reverse=True)
+
+
+def test_api_pull_request_by_id(client: TestClient, db_session: Session) -> None:
+    repo = _add_repository(db_session)
+    pull_request = PullRequest(
+        github_id=301,
+        repository_id=repo.id,
+        number=7,
+        title="Add authentication",
+        author="octocat",
+        state="open",
+    )
+    db_session.add(pull_request)
+    db_session.commit()
+
+    response = client.get(f"/api/pull-requests/{pull_request.id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["number"] == 7
+    assert data["title"] == "Add authentication"
+    assert data["repository_id"] == repo.id
+    assert data["repository_full_name"] == "octocat/hello-world"
+
+
+def test_api_pull_request_by_id_not_found(client: TestClient) -> None:
+    response = client.get("/api/pull-requests/999999")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Pull request not found"

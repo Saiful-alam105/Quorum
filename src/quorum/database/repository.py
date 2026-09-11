@@ -83,3 +83,7 @@ def get_pull_request(db: Session, github_id: int) -> PullRequest | None:
     return db.scalar(
         select(PullRequest).where(PullRequest.github_id == github_id)
     )
+
+
+def get_pull_request_by_id(db: Session, pull_request_id: int) -> PullRequest | None:
+    return db.get(PullRequest, pull_request_id)

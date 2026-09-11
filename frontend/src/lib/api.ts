@@ -58,11 +58,16 @@ export type PullRequestSummary = {
   title: string
   author: string
   state: string
+  repository_id: number | null
   repository_full_name: string | null
 }
 
 export function getPullRequests(): Promise<PullRequestSummary[]> {
   return request<PullRequestSummary[]>("/api/pull-requests")
+}
+
+export function getPullRequest(id: number): Promise<PullRequestSummary> {
+  return request<PullRequestSummary>(`/api/pull-requests/${id}`)
 }
 
 export type CurrentUser = {

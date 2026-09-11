@@ -35,4 +35,5 @@ class PullRequestSummaryOut(BaseModel):
     title: str
     author: str
     state: str
+    repository_id: int | None
     repository_full_name: str | None

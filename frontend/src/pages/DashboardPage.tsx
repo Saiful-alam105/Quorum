@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import {
   ClipboardCheck,
   ExternalLink,
@@ -36,10 +37,13 @@ function PullRequestRow({ pullRequest }: { pullRequest: PullRequestSummary }) {
       <div className="min-w-0 space-y-1">
         <div className="flex items-center gap-2">
           <GitPullRequest className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span className="truncate font-medium">
+          <Link
+            to={`/pull-requests/${pullRequest.id}`}
+            className="truncate font-medium transition-colors hover:text-primary hover:underline"
+          >
             {pullRequest.repository_full_name ?? "unknown/repo"} #
             {pullRequest.number} {pullRequest.title}
-          </span>
+          </Link>
         </div>
         <p className="text-xs text-muted-foreground">
           Author: {pullRequest.author}

@@ -5,6 +5,7 @@ import AskQuorumPage from "@/pages/AskQuorumPage"
 import DashboardPage from "@/pages/DashboardPage"
 import LoginPage from "@/pages/LoginPage"
 import NotFoundPage from "@/pages/NotFoundPage"
+import PullRequestDetailPage from "@/pages/PullRequestDetailPage"
 import PullRequestsPage from "@/pages/PullRequestsPage"
 import RepositoriesPage from "@/pages/RepositoriesPage"
 import RepositoryDetailPage from "@/pages/RepositoryDetailPage"
@@ -24,6 +25,10 @@ export default function App() {
             element={<RepositoryDetailPage />}
           />
           <Route path="pull-requests" element={<PullRequestsPage />} />
+          <Route
+            path="pull-requests/:pullRequestId"
+            element={<PullRequestDetailPage />}
+          />
           <Route path="reviews" element={<ReviewsPage />} />
           <Route path="ask-quorum" element={<AskQuorumPage />} />
           <Route path="settings" element={<SettingsPage />} />
