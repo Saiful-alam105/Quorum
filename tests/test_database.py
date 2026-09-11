@@ -1,5 +1,6 @@
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
@@ -112,6 +113,34 @@ class TestPullRequestStoreRetrieve:
         assert stored is not None
         assert stored.repository is not None
         assert stored.repository.full_name == "octocat/hello-world"
+
+    def test_foreign_key_constraint_rejects_invalid_parent(self) -> None:
+        engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        event.listen(
+            engine,
+            "connect",
+            lambda dbapi_connection, _: dbapi_connection.execute("PRAGMA foreign_keys=ON"),
+        )
+        Base.metadata.create_all(bind=engine)
+        session = Session(bind=engine)
+
+        orphan = PullRequest(
+            github_id=9001,
+            repository_id=999999,
+            number=99,
+            title="Orphan PR",
+            author="octocat",
+            state="open",
+        )
+        session.add(orphan)
+        with pytest.raises(IntegrityError):
+            session.commit()
+        session.close()
+        engine.dispose()
 
 
 class TestAnalysisRunStoreRetrieve:
