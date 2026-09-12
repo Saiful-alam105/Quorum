@@ -163,6 +163,20 @@ def list_repositories_for_user(db: Session, user_id: int) -> list[Repository]:
     )
 
 
+def detach_repositories_not_in(
+    db: Session, user_id: int, authorized_full_names: set[str]
+) -> int:
+    detached = 0
+    for repository in db.scalars(
+        select(Repository).where(Repository.user_id == user_id)
+    ):
+        if repository.full_name not in authorized_full_names:
+            repository.user_id = None
+            detached += 1
+    db.commit()
+    return detached
+
+
 def get_repository_for_user(
     db: Session, repository_id: int, user_id: int
 ) -> Repository | None:

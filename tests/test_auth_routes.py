@@ -10,6 +10,7 @@ from quorum.database.models import Repository, User
 from quorum.main import app
 import quorum.auth.routes as routes_module
 import quorum.config as config_module
+import quorum.github.repo_sync as repo_sync_module
 
 
 client = TestClient(app)
@@ -335,9 +336,9 @@ def test_callback_syncs_installation_repositories(
 
     monkeypatch.setattr(routes_module, "exchange_code", mock_exchange)
     monkeypatch.setattr(routes_module, "get_github_user", mock_get_user)
-    monkeypatch.setattr(routes_module, "get_installation_token", mock_installation_token)
+    monkeypatch.setattr(repo_sync_module, "get_installation_token", mock_installation_token)
     monkeypatch.setattr(
-        routes_module, "get_installation_repositories", mock_installation_repos
+        repo_sync_module, "get_installation_repositories", mock_installation_repos
     )
 
     login_response = client.get("/auth/login")
@@ -357,3 +358,84 @@ def test_callback_syncs_installation_repositories(
     )
     assert repo is not None
     assert repo.user_id == user.id
+
+
+def test_callback_detaches_repos_no_longer_authorized(
+    mock_github_config: None, monkeypatch: pytest.MonkeyPatch, db_session: Session
+) -> None:
+    monkeypatch.setattr(config_module.settings, "github_app_id", "test-app-id")
+    monkeypatch.setattr(config_module.settings, "github_app_private_key_path", "test-key.pem")
+
+    existing_user = User(
+        github_id=12345, username="testuser", github_installation_id=555
+    )
+    db_session.add(existing_user)
+    db_session.commit()
+
+    kept = Repository(
+        github_id=1001,
+        owner="quorum-dev",
+        name="manual-test",
+        full_name="quorum-dev/manual-test",
+        is_private=False,
+        user_id=existing_user.id,
+    )
+    stale = Repository(
+        github_id=1002,
+        owner="quorum-dev",
+        name="revoked-repo",
+        full_name="quorum-dev/revoked-repo",
+        is_private=True,
+        user_id=existing_user.id,
+    )
+    db_session.add(kept)
+    db_session.add(stale)
+    db_session.commit()
+
+    async def mock_exchange(client_id: str, client_secret: str, code: str) -> str:
+        return "mock-access-token"
+
+    async def mock_get_user(access_token: str) -> dict:
+        return {"id": 12345, "login": "testuser"}
+
+    async def mock_installation_token(
+        app_id: str, key_path: str, installation_id: int
+    ) -> dict:
+        return {"token": "install-token"}
+
+    async def mock_installation_repos(token: str) -> list:
+        return [
+            {
+                "id": 1001,
+                "name": "manual-test",
+                "full_name": "quorum-dev/manual-test",
+                "private": False,
+                "owner": {"login": "quorum-dev"},
+            }
+        ]
+
+    monkeypatch.setattr(routes_module, "exchange_code", mock_exchange)
+    monkeypatch.setattr(routes_module, "get_github_user", mock_get_user)
+    monkeypatch.setattr(repo_sync_module, "get_installation_token", mock_installation_token)
+    monkeypatch.setattr(
+        repo_sync_module, "get_installation_repositories", mock_installation_repos
+    )
+
+    login_response = client.get("/auth/login")
+    state = login_response.cookies.get("oauth_state")
+
+    callback_response = client.get(
+        f"/auth/callback?code=test-code&state={state}&installation_id=555"
+    )
+    assert callback_response.status_code in (200, 302)
+
+    kept_repo = db_session.scalar(
+        select(Repository).where(Repository.full_name == "quorum-dev/manual-test")
+    )
+    stale_repo = db_session.scalar(
+        select(Repository).where(Repository.full_name == "quorum-dev/revoked-repo")
+    )
+    assert kept_repo is not None
+    assert kept_repo.user_id == existing_user.id
+    assert stale_repo is not None
+    assert stale_repo.user_id is None
