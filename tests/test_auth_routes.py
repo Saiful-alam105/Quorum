@@ -6,7 +6,7 @@ from sqlalchemy.pool import StaticPool
 
 from quorum.auth.sessions import clear_all_sessions
 from quorum.database.base import Base, get_db
-from quorum.database.models import User
+from quorum.database.models import Repository, User
 from quorum.main import app
 import quorum.auth.routes as routes_module
 import quorum.config as config_module
@@ -47,6 +47,13 @@ def mock_github_config(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(config_module.settings, "github_client_secret", "test-client-secret")
     monkeypatch.setattr(config_module.settings, "github_redirect_uri", "http://localhost:8000/auth/callback")
     monkeypatch.setattr(config_module.settings, "frontend_url", "")
+    monkeypatch.setattr(config_module.settings, "github_app_id", "")
+    monkeypatch.setattr(config_module.settings, "github_app_private_key_path", "")
+
+    async def mock_installations(token: str) -> list:
+        return []
+
+    monkeypatch.setattr(routes_module, "get_user_installations", mock_installations)
 
 
 def test_login_returns_authorize_url(mock_github_config: None) -> None:
@@ -269,3 +276,84 @@ def test_callback_persists_installation_id(
     user = db_session.scalar(select(User).where(User.github_id == 12345))
     assert user is not None
     assert user.github_installation_id == 555
+
+
+def test_callback_discovers_installation_when_not_provided(
+    mock_github_config: None, monkeypatch: pytest.MonkeyPatch, db_session: Session
+) -> None:
+    async def mock_exchange(client_id: str, client_secret: str, code: str) -> str:
+        return "mock-access-token"
+
+    async def mock_get_user(access_token: str) -> dict:
+        return {"id": 12345, "login": "testuser"}
+
+    async def mock_installations(token: str) -> list:
+        return [{"id": 777, "account": {"login": "octocat"}}]
+
+    monkeypatch.setattr(routes_module, "exchange_code", mock_exchange)
+    monkeypatch.setattr(routes_module, "get_github_user", mock_get_user)
+    monkeypatch.setattr(routes_module, "get_user_installations", mock_installations)
+
+    login_response = client.get("/auth/login")
+    state = login_response.cookies.get("oauth_state")
+
+    callback_response = client.get(f"/auth/callback?code=test-code&state={state}")
+    assert callback_response.status_code in (200, 302)
+
+    user = db_session.scalar(select(User).where(User.github_id == 12345))
+    assert user is not None
+    assert user.github_installation_id == 777
+
+
+def test_callback_syncs_installation_repositories(
+    mock_github_config: None, monkeypatch: pytest.MonkeyPatch, db_session: Session
+) -> None:
+    monkeypatch.setattr(config_module.settings, "github_app_id", "test-app-id")
+    monkeypatch.setattr(config_module.settings, "github_app_private_key_path", "test-key.pem")
+
+    async def mock_exchange(client_id: str, client_secret: str, code: str) -> str:
+        return "mock-access-token"
+
+    async def mock_get_user(access_token: str) -> dict:
+        return {"id": 12345, "login": "testuser"}
+
+    async def mock_installation_token(
+        app_id: str, key_path: str, installation_id: int
+    ) -> dict:
+        return {"token": "install-token"}
+
+    async def mock_installation_repos(token: str) -> list:
+        return [
+            {
+                "id": 900001,
+                "name": "manual-test",
+                "full_name": "quorum-dev/manual-test",
+                "private": False,
+                "owner": {"login": "quorum-dev"},
+            }
+        ]
+
+    monkeypatch.setattr(routes_module, "exchange_code", mock_exchange)
+    monkeypatch.setattr(routes_module, "get_github_user", mock_get_user)
+    monkeypatch.setattr(routes_module, "get_installation_token", mock_installation_token)
+    monkeypatch.setattr(
+        routes_module, "get_installation_repositories", mock_installation_repos
+    )
+
+    login_response = client.get("/auth/login")
+    state = login_response.cookies.get("oauth_state")
+
+    callback_response = client.get(
+        f"/auth/callback?code=test-code&state={state}&installation_id=555"
+    )
+    assert callback_response.status_code in (200, 302)
+
+    user = db_session.scalar(select(User).where(User.github_id == 12345))
+    assert user is not None
+    assert user.github_installation_id == 555
+
+    repo = db_session.scalar(
+        select(Repository).where(Repository.full_name == "quorum-dev/manual-test")
+    )
+    assert repo is not None
+    assert repo.user_id == user.id

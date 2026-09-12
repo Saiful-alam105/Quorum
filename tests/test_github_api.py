@@ -3,12 +3,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from quorum.github.api import (
     create_pr_comment,
     get_authenticated_user,
+    get_installation_repositories,
     get_pr_comments,
     get_pr_diff,
     get_pr_files,
     get_pull_request,
     get_repositories,
     get_repository,
+    get_user_installations,
 )
 
 
@@ -209,6 +211,68 @@ index 1234567..abcdefg 100644
             mock_client.get.assert_called_once()
             call_args = mock_client.get.call_args
             assert call_args[1]["headers"]["Accept"] == "application/vnd.github.diff"
+
+
+class TestGetUserInstallations:
+    @pytest.mark.asyncio
+    async def test_get_user_installations_success(self, mock_token):
+        mock_response = {
+            "total_count": 1,
+            "installations": [{"id": 555, "account": {"login": "octocat"}}],
+        }
+
+        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value = mock_client
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.get.return_value = _make_mock_response(json_data=mock_response)
+
+            result = await get_user_installations(mock_token)
+
+            assert result == [{"id": 555, "account": {"login": "octocat"}}]
+            mock_client.get.assert_called_once()
+            call_args = mock_client.get.call_args
+            assert "/user/installations" in call_args[0][0]
+            assert call_args[1]["headers"]["Authorization"] == f"Bearer {mock_token}"
+
+
+class TestGetInstallationRepositories:
+    @pytest.mark.asyncio
+    async def test_get_installation_repositories_success(self, mock_token):
+        mock_response = {
+            "total_count": 1,
+            "repositories": [
+                {
+                    "id": 1,
+                    "name": "repo1",
+                    "full_name": "user/repo1",
+                    "private": False,
+                    "owner": {"login": "user"},
+                }
+            ],
+        }
+
+        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value = mock_client
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.get.return_value = _make_mock_response(json_data=mock_response)
+
+            result = await get_installation_repositories(mock_token)
+
+            assert result == [
+                {
+                    "id": 1,
+                    "name": "repo1",
+                    "full_name": "user/repo1",
+                    "private": False,
+                    "owner": {"login": "user"},
+                }
+            ]
+            mock_client.get.assert_called_once()
+            call_args = mock_client.get.call_args
+            assert "/installation/repositories" in call_args[0][0]
+            assert call_args[1]["headers"]["Authorization"] == f"Bearer {mock_token}"
 
 
 class TestGetPrComments:

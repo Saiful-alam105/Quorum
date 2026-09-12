@@ -95,6 +95,36 @@ async def get_pr_comments(token: str, owner: str, repo: str, pr_number: int) -> 
         return response.json()
 
 
+async def get_user_installations(token: str) -> list[dict]:
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"{GITHUB_API_BASE}/user/installations",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+            },
+            params={"per_page": 100},
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("installations", [])
+
+
+async def get_installation_repositories(token: str) -> list[dict]:
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"{GITHUB_API_BASE}/installation/repositories",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+            },
+            params={"per_page": 100},
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("repositories", [])
+
+
 async def create_pr_comment(
     token: str, owner: str, repo: str, pr_number: int, body: str
 ) -> dict:
