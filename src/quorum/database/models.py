@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     DateTime,
     Float,
@@ -22,11 +23,11 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    github_id: Mapped[int] = mapped_column(unique=True, index=True)
+    github_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
     username: Mapped[str] = mapped_column(String(255), index=True)
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     github_installation_id: Mapped[int | None] = mapped_column(
-        Integer, nullable=True
+        BigInteger, nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
@@ -38,7 +39,7 @@ class Repository(Base):
     __tablename__ = "repositories"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    github_id: Mapped[int] = mapped_column(unique=True, index=True)
+    github_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
     owner: Mapped[str] = mapped_column(String(255))
     name: Mapped[str] = mapped_column(String(255))
     full_name: Mapped[str] = mapped_column(String(512), unique=True, index=True)
@@ -56,7 +57,7 @@ class PullRequest(Base):
     __tablename__ = "pull_requests"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    github_id: Mapped[int] = mapped_column(unique=True, index=True)
+    github_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
     repository_id: Mapped[int] = mapped_column(ForeignKey("repositories.id"), index=True)
     number: Mapped[int] = mapped_column(Integer)
     title: Mapped[str] = mapped_column(String(500))

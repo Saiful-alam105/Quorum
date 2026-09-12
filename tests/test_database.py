@@ -1,5 +1,5 @@
 import pytest
-from sqlalchemy import create_engine, event
+from sqlalchemy import BigInteger, create_engine, event
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
@@ -56,6 +56,41 @@ class TestRepositoryStoreRetrieve:
         assert stored.owner == "octocat"
         assert stored.name == "hello-world"
         assert stored.is_private is False
+
+    def test_github_id_columns_are_bigint(self) -> None:
+        for column in (
+            User.__table__.c.github_id,
+            User.__table__.c.github_installation_id,
+            Repository.__table__.c.github_id,
+            PullRequest.__table__.c.github_id,
+        ):
+            assert isinstance(column.type, BigInteger), column
+
+    def test_large_github_id_stores_correctly(self, db_session: Session) -> None:
+        repo = Repository(
+            github_id=1367470649,
+            owner="octocat",
+            name="hello-world",
+            full_name="octocat/hello-world",
+            is_private=False,
+        )
+        db_session.add(repo)
+        db_session.commit()
+
+        pr = PullRequest(
+            github_id=4515237758,
+            repository_id=repo.id,
+            number=2,
+            title="demo: add demo file",
+            author="octocat",
+            state="open",
+        )
+        db_session.add(pr)
+        db_session.commit()
+
+        stored = db_session.get(PullRequest, pr.id)
+        assert stored is not None
+        assert stored.github_id == 4515237758
 
     def test_repository_full_name_is_unique(self, db_session: Session) -> None:
         _create_repository(db_session)
