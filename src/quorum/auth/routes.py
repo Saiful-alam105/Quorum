@@ -16,7 +16,9 @@ from quorum.auth.github_oauth import build_authorize_url, exchange_code, get_git
 from quorum.auth.sessions import create_session, delete_session, get_session
 from quorum.config import settings
 from quorum.database.base import get_db
-from quorum.database.repository import upsert_user
+from quorum.database.repository import upsert_repository, upsert_user
+from quorum.github.api import get_installation_repositories, get_user_installations
+from quorum.github.app_auth import get_installation_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -66,13 +68,41 @@ async def callback(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"OAuth failed: {e}")
 
-    upsert_user(
+    resolved_installation_id = installation_id
+    if resolved_installation_id is None:
+        try:
+            installations = await get_user_installations(access_token)
+            if installations:
+                resolved_installation_id = installations[0].get("id")
+        except Exception:
+            resolved_installation_id = None
+
+    saved_user = upsert_user(
         db,
         github_id=user.get("id"),
         username=user.get("login"),
         avatar_url=user.get("avatar_url"),
-        github_installation_id=installation_id,
+        github_installation_id=resolved_installation_id,
     )
+
+    if (
+        saved_user is not None
+        and resolved_installation_id is not None
+        and settings.github_app_id
+        and settings.github_app_private_key_path
+    ):
+        try:
+            install_auth = await get_installation_token(
+                settings.github_app_id,
+                settings.github_app_private_key_path,
+                resolved_installation_id,
+            )
+            install_token = install_auth.get("token")
+            if install_token:
+                for repo_data in await get_installation_repositories(install_token):
+                    upsert_repository(db, repo_data, user_id=saved_user.id)
+        except Exception:
+            pass
 
     session_token = create_session({
         "github_id": user.get("id"),
