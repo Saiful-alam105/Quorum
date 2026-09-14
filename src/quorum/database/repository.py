@@ -1,7 +1,18 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from quorum.database.models import PullRequest, Repository, User
+from quorum.database.models import (
+    AnalysisRun,
+    PullRequest,
+    Repository,
+    User,
+    utcnow,
+)
+
+STATUS_PENDING = "pending"
+STATUS_IN_PROGRESS = "in_progress"
+STATUS_COMPLETED = "completed"
+STATUS_FAILED = "failed"
 
 
 def upsert_user(
@@ -222,3 +233,62 @@ def get_pull_request_for_user(
         .join(Repository, PullRequest.repository_id == Repository.id)
         .where(PullRequest.id == pull_request_id, Repository.user_id == user_id)
     )
+
+
+def create_analysis_run(
+    db: Session, pull_request_id: int, status: str = STATUS_PENDING
+) -> AnalysisRun:
+    analysis_run = AnalysisRun(pull_request_id=pull_request_id, status=status)
+    db.add(analysis_run)
+    db.commit()
+    return analysis_run
+
+
+def get_analysis_run(db: Session, analysis_run_id: int) -> AnalysisRun | None:
+    return db.get(AnalysisRun, analysis_run_id)
+
+
+def list_analysis_runs_for_pull_request(
+    db: Session, pull_request_id: int
+) -> list[AnalysisRun]:
+    return list(
+        db.scalars(
+            select(AnalysisRun)
+            .where(AnalysisRun.pull_request_id == pull_request_id)
+            .order_by(AnalysisRun.id.desc())
+        )
+    )
+
+
+def mark_analysis_run_in_progress(
+    db: Session, analysis_run_id: int
+) -> AnalysisRun | None:
+    analysis_run = db.get(AnalysisRun, analysis_run_id)
+    if analysis_run is None:
+        return None
+    analysis_run.status = STATUS_IN_PROGRESS
+    analysis_run.started_at = utcnow()
+    db.commit()
+    return analysis_run
+
+
+def complete_analysis_run(
+    db: Session, analysis_run_id: int
+) -> AnalysisRun | None:
+    analysis_run = db.get(AnalysisRun, analysis_run_id)
+    if analysis_run is None:
+        return None
+    analysis_run.status = STATUS_COMPLETED
+    analysis_run.completed_at = utcnow()
+    db.commit()
+    return analysis_run
+
+
+def fail_analysis_run(db: Session, analysis_run_id: int) -> AnalysisRun | None:
+    analysis_run = db.get(AnalysisRun, analysis_run_id)
+    if analysis_run is None:
+        return None
+    analysis_run.status = STATUS_FAILED
+    analysis_run.completed_at = utcnow()
+    db.commit()
+    return analysis_run
