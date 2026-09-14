@@ -8,6 +8,8 @@ from quorum.auth.sessions import create_session
 from quorum.database.base import Base, get_db
 from quorum.database.models import PullRequest, Repository, User
 from quorum.main import app
+import quorum.config as config_module
+import quorum.github.repo_sync as repo_sync_module
 
 
 @pytest.fixture
@@ -395,3 +397,63 @@ def test_api_pull_request_not_owned(
         f"/api/pull-requests/{other_pr.id}", **_auth(client, session_token)
     )
     assert response.status_code == 404
+
+
+def test_api_repositories_syncs_from_github_on_refresh(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user.github_installation_id = 555
+    db_session.commit()
+
+    monkeypatch.setattr(config_module.settings, "github_app_id", "test-app-id")
+    monkeypatch.setattr(
+        config_module.settings, "github_app_private_key_path", "test-key.pem"
+    )
+
+    kept = Repository(
+        github_id=1001,
+        owner="quorum-dev",
+        name="kept-repo",
+        full_name="quorum-dev/kept-repo",
+        is_private=False,
+        user_id=user.id,
+    )
+    stale = Repository(
+        github_id=1002,
+        owner="quorum-dev",
+        name="stale-repo",
+        full_name="quorum-dev/stale-repo",
+        is_private=False,
+        user_id=user.id,
+    )
+    db_session.add(kept)
+    db_session.add(stale)
+    db_session.commit()
+
+    async def mock_installation_token(app_id: str, key_path: str, installation_id: int) -> dict:
+        return {"token": "install-token"}
+
+    async def mock_installation_repos(token: str) -> list:
+        return [
+            {
+                "id": 1001,
+                "name": "kept-repo",
+                "full_name": "quorum-dev/kept-repo",
+                "private": False,
+                "owner": {"login": "quorum-dev"},
+            }
+        ]
+
+    monkeypatch.setattr(repo_sync_module, "get_installation_token", mock_installation_token)
+    monkeypatch.setattr(
+        repo_sync_module, "get_installation_repositories", mock_installation_repos
+    )
+
+    response = client.get("/api/repositories", **_auth(client, session_token))
+    assert response.status_code == 200
+    data = response.json()
+    assert [item["full_name"] for item in data] == ["quorum-dev/kept-repo"]

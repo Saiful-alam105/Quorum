@@ -9,7 +9,7 @@ from quorum.api.schemas import (
 )
 from quorum.auth.sessions import get_session
 from quorum.database.base import get_db
-from quorum.database.models import PullRequest
+from quorum.database.models import PullRequest, User
 from quorum.database.repository import (
     get_pull_request_for_user,
     get_repository_for_user,
@@ -18,6 +18,7 @@ from quorum.database.repository import (
     list_repositories_for_user,
     list_repository_pull_requests_for_user,
 )
+from quorum.github.repo_sync import sync_user_repositories
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -52,11 +53,14 @@ def read_current_user(session: str | None = Cookie(default=None)) -> UserOut:
 
 
 @router.get("/repositories", response_model=list[RepositoryOut])
-def read_repositories(
+async def read_repositories(
     session: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ) -> list[RepositoryOut]:
     user_id = _current_user_id(db, session)
+    user = db.get(User, user_id)
+    if user is not None:
+        await sync_user_repositories(db, user)
     return [
         RepositoryOut.model_validate(repo)
         for repo in list_repositories_for_user(db, user_id)
