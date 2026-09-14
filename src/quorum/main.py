@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,7 @@ from quorum.database.repository import (
     upsert_repository,
 )
 from quorum.github.webhook import verify_signature
+from quorum.orchestrator.runner import run_analysis_for_pull_request
 
 app = FastAPI(
     title="Quorum",
@@ -51,7 +52,9 @@ def health() -> dict[str, str]:
 
 @app.post("/webhooks/github")
 async def github_webhook(
-    request: Request, db: Session = Depends(get_db)
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
 ) -> JSONResponse:
     raw_body = await request.body()
     signature = request.headers.get("X-Hub-Signature-256")
@@ -101,7 +104,13 @@ async def github_webhook(
             user_id=owner.id if owner is not None else None,
         )
         if repository is not None:
-            upsert_pull_request(db, payload.get("pull_request") or {}, repository)
+            pull_request = upsert_pull_request(
+                db, payload.get("pull_request") or {}, repository
+            )
+            if pull_request is not None:
+                background_tasks.add_task(
+                    run_analysis_for_pull_request, pull_request.id
+                )
 
     return JSONResponse(
         status_code=202,

@@ -11,6 +11,7 @@ from quorum.database.base import Base, get_db
 from quorum.database.models import PullRequest, Repository, User
 from quorum.database.repository import get_pull_request, get_repository_by_full_name
 from quorum.main import app
+import quorum.main as main_module
 
 
 def _webhook_payload(action: str = "opened", title: str = "Add authentication") -> bytes:
@@ -58,7 +59,12 @@ def db_session():
 
 
 @pytest.fixture
-def client(db_session: Session):
+def client(db_session: Session, monkeypatch: pytest.MonkeyPatch):
+    async def fake_runner(pull_request_id: int, db=None, stages=None) -> int | None:
+        return None
+
+    monkeypatch.setattr(main_module, "run_analysis_for_pull_request", fake_runner)
+
     def override_get_db():
         yield db_session
 
@@ -98,6 +104,29 @@ class TestWebhookPersistence:
         assert pull_request.state == "open"
         assert pull_request.repository is not None
         assert pull_request.repository.full_name == "octocat/hello-world"
+
+    def test_webhook_schedules_analysis_in_background(
+        self, client: TestClient, db_session: Session, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        scheduled: list[int] = []
+
+        async def recording_runner(
+            pull_request_id: int, db=None, stages=None
+        ) -> int | None:
+            scheduled.append(pull_request_id)
+            return None
+
+        monkeypatch.setattr(main_module, "run_analysis_for_pull_request", recording_runner)
+
+        body = _webhook_payload()
+        response = client.post(
+            "/webhooks/github", headers=_webhook_headers(body), content=body
+        )
+        assert response.status_code == 202
+
+        pull_request = get_pull_request(db_session, 301)
+        assert pull_request is not None
+        assert scheduled == [pull_request.id]
 
     def test_webhook_synchronize_updates_existing_pull_request(
         self, client: TestClient, db_session: Session
