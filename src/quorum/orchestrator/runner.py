@@ -7,11 +7,12 @@ background execution never touches the request-scoped session.
 """
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable
 
 from sqlalchemy.orm import Session
 
+from quorum.analysis.diff import ChangedFile
 from quorum.database.base import SessionLocal
 from quorum.database.models import PullRequest, Repository, User
 from quorum.database.repository import (
@@ -37,6 +38,7 @@ class AnalysisContext:
     repo: str
     pr_number: int
     installation_id: int | None
+    changed_files: list[ChangedFile] = field(default_factory=list)
 
 
 def _build_context(db: Session, pull_request: PullRequest) -> AnalysisContext:
@@ -97,3 +99,8 @@ async def run_analysis_for_pull_request(
     finally:
         if owns_session:
             session.close()
+
+
+from quorum.orchestrator.stages import extract_diff_stage
+
+STAGES.append(extract_diff_stage)
