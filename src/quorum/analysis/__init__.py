@@ -1,0 +1,1 @@
+"""Analysis package: PR diff parsing and, in later phases, AST/context analysis."""
