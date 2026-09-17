@@ -69,7 +69,9 @@ class TestEmptyPipeline:
         self, db_session: Session
     ) -> None:
         _, _, pr = _create_pr_with_user(db_session)
-        run_id = await run_analysis_for_pull_request(pr.id, db=db_session)
+        run_id = await run_analysis_for_pull_request(
+            pr.id, db=db_session, stages=[]
+        )
         assert run_id is not None
         run = get_analysis_run(db_session, run_id)
         assert run is not None
