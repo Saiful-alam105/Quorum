@@ -44,6 +44,7 @@ class ContextFile:
     status: str
     old_path: str | None = None
     hunks: list[ContextHunk] = field(default_factory=list)
+    truncated_hunks: int = 0
 
 
 @dataclass

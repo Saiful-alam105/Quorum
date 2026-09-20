@@ -165,6 +165,7 @@ def _trim_file_to_budget(
             )
         )
     kept_hunks = _fit_hunks(trimmed_hunks, max_characters)
+    dropped_hunks = len(trimmed_hunks) - len(kept_hunks)
     chars = sum(_hunk_chars(hunk) for hunk in kept_hunks)
     if chars > max_characters:
         fitted = []
@@ -185,6 +186,7 @@ def _trim_file_to_budget(
         status=file.status,
         old_path=file.old_path,
         hunks=kept_hunks,
+        truncated_hunks=dropped_hunks,
     )
 
 
