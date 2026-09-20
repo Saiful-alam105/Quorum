@@ -12,6 +12,7 @@ from typing import Callable
 
 from sqlalchemy.orm import Session
 
+from quorum.analysis.context import PreparedContext
 from quorum.analysis.diff import ChangedFile
 from quorum.database.base import SessionLocal
 from quorum.database.models import PullRequest, Repository, User
@@ -39,6 +40,7 @@ class AnalysisContext:
     pr_number: int
     installation_id: int | None
     changed_files: list[ChangedFile] = field(default_factory=list)
+    prepared_context: PreparedContext | None = None
 
 
 def _build_context(db: Session, pull_request: PullRequest) -> AnalysisContext:
@@ -101,6 +103,7 @@ async def run_analysis_for_pull_request(
             session.close()
 
 
-from quorum.orchestrator.stages import extract_diff_stage
+from quorum.orchestrator.stages import build_context_stage, extract_diff_stage
 
 STAGES.append(extract_diff_stage)
+STAGES.append(build_context_stage)
