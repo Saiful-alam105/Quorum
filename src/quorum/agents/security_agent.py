@@ -13,6 +13,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from quorum.analysis.context import PreparedContext
+from quorum.analysis.diff import ChangedFile
 from quorum.analysis.semgrep import SemgrepFinding
 from quorum.llm.base import LLMError, LLMProvider
 
@@ -163,3 +164,30 @@ class SecurityAgent:
             raise SecurityAgentError(
                 f"security agent produced invalid output: {exc}"
             ) from exc
+
+
+def filter_unsupported_findings(
+    review: SecurityAgentReview,
+    semgrep_findings: list[SemgrepFinding],
+    changed_files: list[ChangedFile],
+) -> SecurityAgentReview:
+    """Drop agent findings that do not trace to input evidence.
+
+    A finding is kept only if its file is a changed file, the file has Semgrep
+    evidence, and — when a line number is present — the (file, line) matches a
+    Semgrep finding. This enforces "no unsupported claims" deterministically.
+    """
+    changed_paths = {file.path for file in changed_files}
+    evidence_files = {finding.file for finding in semgrep_findings}
+    evidence_lines = {(finding.file, finding.line) for finding in semgrep_findings}
+
+    kept = []
+    for finding in review.findings:
+        if finding.file not in changed_paths:
+            continue
+        if finding.file not in evidence_files:
+            continue
+        if finding.line is not None and (finding.file, finding.line) not in evidence_lines:
+            continue
+        kept.append(finding)
+    return SecurityAgentReview(findings=kept)
