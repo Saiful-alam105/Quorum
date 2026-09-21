@@ -9,7 +9,11 @@ assembly are added in later chunks of this phase.
 """
 
 import json
+import subprocess
 from dataclasses import dataclass
+from pathlib import Path
+
+from quorum.config import settings
 
 _SEVERITY_MAP = {"ERROR": "high", "WARNING": "medium", "INFO": "low"}
 
@@ -18,6 +22,14 @@ _CONFIDENCE_MAP = {"HIGH": 1.0, "MEDIUM": 0.7, "LOW": 0.4}
 
 class SemgrepParseError(Exception):
     """Raised when Semgrep JSON output cannot be parsed."""
+
+
+class SemgrepError(Exception):
+    """Raised when the Semgrep CLI cannot run successfully."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
 
 
 @dataclass
@@ -104,3 +116,48 @@ def parse_semgrep_json(raw: str, path_prefix: str = "") -> list[SemgrepFinding]:
             )
         )
     return findings
+
+
+def run_semgrep(
+    scan_dir: str | Path,
+    ruleset: str | None = None,
+    timeout_seconds: int | None = None,
+) -> str:
+    """Run ``semgrep scan --json`` over ``scan_dir`` and return raw JSON text.
+
+    Missing binary, timeout, and non-zero exit codes raise
+    :class:`SemgrepError`. The ruleset and timeout default to the configured
+    values.
+    """
+    resolved_ruleset = settings.semgrep_ruleset if ruleset is None else ruleset
+    resolved_timeout = (
+        settings.semgrep_timeout_seconds if timeout_seconds is None else timeout_seconds
+    )
+    command = [
+        "semgrep",
+        "scan",
+        "--json",
+        "--config",
+        resolved_ruleset,
+        str(scan_dir),
+    ]
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=resolved_timeout,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise SemgrepError("semgrep executable not found") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise SemgrepError(
+            f"semgrep scan timed out after {resolved_timeout}s"
+        ) from exc
+    if result.returncode != 0:
+        raise SemgrepError(
+            result.stderr.strip() or f"semgrep exited with code {result.returncode}"
+        )
+    return result.stdout

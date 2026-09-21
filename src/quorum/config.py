@@ -29,6 +29,10 @@ class Settings:
         self.context_min_context_lines: int = int(
             os.getenv("CONTEXT_MIN_CONTEXT_LINES", "2")
         )
+        self.semgrep_ruleset: str = os.getenv("SEMGREP_RULESET", "p/security-audit")
+        self.semgrep_timeout_seconds: int = int(
+            os.getenv("SEMGREP_TIMEOUT_SECONDS", "120")
+        )
 
 
 settings = Settings()
