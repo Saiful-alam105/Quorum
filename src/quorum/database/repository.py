@@ -5,6 +5,7 @@ from quorum.database.models import (
     AnalysisRun,
     PullRequest,
     Repository,
+    SecurityFinding,
     User,
     utcnow,
 )
@@ -292,3 +293,28 @@ def fail_analysis_run(db: Session, analysis_run_id: int) -> AnalysisRun | None:
     analysis_run.completed_at = utcnow()
     db.commit()
     return analysis_run
+
+
+def create_security_findings(
+    db: Session, analysis_run_id: int, findings: list[dict]
+) -> list[SecurityFinding]:
+    """Persist security findings for an analysis run and return the rows."""
+    if not findings:
+        return []
+    rows = [
+        SecurityFinding(
+            analysis_run_id=analysis_run_id,
+            severity=finding.get("severity", ""),
+            title=finding.get("title", ""),
+            file=finding.get("file", ""),
+            line=finding.get("line"),
+            evidence=finding.get("evidence", ""),
+            explanation=finding.get("explanation"),
+            confidence=finding.get("confidence"),
+            rule_id=finding.get("rule_id"),
+        )
+        for finding in findings
+    ]
+    db.add_all(rows)
+    db.commit()
+    return rows

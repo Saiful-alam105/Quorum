@@ -98,6 +98,7 @@ class SecurityFinding(Base):
     analysis_run_id: Mapped[int] = mapped_column(
         ForeignKey("analysis_runs.id"), index=True
     )
+    rule_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     severity: Mapped[str] = mapped_column(String(20))
     title: Mapped[str] = mapped_column(String(500))
     file: Mapped[str] = mapped_column(String(500))

@@ -1,8 +1,11 @@
+import base64
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from quorum.github.api import (
     create_pr_comment,
     get_authenticated_user,
+    get_file_contents,
     get_installation_repositories,
     get_pr_comments,
     get_pr_diff,
@@ -211,6 +214,53 @@ index 1234567..abcdefg 100644
             mock_client.get.assert_called_once()
             call_args = mock_client.get.call_args
             assert call_args[1]["headers"]["Accept"] == "application/vnd.github.diff"
+
+
+class TestGetFileContents:
+    @pytest.mark.asyncio
+    async def test_get_file_contents_decodes_base64(
+        self, mock_token, mock_owner, mock_repo
+    ):
+        content = "def hello():\n    return 1\n"
+        encoded = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+        mock_response = {"content": encoded, "encoding": "base64"}
+
+        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value = mock_client
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.get.return_value = _make_mock_response(json_data=mock_response)
+
+            result = await get_file_contents(
+                mock_token, mock_owner, mock_repo, "src/app.py", "abc123"
+            )
+
+            assert result == content
+            mock_client.get.assert_called_once()
+            call_args = mock_client.get.call_args
+            assert (
+                f"/repos/{mock_owner}/{mock_repo}/contents/src/app.py"
+                in call_args[0][0]
+            )
+            assert call_args[1]["params"] == {"ref": "abc123"}
+            assert call_args[1]["headers"]["Authorization"] == f"Bearer {mock_token}"
+
+    @pytest.mark.asyncio
+    async def test_get_file_contents_empty_content(
+        self, mock_token, mock_owner, mock_repo
+    ):
+        mock_response = {"content": "", "encoding": "base64"}
+
+        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value = mock_client
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.get.return_value = _make_mock_response(json_data=mock_response)
+
+            result = await get_file_contents(
+                mock_token, mock_owner, mock_repo, "empty.txt", "abc123"
+            )
+            assert result == ""
 
 
 class TestGetUserInstallations:

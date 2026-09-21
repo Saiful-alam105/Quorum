@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from quorum.analysis.context import PreparedContext
 from quorum.analysis.diff import ChangedFile
+from quorum.analysis.semgrep import SemgrepFinding
 from quorum.database.base import SessionLocal
 from quorum.database.models import PullRequest, Repository, User
 from quorum.database.repository import (
@@ -41,6 +42,8 @@ class AnalysisContext:
     installation_id: int | None
     changed_files: list[ChangedFile] = field(default_factory=list)
     prepared_context: PreparedContext | None = None
+    analysis_run_id: int | None = None
+    semgrep_findings: list[SemgrepFinding] = field(default_factory=list)
 
 
 def _build_context(db: Session, pull_request: PullRequest) -> AnalysisContext:
@@ -85,6 +88,7 @@ async def run_analysis_for_pull_request(
         mark_analysis_run_in_progress(session, analysis_run.id)
 
         context = _build_context(session, pull_request)
+        context.analysis_run_id = analysis_run.id
         pipeline = STAGES if stages is None else stages
 
         try:
@@ -103,7 +107,12 @@ async def run_analysis_for_pull_request(
             session.close()
 
 
-from quorum.orchestrator.stages import build_context_stage, extract_diff_stage
+from quorum.orchestrator.stages import (
+    build_context_stage,
+    extract_diff_stage,
+    semgrep_stage,
+)
 
 STAGES.append(extract_diff_stage)
 STAGES.append(build_context_stage)
+STAGES.append(semgrep_stage)
