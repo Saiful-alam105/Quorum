@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from quorum.analysis.context import PreparedContext
 from quorum.analysis.semgrep import SemgrepFinding
+from quorum.llm.base import LLMError, LLMProvider
 
 SEVERITY_VALUES: tuple[str, ...] = ("high", "medium", "low")
 
@@ -120,3 +121,45 @@ def build_security_prompt(
     sections.append(_PROMPT_INSTRUCTIONS)
 
     return "\n".join(sections)
+
+
+class SecurityAgentError(Exception):
+    """Raised when the Security Agent cannot produce a valid review."""
+
+
+class SecurityAgent:
+    """Runs the security review using an injected :class:`LLMProvider`."""
+
+    def __init__(self, llm: LLMProvider) -> None:
+        self.llm = llm
+
+    async def review(
+        self,
+        prepared_context: PreparedContext | None,
+        semgrep_findings: list[SemgrepFinding],
+        owner: str = "",
+        repo: str = "",
+        pr_number: int | None = None,
+    ) -> SecurityAgentReview:
+        """Review evidence and return a validated review.
+
+        With no Semgrep evidence the LLM is not called and an empty review is
+        returned — the agent must not invent findings without evidence.
+        """
+        if not semgrep_findings:
+            return SecurityAgentReview(findings=[])
+
+        prompt = build_security_prompt(
+            prepared_context, semgrep_findings, owner, repo, pr_number
+        )
+        try:
+            raw = await self.llm.generate(prompt)
+        except LLMError as exc:
+            raise SecurityAgentError(f"security agent LLM call failed: {exc}") from exc
+
+        try:
+            return parse_security_review(raw)
+        except SecurityAgentParseError as exc:
+            raise SecurityAgentError(
+                f"security agent produced invalid output: {exc}"
+            ) from exc
