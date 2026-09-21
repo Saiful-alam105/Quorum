@@ -73,11 +73,13 @@ def _map_confidence(value: object) -> float | None:
 
 def _strip_prefix(path: str, path_prefix: str) -> str:
     if not path_prefix:
-        return path
+        return path.replace("\\", "/")
     prefix = path_prefix.rstrip("/\\")
     if prefix and path.startswith(prefix):
-        return path[len(prefix):].lstrip("/\\")
-    return path
+        stripped = path[len(prefix):].lstrip("/\\")
+    else:
+        stripped = path
+    return stripped.replace("\\", "/")
 
 
 def parse_semgrep_json(raw: str, path_prefix: str = "") -> list[SemgrepFinding]:
@@ -205,3 +207,11 @@ def _unsafe_path(path: str) -> bool:
     if pure.is_absolute():
         return True
     return any(segment == ".." for segment in pure.parts)
+
+
+def has_scannable_files(changed_files: list[ChangedFile]) -> bool:
+    """Return whether any changed file can be fetched for a Semgrep scan."""
+    return any(
+        file.status in _SCANNABLE_STATUSES and not _unsafe_path(file.path)
+        for file in changed_files
+    )

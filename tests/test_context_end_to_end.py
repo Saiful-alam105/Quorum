@@ -88,6 +88,31 @@ def _fake_fetch(diff_text: str):
     return fake
 
 
+def _fake_fetch_pull_request():
+    async def fake(
+        installation_id: int, owner: str, repo: str, pr_number: int
+    ) -> dict:
+        return {"head": {"sha": "abc123"}}
+
+    return fake
+
+
+def _fake_fetch_file_content():
+    async def fake(
+        installation_id: int, owner: str, repo: str, path: str, ref: str
+    ) -> str:
+        return "def f():\n    return 1\n"
+
+    return fake
+
+
+def _fake_run_semgrep(raw: str):
+    def fake(scan_dir, ruleset=None, timeout_seconds=None) -> str:
+        return raw
+
+    return fake
+
+
 async def _run_pipeline(
     db: Session,
     pr_id: int,
@@ -121,6 +146,17 @@ class TestEndToEnd:
         pr = _create_pr_with_user(db_session)
         monkeypatch.setattr(
             "quorum.orchestrator.stages.fetch_pr_diff", _fake_fetch(SMALL_DIFF_TEXT)
+        )
+        monkeypatch.setattr(
+            "quorum.orchestrator.stages.fetch_pull_request",
+            _fake_fetch_pull_request(),
+        )
+        monkeypatch.setattr(
+            "quorum.orchestrator.stages.fetch_file_content",
+            _fake_fetch_file_content(),
+        )
+        monkeypatch.setattr(
+            "quorum.orchestrator.stages.run_semgrep", _fake_run_semgrep("{}")
         )
         run_id = await run_analysis_for_pull_request(pr.id, db=db_session)
         assert run_id is not None

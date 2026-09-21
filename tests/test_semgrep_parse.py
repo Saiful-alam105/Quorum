@@ -146,6 +146,11 @@ class TestPathPrefix:
         findings = parse_semgrep_json(_raw(entry), path_prefix="C:/tmp/quorum_scan")
         assert findings[0].file == "other/src/app.py"
 
+    def test_prefix_with_backslashes_normalized(self) -> None:
+        entry = _finding(path="C:\\tmp\\quorum_scan\\src\\app.py")
+        findings = parse_semgrep_json(_raw(entry), path_prefix="C:\\tmp\\quorum_scan")
+        assert findings[0].file == "src/app.py"
+
     def test_no_prefix_keeps_path(self) -> None:
         findings = parse_semgrep_json(_raw(_finding()))
         assert findings[0].file == "src/app.py"
