@@ -1,19 +1,29 @@
-"""Semgrep security analysis: finding contract and JSON parsing (Phase 8).
+"""Semgrep security analysis: finding contract, JSON parsing, scanning, and
+scan-directory assembly (Phase 8).
 
 This module converts Semgrep ``--json`` output into structured
-:class:`SemgrepFinding` records. The parser is intentionally pure (no network,
-no subprocess, no database) so later phases (Security Agent, dashboard) consume
-the same structure and the LLM can never invent a finding — every finding maps
-back to real Semgrep evidence. The Semgrep CLI runner and the scan-directory
-assembly are added in later chunks of this phase.
+:class:`SemgrepFinding` records, runs the Semgrep CLI, and builds the
+temporary scan directory from a pull request's changed files. The parser is
+intentionally pure so later phases (Security Agent, dashboard) consume the
+same structure and the LLM can never invent a finding — every finding maps
+back to real Semgrep evidence.
 """
 
 import json
 import subprocess
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePath
+from typing import Awaitable, Callable
 
+from quorum.analysis.diff import (
+    STATUS_ADDED,
+    STATUS_MODIFIED,
+    STATUS_RENAMED,
+    ChangedFile,
+)
 from quorum.config import settings
+
+_SCANNABLE_STATUSES = {STATUS_ADDED, STATUS_MODIFIED, STATUS_RENAMED}
 
 _SEVERITY_MAP = {"ERROR": "high", "WARNING": "medium", "INFO": "low"}
 
@@ -161,3 +171,37 @@ def run_semgrep(
             result.stderr.strip() or f"semgrep exited with code {result.returncode}"
         )
     return result.stdout
+
+
+async def build_scan_directory(
+    changed_files: list[ChangedFile],
+    fetch_content: Callable[[str, str], Awaitable[str]],
+    head_sha: str,
+    scan_dir: str | Path,
+) -> Path:
+    """Write the full contents of scannable changed files into ``scan_dir``.
+
+    Only added, modified, and renamed files are fetched; deleted and binary
+    files are skipped. Paths that could escape ``scan_dir`` (absolute paths or
+    ``..`` segments) are skipped so a malicious repository cannot write outside
+    the temporary directory. The caller owns the directory lifecycle.
+    """
+    root = Path(scan_dir)
+    root.mkdir(parents=True, exist_ok=True)
+    for file in changed_files:
+        if file.status not in _SCANNABLE_STATUSES:
+            continue
+        if _unsafe_path(file.path):
+            continue
+        content = await fetch_content(file.path, head_sha)
+        target = root / file.path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+    return root
+
+
+def _unsafe_path(path: str) -> bool:
+    pure = PurePath(path)
+    if pure.is_absolute():
+        return True
+    return any(segment == ".." for segment in pure.parts)
