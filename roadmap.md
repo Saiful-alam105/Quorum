@@ -141,8 +141,8 @@ All core technologies should be free, open-source, or locally runnable for the s
 | Styling | Tailwind CSS | UI styling |
 | Components | shadcn/ui | Reusable accessible UI components |
 | API communication | REST/HTTP | Frontend ↔ FastAPI communication |
-| LLM runtime | Ollama | Local LLM inference |
-| Coding model | Qwen2.5-Coder | Code reasoning and test generation |
+| LLM runtime | OpenAI API (active); Ollama optional/local (not in use) | LLM inference (hosted) |
+| Coding model | GPT-5.6 Terra (security/test), GPT-5.6 Luna (chat); Qwen2.5-Coder optional (Ollama) | Code reasoning and test generation |
 | GitHub | GitHub App + Webhooks + REST API | PR integration |
 | Security | Semgrep Community CLI | Static security evidence |
 | Code analysis | Python `ast` | Structural analysis of changed Python code |
@@ -165,14 +165,21 @@ Keep the LLM behind an interface:
 ```text
 LLMProvider
     │
-    └── OllamaProvider
-            │
+    ├── OpenAIProvider        (active)
+    │       ├── gpt-5.6-terra   (Security Agent, Test Writer)
+    │       └── gpt-5.6-luna    (Ask Quorum)
+    │
+    └── OllamaProvider        (optional local, not in use)
             └── Qwen2.5-Coder
 ```
 
-This allows the model to be replaced later without rewriting the agents.
+Provider selection and per-role models are configuration-driven (`LLM_PROVIDER`,
+`OPENAI_SECURITY_MODEL`/`OPENAI_TEST_MODEL`/`OPENAI_CHAT_MODEL`, `OLLAMA_MODEL`).
+Agents depend on the `LLMProvider` abstraction, never on a concrete provider.
 
-Do not add paid LLM APIs to the MVP.
+OpenAI is the active provider. A single API key authenticates all models; it is
+never committed, logged, or sent to the frontend. Ollama remains an optional
+local fallback in code but is not currently used.
 
 ---
 
@@ -297,11 +304,11 @@ This section reflects the actual repository state (verified against the source, 
 | Phase 2 — GitHub App + Authentication | Implemented; OAuth login/callback/me/logout and App private-key/JWT verified manually against GitHub; webhook signature covered by automated tests (live webhook delivery via tunnel not yet exercised) |
 | Phase 3 — GitHub API Layer | Implemented (all 9 functions) with mocked tests; not yet consumed by the pipeline |
 | Phase 4 — PostgreSQL | Implemented and verified against local PostgreSQL (migration `303b9ed314cd` applied; tables/PKs/FKs confirmed) |
-| Phase 5 — Orchestrator | Not started |
-| Phase 6 — Diff + AST Analysis | Not started |
-| Phase 7 — Context Window Management | Not started |
-| Phase 8 — Semgrep Security Analysis | Not started |
-| Phase 9 — LLM Layer | Not started |
+| Phase 5 — Orchestrator | Implemented (runner, STAGES registry, lifecycle; webhook scheduling) |
+| Phase 6 — Diff Analysis | Implemented (diff parsing + GitHub diff service); AST portion pending |
+| Phase 7 — Context Window Management | Implemented (representation, sizing, prioritization, truncation, orchestrator stage) |
+| Phase 8 — Semgrep Security Analysis | Implemented (parser, CLI runner, scan-directory assembly, content service, persistence, orchestrator stage) |
+| Phase 9 — LLM Layer | Implemented (LLMProvider interface, OpenAIProvider active with GPT-5.6 Terra/Luna, OllamaProvider dormant, provider factory, role-model configuration) |
 | Phase 10 — Security Review Agent | Not started |
 | Phase 11 — Docker Sandbox | Not started |
 | Phase 12 — Test Writer Agent | Not started |
@@ -624,6 +631,8 @@ Create:
 ```text
 llm/base.py
 llm/ollama_provider.py
+llm/openai_provider.py
+llm/factory.py
 ```
 
 Interface:
@@ -634,11 +643,13 @@ class LLMProvider:
         ...
 ```
 
-Run the selected coding model through Ollama.
+Run the selected coding model through the configured provider (OpenAI active;
+Ollama optional/local). Provider selection and per-role model choices are
+configuration-driven.
 
 Definition of done:
 
-Python can send a bounded prompt to Ollama and receive a structured model response.
+Python can send a bounded prompt to a configured LLM provider and receive a structured model response.
 
 ---
 

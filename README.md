@@ -71,8 +71,18 @@ The frontend communicates **only** with the FastAPI REST API. It never accesses 
 | Data | PostgreSQL, SQLAlchemy, Alembic |
 | GitHub | GitHub App, webhooks, REST API (`httpx`, `PyJWT`) |
 | Frontend | React, TypeScript, Vite, Tailwind CSS, shadcn/ui |
-| Analysis (planned) | Semgrep, Ollama (Qwen2.5-Coder), Docker sandbox |
+| Analysis (planned) | Semgrep, LLM layer (OpenAI), Docker sandbox |
 | Tests | pytest, pytest-cov |
+
+### LLM providers
+
+Quorum talks to the LLM through a common `LLMProvider` interface. The active provider is OpenAI (`LLM_PROVIDER=openai`), with per-role models:
+
+- Security Agent → `gpt-5.6-terra` (GPT-5.6 Terra)
+- Test Writer → `gpt-5.6-terra` (GPT-5.6 Terra)
+- Ask Quorum → `gpt-5.6-luna` (GPT-5.6 Luna)
+
+A single `OPENAI_API_KEY` authenticates all roles. The key is server-side only and is never sent to the frontend. A local Ollama provider also exists in the codebase but is not in use.
 
 ## Project Structure
 
@@ -134,6 +144,7 @@ Configure at least:
 - `GITHUB_REDIRECT_URI` — OAuth callback (default `http://localhost:8000/auth/callback`).
 - `FRONTEND_URL` — frontend origin the OAuth callback redirects to after login (default `http://localhost:5173`).
 - `DATABASE_URL` — PostgreSQL connection string, e.g. `postgresql+psycopg://USER:PASSWORD@localhost:5432/quorum`.
+- `LLM_PROVIDER` — `openai` (default) or `ollama` (optional local, not in use). With OpenAI, set `OPENAI_API_KEY` (see `.env.example`). Never commit the key.
 
 ### 5. PostgreSQL
 

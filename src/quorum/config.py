@@ -33,6 +33,34 @@ class Settings:
         self.semgrep_timeout_seconds: int = int(
             os.getenv("SEMGREP_TIMEOUT_SECONDS", "120")
         )
+        self.ollama_base_url: str = os.getenv(
+            "OLLAMA_BASE_URL", "http://localhost:11434"
+        )
+        self.ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
+        self.ollama_timeout_seconds: int = int(
+            os.getenv("OLLAMA_TIMEOUT_SECONDS", "300")
+        )
+        self.ollama_temperature: float = float(
+            os.getenv("OLLAMA_TEMPERATURE", "0.0")
+        )
+        self.llm_provider: str = os.getenv("LLM_PROVIDER", "openai")
+        self.openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
+        self.openai_base_url: str = os.getenv(
+            "OPENAI_BASE_URL", "https://api.openai.com/v1"
+        )
+        self.openai_model: str = os.getenv("OPENAI_MODEL", "gpt-5.6-terra")
+        self.openai_security_model: str = os.getenv(
+            "OPENAI_SECURITY_MODEL", "gpt-5.6-terra"
+        )
+        self.openai_test_model: str = os.getenv(
+            "OPENAI_TEST_MODEL", "gpt-5.6-terra"
+        )
+        self.openai_chat_model: str = os.getenv(
+            "OPENAI_CHAT_MODEL", "gpt-5.6-luna"
+        )
+        self.openai_timeout_seconds: int = int(
+            os.getenv("OPENAI_TIMEOUT_SECONDS", "300")
+        )
 
 
 settings = Settings()
