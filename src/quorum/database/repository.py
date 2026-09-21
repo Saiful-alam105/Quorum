@@ -295,26 +295,29 @@ def fail_analysis_run(db: Session, analysis_run_id: int) -> AnalysisRun | None:
     return analysis_run
 
 
+def _security_finding_from_dict(
+    analysis_run_id: int, finding: dict
+) -> SecurityFinding:
+    return SecurityFinding(
+        analysis_run_id=analysis_run_id,
+        severity=finding.get("severity", ""),
+        title=finding.get("title", ""),
+        file=finding.get("file", ""),
+        line=finding.get("line"),
+        evidence=finding.get("evidence", ""),
+        explanation=finding.get("explanation"),
+        confidence=finding.get("confidence"),
+        rule_id=finding.get("rule_id"),
+    )
+
+
 def create_security_findings(
     db: Session, analysis_run_id: int, findings: list[dict]
 ) -> list[SecurityFinding]:
     """Persist security findings for an analysis run and return the rows."""
     if not findings:
         return []
-    rows = [
-        SecurityFinding(
-            analysis_run_id=analysis_run_id,
-            severity=finding.get("severity", ""),
-            title=finding.get("title", ""),
-            file=finding.get("file", ""),
-            line=finding.get("line"),
-            evidence=finding.get("evidence", ""),
-            explanation=finding.get("explanation"),
-            confidence=finding.get("confidence"),
-            rule_id=finding.get("rule_id"),
-        )
-        for finding in findings
-    ]
+    rows = [_security_finding_from_dict(analysis_run_id, f) for f in findings]
     db.add_all(rows)
     db.commit()
     return rows
@@ -323,11 +326,16 @@ def create_security_findings(
 def replace_security_findings(
     db: Session, analysis_run_id: int, findings: list[dict]
 ) -> list[SecurityFinding]:
-    """Replace all security findings for a run with the curated set."""
+    """Replace all security findings for a run with the curated set (atomic)."""
     db.execute(
         delete(SecurityFinding).where(
             SecurityFinding.analysis_run_id == analysis_run_id
         )
     )
+    if not findings:
+        db.commit()
+        return []
+    rows = [_security_finding_from_dict(analysis_run_id, f) for f in findings]
+    db.add_all(rows)
     db.commit()
-    return create_security_findings(db, analysis_run_id, findings)
+    return rows
