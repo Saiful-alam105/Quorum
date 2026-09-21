@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from quorum.database.models import (
@@ -318,3 +318,16 @@ def create_security_findings(
     db.add_all(rows)
     db.commit()
     return rows
+
+
+def replace_security_findings(
+    db: Session, analysis_run_id: int, findings: list[dict]
+) -> list[SecurityFinding]:
+    """Replace all security findings for a run with the curated set."""
+    db.execute(
+        delete(SecurityFinding).where(
+            SecurityFinding.analysis_run_id == analysis_run_id
+        )
+    )
+    db.commit()
+    return create_security_findings(db, analysis_run_id, findings)

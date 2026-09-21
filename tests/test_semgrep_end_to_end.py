@@ -67,6 +67,26 @@ def _create_pr_with_user(db: Session) -> PullRequest:
     return pr
 
 
+class _FakeSecurityLLM:
+    async def generate(self, prompt: str) -> str:
+        return json.dumps(
+            {
+                "findings": [
+                    {
+                        "severity": "high",
+                        "title": "dangerous call",
+                        "file": "src/app.py",
+                        "line": 2,
+                        "evidence": "subprocess.call('ls')",
+                        "explanation": "dangerous subprocess usage",
+                        "confidence": 1.0,
+                        "rule_id": "python.lang.security.audit.dangerous-system-call",
+                    }
+                ]
+            }
+        )
+
+
 def _mock_dependencies(
     monkeypatch: pytest.MonkeyPatch, diff_text: str = DIFF_TEXT
 ) -> None:
@@ -113,6 +133,10 @@ def _mock_dependencies(
         "quorum.orchestrator.stages.fetch_file_content", fake_fetch_file_content
     )
     monkeypatch.setattr("quorum.orchestrator.stages.run_semgrep", fake_run_semgrep)
+    monkeypatch.setattr(
+        "quorum.orchestrator.stages.create_llm_provider",
+        lambda role=None: _FakeSecurityLLM(),
+    )
 
 
 class TestSemgrepEndToEnd:
