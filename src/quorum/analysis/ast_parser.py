@@ -10,6 +10,8 @@ is added in a later chunk of this phase.
 import ast
 from dataclasses import dataclass, field
 
+from quorum.analysis.diff import ChangedFile
+
 KIND_FUNCTION = "function"
 KIND_ASYNC_FUNCTION = "async_function"
 KIND_METHOD = "method"
@@ -28,6 +30,7 @@ class FunctionInfo:
     start_line: int = 0
     end_line: int = 0
     source: str = ""
+    modified: bool = False
 
 
 @dataclass
@@ -38,6 +41,7 @@ class ClassInfo:
     decorators: list[str] = field(default_factory=list)
     start_line: int = 0
     end_line: int = 0
+    modified: bool = False
 
 
 @dataclass
@@ -118,3 +122,45 @@ def parse_python_ast(source: str, path: str) -> AstFileInfo:
         return info
     _walk(tree, source, None, info)
     return info
+
+
+def _hunk_new_spans(changed_file: ChangedFile) -> list[tuple[int, int]]:
+    """Inclusive new-side line spans covered by each hunk."""
+    spans = []
+    for hunk in changed_file.hunks:
+        start = hunk.new_start
+        end = hunk.new_start + hunk.new_count - 1
+        spans.append((start, end))
+    return spans
+
+
+def _overlaps(start_line: int, end_line: int, spans: list[tuple[int, int]]) -> bool:
+    for span_start, span_end in spans:
+        if start_line <= span_end and end_line >= span_start:
+            return True
+    return False
+
+
+def analyze_changed_python(source: str, changed_file: ChangedFile) -> AstFileInfo:
+    """Parse ``source`` and mark structures whose range overlaps a hunk.
+
+    A function or class is ``modified`` when its line range overlaps the
+    new-side span of any hunk in ``changed_file`` (which covers added lines and
+    the context around removals).
+    """
+    info = parse_python_ast(source, changed_file.path)
+    spans = _hunk_new_spans(changed_file)
+    for function in info.functions:
+        function.modified = _overlaps(function.start_line, function.end_line, spans)
+    for cls in info.classes:
+        cls.modified = _overlaps(cls.start_line, cls.end_line, spans)
+    return info
+
+
+def modified_structures(info: AstFileInfo) -> AstFileInfo:
+    """Return only the functions and classes flagged as modified."""
+    return AstFileInfo(
+        path=info.path,
+        functions=[f for f in info.functions if f.modified],
+        classes=[c for c in info.classes if c.modified],
+    )
