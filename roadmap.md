@@ -309,8 +309,8 @@ This section reflects the actual repository state (verified against the source, 
 | Phase 7 — Context Window Management | Implemented (representation, sizing, prioritization, truncation, orchestrator stage) |
 | Phase 8 — Semgrep Security Analysis | Implemented (parser, CLI runner, scan-directory assembly, content service, persistence, orchestrator stage) |
 | Phase 9 — LLM Layer | Implemented (LLMProvider interface, OpenAIProvider active with GPT-5.6 Terra/Luna, OllamaProvider dormant, provider factory, role-model configuration) |
-| Phase 10 — Security Review Agent | Not started |
-| Phase 11 — Docker Sandbox | Not started |
+| Phase 10 — Security Review Agent | Implemented (Security Agent with strict Pydantic-validated structured findings, bounded review prompt, deterministic evidence traceability filter, atomic persistence, orchestrator stage; live LLM tests gated on `OPENAI_API_KEY`) |
+| Phase 11 — Docker Sandbox | Implemented (sandbox config + hardened `docker run` builder, runner with hard timeout and guaranteed container cleanup, `quorum-sandbox` image with pytest+pytest-cov, workspace assembly, pytest execution primitive; DoD verified live against Docker: a valid test passes, an infinite/unsafe test is terminated safely, network blocked, memory limit enforced, no leftover containers) |
 | Phase 12 — Test Writer Agent | Not started |
 | Phase 13 — Result Synthesis + Merge Readiness | Not started |
 | Phase 14 — GitHub Review Comment | Not started |

@@ -6,6 +6,8 @@ from pathlib import Path
 import pytest
 
 from quorum.sandbox import SandboxConfig, run_in_sandbox
+from quorum.sandbox.pytest_runner import run_pytest_in_sandbox
+from quorum.sandbox.workspace import write_generated_test
 
 pytestmark = pytest.mark.skipif(
     os.getenv("SANDBOX_LIVE_TESTS") != "1",
@@ -120,3 +122,21 @@ class TestCleanup:
             'python -c "x = [0] * (10**8)"',
         )
         assert _leftover_containers() == []
+
+
+class TestPytestPrimitive:
+    def test_runs_generated_test_end_to_end(self) -> None:
+        ws = _workspace(
+            {"app.py": "def add(a, b):\n    return a + b\n"}
+        )
+        write_generated_test(
+            ws,
+            "test_gen.py",
+            "from app import add\n\ndef test_add():\n    assert add(1, 2) == 3\n",
+        )
+        result = run_pytest_in_sandbox(
+            ws, ["test_gen.py"], SandboxConfig(timeout_seconds=60)
+        )
+        assert result.timed_out is False
+        assert result.return_code == 0
+        assert "1 passed" in result.stdout
