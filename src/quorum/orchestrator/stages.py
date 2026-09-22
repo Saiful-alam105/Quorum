@@ -14,8 +14,14 @@ from quorum.agents.security_agent import (
     SecurityAgentError,
     filter_unsupported_findings,
 )
+from quorum.analysis.ast_parser import analyze_changed_python
 from quorum.analysis.context_selector import build_prepared_context
-from quorum.analysis.diff import parse_unified_diff
+from quorum.analysis.diff import (
+    STATUS_ADDED,
+    STATUS_MODIFIED,
+    STATUS_RENAMED,
+    parse_unified_diff,
+)
 from quorum.analysis.semgrep import (
     build_scan_directory,
     has_scannable_files,
@@ -62,6 +68,72 @@ async def extract_diff_stage(
         context.repo,
         context.pr_number,
         len(context.changed_files),
+    )
+
+
+_PYTHON_STATUSES = {STATUS_ADDED, STATUS_MODIFIED, STATUS_RENAMED}
+
+
+def _is_python_file(path: str) -> bool:
+    return path.endswith(".py")
+
+
+async def extract_ast_stage(
+    session: "Session", context: "AnalysisContext"
+) -> None:
+    """Fetch changed Python files and extract their modified structures."""
+    python_files = [
+        file
+        for file in context.changed_files
+        if file.status in _PYTHON_STATUSES and _is_python_file(file.path)
+    ]
+    if not python_files:
+        context.ast_files = []
+        logger.info(
+            "no changed python files for %s/%s#%s; skipping AST extraction",
+            context.owner,
+            context.repo,
+            context.pr_number,
+        )
+        return
+    if context.installation_id is None:
+        raise ContentFetchError(
+            f"cannot extract AST for {context.owner}/{context.repo}#"
+            f"{context.pr_number}: no GitHub installation id"
+        )
+
+    pr = await fetch_pull_request(
+        context.installation_id,
+        context.owner,
+        context.repo,
+        context.pr_number,
+    )
+    head_sha = (pr.get("head") or {}).get("sha")
+    if not head_sha:
+        raise ContentFetchError(
+            f"pull request {context.owner}/{context.repo}#{context.pr_number} "
+            "has no head sha"
+        )
+
+    async def fetch_content(path: str, ref: str) -> str:
+        return await fetch_file_content(
+            context.installation_id,
+            context.owner,
+            context.repo,
+            path,
+            ref,
+        )
+
+    context.ast_files = []
+    for file in python_files:
+        content = await fetch_content(file.path, head_sha)
+        context.ast_files.append(analyze_changed_python(content, file))
+    logger.info(
+        "extracted AST for %d python file(s) for %s/%s#%s",
+        len(context.ast_files),
+        context.owner,
+        context.repo,
+        context.pr_number,
     )
 
 
