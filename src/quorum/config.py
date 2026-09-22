@@ -33,6 +33,14 @@ class Settings:
         self.semgrep_timeout_seconds: int = int(
             os.getenv("SEMGREP_TIMEOUT_SECONDS", "120")
         )
+        self.sandbox_image: str = os.getenv("SANDBOX_IMAGE", "quorum-sandbox:latest")
+        self.sandbox_timeout_seconds: int = int(
+            os.getenv("SANDBOX_TIMEOUT_SECONDS", "60")
+        )
+        self.sandbox_memory_limit: str = os.getenv("SANDBOX_MEMORY_LIMIT", "256m")
+        self.sandbox_pids_limit: int = int(os.getenv("SANDBOX_PIDS_LIMIT", "256"))
+        self.sandbox_tmpfs_size: str = os.getenv("SANDBOX_TMPFS_SIZE", "64m")
+        self.sandbox_workdir: str = os.getenv("SANDBOX_WORKDIR", "/workspace")
         self.ollama_base_url: str = os.getenv(
             "OLLAMA_BASE_URL", "http://localhost:11434"
         )
