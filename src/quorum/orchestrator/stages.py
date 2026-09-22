@@ -9,6 +9,11 @@ import logging
 import tempfile
 from typing import TYPE_CHECKING
 
+from quorum.agents.security_agent import (
+    SecurityAgent,
+    SecurityAgentError,
+    filter_unsupported_findings,
+)
 from quorum.analysis.context_selector import build_prepared_context
 from quorum.analysis.diff import parse_unified_diff
 from quorum.analysis.semgrep import (
@@ -17,13 +22,14 @@ from quorum.analysis.semgrep import (
     parse_semgrep_json,
     run_semgrep,
 )
-from quorum.database.repository import create_security_findings
+from quorum.database.repository import create_security_findings, replace_security_findings
 from quorum.github.content_service import (
     ContentFetchError,
     fetch_file_content,
     fetch_pull_request,
 )
 from quorum.github.diff_service import DiffFetchError, fetch_pr_diff
+from quorum.llm.factory import create_llm_provider
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -146,6 +152,61 @@ async def semgrep_stage(
     logger.info(
         "semgrep found %d finding(s) for %s/%s#%s",
         len(findings),
+        context.owner,
+        context.repo,
+        context.pr_number,
+    )
+
+
+async def security_agent_stage(
+    session: "Session", context: "AnalysisContext"
+) -> None:
+    """Run the Security Agent over Semgrep evidence and persist the findings."""
+    if not context.semgrep_findings:
+        context.security_findings = []
+        logger.info(
+            "no Semgrep findings for %s/%s#%s; skipping security agent",
+            context.owner,
+            context.repo,
+            context.pr_number,
+        )
+        return
+    if context.analysis_run_id is None:
+        raise SecurityAgentError("cannot persist findings: no analysis run id")
+
+    provider = create_llm_provider(role="security")
+    agent = SecurityAgent(provider)
+    review = await agent.review(
+        context.prepared_context,
+        context.semgrep_findings,
+        context.owner,
+        context.repo,
+        context.pr_number,
+    )
+    filtered = filter_unsupported_findings(
+        review, context.semgrep_findings, context.changed_files
+    )
+    context.security_findings = filtered.findings
+    replace_security_findings(
+        session,
+        context.analysis_run_id,
+        [
+            {
+                "rule_id": finding.rule_id,
+                "severity": finding.severity,
+                "title": finding.title,
+                "file": finding.file,
+                "line": finding.line,
+                "evidence": finding.evidence,
+                "explanation": finding.explanation,
+                "confidence": finding.confidence,
+            }
+            for finding in filtered.findings
+        ],
+    )
+    logger.info(
+        "security agent produced %d finding(s) for %s/%s#%s",
+        len(filtered.findings),
         context.owner,
         context.repo,
         context.pr_number,

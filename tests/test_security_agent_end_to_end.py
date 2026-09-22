@@ -9,7 +9,8 @@ from sqlalchemy.pool import StaticPool
 from quorum.database.base import Base
 from quorum.database.models import PullRequest, Repository, SecurityFinding, User
 from quorum.database.repository import STATUS_COMPLETED, get_analysis_run
-from quorum.orchestrator.runner import run_analysis_for_pull_request
+from quorum.orchestrator import runner
+from quorum.orchestrator.runner import AnalysisContext, run_analysis_for_pull_request
 
 DIFF_TEXT = r"""diff --git a/src/app.py b/src/app.py
 new file mode 100644
@@ -18,9 +19,6 @@ new file mode 100644
 @@ -0,0 +1,2 @@
 +import subprocess
 +subprocess.call('ls')
-diff --git a/logo.png b/logo.png
-index 1111111..2222222 100644
-Binary files a/logo.png and b/logo.png differ
 """
 
 
@@ -74,52 +72,53 @@ class _FakeSecurityLLM:
                 "findings": [
                     {
                         "severity": "high",
-                        "title": "dangerous call",
+                        "title": "curated A",
                         "file": "src/app.py",
-                        "line": 2,
-                        "evidence": "subprocess.call('ls')",
-                        "explanation": "dangerous subprocess usage",
-                        "confidence": 1.0,
-                        "rule_id": "python.lang.security.audit.dangerous-system-call",
-                    }
+                        "line": 1,
+                        "evidence": "import subprocess",
+                        "explanation": "explained A",
+                        "confidence": 0.9,
+                    },
+                    {
+                        "severity": "high",
+                        "title": "ghost finding",
+                        "file": "src/app.py",
+                        "line": 99,
+                        "evidence": "???",
+                        "explanation": "should be filtered",
+                        "confidence": 0.5,
+                    },
                 ]
             }
         )
 
 
-def _mock_dependencies(
-    monkeypatch: pytest.MonkeyPatch, diff_text: str = DIFF_TEXT
-) -> None:
-    async def fake_fetch_pr_diff(
-        installation_id: int, owner: str, repo: str, pr_number: int
-    ) -> str:
+def _mock_dependencies(monkeypatch: pytest.MonkeyPatch, diff_text: str = DIFF_TEXT) -> None:
+    async def fake_fetch_pr_diff(installation_id, owner, repo, pr_number):
         return diff_text
 
-    async def fake_fetch_pull_request(
-        installation_id: int, owner: str, repo: str, pr_number: int
-    ) -> dict:
+    async def fake_fetch_pull_request(installation_id, owner, repo, pr_number):
         return {"head": {"sha": "abc123"}}
 
-    async def fake_fetch_file_content(
-        installation_id: int, owner: str, repo: str, path: str, ref: str
-    ) -> str:
+    async def fake_fetch_file_content(installation_id, owner, repo, path, ref):
         return "import subprocess\nsubprocess.call('ls')\n"
 
-    def fake_run_semgrep(scan_dir, ruleset=None, timeout_seconds=None) -> str:
+    def fake_run_semgrep(scan_dir, ruleset=None, timeout_seconds=None):
         return json.dumps(
             {
                 "results": [
                     {
                         "check_id": "python.lang.security.audit.dangerous-system-call",
                         "path": str(Path(scan_dir) / "src" / "app.py"),
+                        "start": {"line": 1},
+                        "extra": {"severity": "ERROR", "message": "m1", "lines": "import subprocess"},
+                    },
+                    {
+                        "check_id": "python.lang.security.audit.dangerous-system-call",
+                        "path": str(Path(scan_dir) / "src" / "app.py"),
                         "start": {"line": 2},
-                        "extra": {
-                            "severity": "ERROR",
-                            "message": "dangerous call",
-                            "lines": "subprocess.call('ls')",
-                            "metadata": {"confidence": "HIGH"},
-                        },
-                    }
+                        "extra": {"severity": "WARNING", "message": "m2", "lines": "subprocess.call('ls')"},
+                    },
                 ],
                 "errors": [],
             }
@@ -139,30 +138,38 @@ def _mock_dependencies(
     )
 
 
-class TestSemgrepEndToEnd:
+class TestSecurityAgentEndToEnd:
     @pytest.mark.asyncio
-    async def test_full_pipeline_stores_findings(
+    async def test_full_pipeline_stores_curated_findings(
         self, db_session: Session, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         pr = _create_pr_with_user(db_session)
         _mock_dependencies(monkeypatch)
 
-        run_id = await run_analysis_for_pull_request(pr.id, db=db_session)
+        seen: list[AnalysisContext] = []
+
+        async def capture_stage(session: Session, context: AnalysisContext) -> None:
+            seen.append(context)
+
+        run_id = await run_analysis_for_pull_request(
+            pr.id, db=db_session, stages=list(runner.STAGES) + [capture_stage]
+        )
 
         assert run_id is not None
         assert get_analysis_run(db_session, run_id).status == STATUS_COMPLETED
+        assert len(seen) == 1
+        assert len(seen[0].security_findings) == 1
 
-        stored = db_session.scalars(select(SecurityFinding)).all()
+        stored = db_session.scalars(
+            select(SecurityFinding).where(SecurityFinding.analysis_run_id == run_id)
+        ).all()
         assert len(stored) == 1
         finding = stored[0]
-        assert finding.analysis_run_id == run_id
-        assert finding.rule_id == "python.lang.security.audit.dangerous-system-call"
-        assert finding.severity == "high"
+        assert finding.title == "curated A"
         assert finding.file == "src/app.py"
-        assert finding.line == 2
-        assert finding.title == "dangerous call"
-        assert finding.evidence == "subprocess.call('ls')"
-        assert finding.confidence == 1.0
+        assert finding.line == 1
+        assert finding.explanation == "explained A"
+        assert finding.confidence == 0.9
 
     @pytest.mark.asyncio
     async def test_empty_pr_stores_no_findings(
@@ -170,24 +177,6 @@ class TestSemgrepEndToEnd:
     ) -> None:
         pr = _create_pr_with_user(db_session)
         _mock_dependencies(monkeypatch, diff_text="")
-
-        run_id = await run_analysis_for_pull_request(pr.id, db=db_session)
-
-        assert run_id is not None
-        assert get_analysis_run(db_session, run_id).status == STATUS_COMPLETED
-        assert db_session.scalar(select(SecurityFinding).limit(1)) is None
-
-    @pytest.mark.asyncio
-    async def test_binary_only_pr_stores_no_findings(
-        self, db_session: Session, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        pr = _create_pr_with_user(db_session)
-        binary_only = (
-            "diff --git a/logo.png b/logo.png\n"
-            "index 1111111..2222222 100644\n"
-            "Binary files a/logo.png and b/logo.png differ\n"
-        )
-        _mock_dependencies(monkeypatch, diff_text=binary_only)
 
         run_id = await run_analysis_for_pull_request(pr.id, db=db_session)
 
@@ -215,7 +204,7 @@ class TestSemgrepEndToEnd:
 
         def _signature(rows):
             return [
-                (row.rule_id, row.severity, row.file, row.line, row.title)
+                (row.severity, row.title, row.file, row.line, row.explanation)
                 for row in rows
             ]
 

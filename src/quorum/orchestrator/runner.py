@@ -12,6 +12,7 @@ from typing import Callable
 
 from sqlalchemy.orm import Session
 
+from quorum.agents.security_agent import SecurityAgentFinding
 from quorum.analysis.context import PreparedContext
 from quorum.analysis.diff import ChangedFile
 from quorum.analysis.semgrep import SemgrepFinding
@@ -44,6 +45,7 @@ class AnalysisContext:
     prepared_context: PreparedContext | None = None
     analysis_run_id: int | None = None
     semgrep_findings: list[SemgrepFinding] = field(default_factory=list)
+    security_findings: list[SecurityAgentFinding] = field(default_factory=list)
 
 
 def _build_context(db: Session, pull_request: PullRequest) -> AnalysisContext:
@@ -110,9 +112,11 @@ async def run_analysis_for_pull_request(
 from quorum.orchestrator.stages import (
     build_context_stage,
     extract_diff_stage,
+    security_agent_stage,
     semgrep_stage,
 )
 
 STAGES.append(extract_diff_stage)
 STAGES.append(build_context_stage)
 STAGES.append(semgrep_stage)
+STAGES.append(security_agent_stage)
