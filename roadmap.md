@@ -305,7 +305,7 @@ This section reflects the actual repository state (verified against the source, 
 | Phase 3 — GitHub API Layer | Implemented (all 9 functions) with mocked tests; not yet consumed by the pipeline |
 | Phase 4 — PostgreSQL | Implemented and verified against local PostgreSQL (migration `303b9ed314cd` applied; tables/PKs/FKs confirmed) |
 | Phase 5 — Orchestrator | Implemented (runner, STAGES registry, lifecycle; webhook scheduling) |
-| Phase 6 — Diff Analysis | Implemented (diff parsing + GitHub diff service); AST portion pending |
+| Phase 6 — Diff + AST Analysis | Implemented (diff parsing, GitHub diff service, Python AST extraction: modified functions/classes with arguments, decorators, source ranges, surrounding source; orchestrator stage). "Relevant existing tests" extraction remains a later-phase item |
 | Phase 7 — Context Window Management | Implemented (representation, sizing, prioritization, truncation, orchestrator stage) |
 | Phase 8 — Semgrep Security Analysis | Implemented (parser, CLI runner, scan-directory assembly, content service, persistence, orchestrator stage) |
 | Phase 9 — LLM Layer | Implemented (LLMProvider interface, OpenAIProvider active with GPT-5.6 Terra/Luna, OllamaProvider dormant, provider factory, role-model configuration) |
@@ -497,14 +497,14 @@ Use FastAPI background execution initially. Do not introduce a distributed task 
 
 Extract:
 
-- [ ] changed files
-- [ ] added/removed lines
-- [ ] modified functions
-- [ ] modified classes
-- [ ] arguments
-- [ ] decorators
-- [ ] source ranges
-- [ ] surrounding function context
+- [x] changed files
+- [x] added/removed lines
+- [x] modified functions
+- [x] modified classes
+- [x] arguments
+- [x] decorators
+- [x] source ranges
+- [x] surrounding function context
 - [ ] relevant existing tests
 
 Definition of done:
