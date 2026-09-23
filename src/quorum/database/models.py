@@ -113,6 +113,8 @@ class SecurityFinding(Base):
 class TestRun(Base):
     __tablename__ = "test_runs"
 
+    __test__ = False
+
     id: Mapped[int] = mapped_column(primary_key=True)
     analysis_run_id: Mapped[int] = mapped_column(
         ForeignKey("analysis_runs.id"), index=True

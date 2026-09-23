@@ -98,9 +98,6 @@ def _mock_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_run_semgrep(scan_dir, ruleset=None, timeout_seconds=None):
         return '{"results": [], "errors": []}'
 
-    async def fake_generate(prompt: str) -> str:
-        return '{"findings": []}'
-
     monkeypatch.setattr("quorum.orchestrator.stages.fetch_pr_diff", fake_fetch_pr_diff)
     monkeypatch.setattr(
         "quorum.orchestrator.stages.fetch_pull_request", fake_fetch_pull_request
@@ -111,16 +108,16 @@ def _mock_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("quorum.orchestrator.stages.run_semgrep", fake_run_semgrep)
     monkeypatch.setattr(
         "quorum.orchestrator.stages.create_llm_provider",
-        lambda role=None: _FakeLLM(fake_generate),
+        lambda role=None: _FakeLLM(role),
     )
 
 
 class _FakeLLM:
-    def __init__(self, generate) -> None:
-        self._generate = generate
+    def __init__(self, role: str | None = None) -> None:
+        self.role = role
 
     async def generate(self, prompt: str) -> str:
-        return await self._generate(prompt)
+        return '{"tests": []}' if self.role == "test" else '{"findings": []}'
 
 
 def _signature(context: AnalysisContext):
