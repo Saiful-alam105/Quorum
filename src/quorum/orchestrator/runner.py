@@ -13,12 +13,14 @@ from typing import Callable
 from sqlalchemy.orm import Session
 
 from quorum.agents.security_agent import SecurityAgentFinding
+from quorum.agents.test_runner import TestOutcome
+from quorum.agents.test_writer import GeneratedTest
 from quorum.analysis.ast_parser import AstFileInfo
 from quorum.analysis.context import PreparedContext
 from quorum.analysis.diff import ChangedFile
 from quorum.analysis.semgrep import SemgrepFinding
 from quorum.database.base import SessionLocal
-from quorum.database.models import PullRequest, Repository, User
+from quorum.database.models import CoverageResult, PullRequest, Repository, User
 from quorum.database.repository import (
     complete_analysis_run,
     create_analysis_run,
@@ -48,6 +50,9 @@ class AnalysisContext:
     analysis_run_id: int | None = None
     semgrep_findings: list[SemgrepFinding] = field(default_factory=list)
     security_findings: list[SecurityAgentFinding] = field(default_factory=list)
+    generated_tests: list[GeneratedTest] = field(default_factory=list)
+    test_results: list[TestOutcome] = field(default_factory=list)
+    coverage: CoverageResult | None = None
 
 
 def _build_context(db: Session, pull_request: PullRequest) -> AnalysisContext:
@@ -117,6 +122,7 @@ from quorum.orchestrator.stages import (
     extract_diff_stage,
     security_agent_stage,
     semgrep_stage,
+    generate_tests_stage,
 )
 
 STAGES.append(extract_diff_stage)
@@ -124,3 +130,4 @@ STAGES.append(extract_ast_stage)
 STAGES.append(build_context_stage)
 STAGES.append(semgrep_stage)
 STAGES.append(security_agent_stage)
+STAGES.append(generate_tests_stage)

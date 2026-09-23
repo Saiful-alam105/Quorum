@@ -311,7 +311,7 @@ This section reflects the actual repository state (verified against the source, 
 | Phase 9 — LLM Layer | Implemented (LLMProvider interface, OpenAIProvider active with GPT-5.6 Terra/Luna, OllamaProvider dormant, provider factory, role-model configuration) |
 | Phase 10 — Security Review Agent | Implemented (Security Agent with strict Pydantic-validated structured findings, bounded review prompt, deterministic evidence traceability filter, atomic persistence, orchestrator stage; live LLM tests gated on `OPENAI_API_KEY`) |
 | Phase 11 — Docker Sandbox | Implemented (sandbox config + hardened `docker run` builder, runner with hard timeout and guaranteed container cleanup, `quorum-sandbox` image with pytest+pytest-cov, workspace assembly, pytest execution primitive; DoD verified live against Docker: a valid test passes, an infinite/unsafe test is terminated safely, network blocked, memory limit enforced, no leftover containers) |
-| Phase 12 — Test Writer Agent | Not started |
+| Phase 12 — Test Writer Agent | Implemented (generated-test schema + syntax validation, bounded prompt, TestWriterAgent via role="test", sandbox pytest execution with per-test result parsing, pytest-cov coverage before/after/delta, persistence of test_runs + coverage_results, orchestrator stage; live-verified: 11 generated tests ran in Docker with coverage 0% -> 98%) |
 | Phase 13 — Result Synthesis + Merge Readiness | Not started |
 | Phase 14 — GitHub Review Comment | Not started |
 | Phase 15 — Dashboard Backend API | Partially implemented — read API subset exists (`/api/me`, `/api/repositories`, `/api/repositories/{id}`, `/api/repositories/{id}/pull-requests`, `/api/pull-requests`, `/api/pull-requests/{id}`) |

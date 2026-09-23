@@ -14,6 +14,14 @@ from quorum.agents.security_agent import (
     SecurityAgentError,
     filter_unsupported_findings,
 )
+from quorum.agents.test_runner import (
+    STATUS_FAILED,
+    TestOutcome,
+    compute_coverage_delta,
+    measure_coverage,
+    run_tests_in_sandbox,
+)
+from quorum.agents.test_writer import TestWriterAgent, TestWriterError
 from quorum.analysis.ast_parser import analyze_changed_python
 from quorum.analysis.context_selector import build_prepared_context
 from quorum.analysis.diff import (
@@ -28,7 +36,12 @@ from quorum.analysis.semgrep import (
     parse_semgrep_json,
     run_semgrep,
 )
-from quorum.database.repository import create_security_findings, replace_security_findings
+from quorum.database.repository import (
+    create_coverage_result,
+    create_security_findings,
+    create_test_runs,
+    replace_security_findings,
+)
 from quorum.github.content_service import (
     ContentFetchError,
     fetch_file_content,
@@ -36,6 +49,7 @@ from quorum.github.content_service import (
 )
 from quorum.github.diff_service import DiffFetchError, fetch_pr_diff
 from quorum.llm.factory import create_llm_provider
+from quorum.sandbox.workspace import build_sandbox_workspace, write_generated_test
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -282,4 +296,122 @@ async def security_agent_stage(
         context.owner,
         context.repo,
         context.pr_number,
+    )
+
+
+async def generate_tests_stage(
+    session: "Session", context: "AnalysisContext"
+) -> None:
+    """Generate tests for modified functions, run them, and store results."""
+    modified_functions = [
+        function
+        for info in context.ast_files
+        for function in info.functions
+        if function.modified
+    ]
+    if not modified_functions:
+        context.generated_tests = []
+        context.test_results = []
+        context.coverage = None
+        logger.info(
+            "no modified functions for %s/%s#%s; skipping test writer",
+            context.owner,
+            context.repo,
+            context.pr_number,
+        )
+        return
+    if context.analysis_run_id is None:
+        raise TestWriterError("cannot persist tests: no analysis run id")
+
+    provider = create_llm_provider(role="test")
+    agent = TestWriterAgent(provider)
+    generated = await agent.generate_tests(
+        context.ast_files,
+        context.prepared_context,
+        context.owner,
+        context.repo,
+        context.pr_number,
+    )
+    context.generated_tests = generated.tests
+    if not generated.tests:
+        context.test_results = []
+        context.coverage = None
+        logger.info(
+            "test writer produced no tests for %s/%s#%s",
+            context.owner,
+            context.repo,
+            context.pr_number,
+        )
+        return
+
+    if context.installation_id is None:
+        raise TestWriterError("cannot build workspace: no GitHub installation id")
+    pr = await fetch_pull_request(
+        context.installation_id,
+        context.owner,
+        context.repo,
+        context.pr_number,
+    )
+    head_sha = (pr.get("head") or {}).get("sha")
+    if not head_sha:
+        raise TestWriterError(
+            f"pull request {context.owner}/{context.repo}#{context.pr_number} "
+            "has no head sha"
+        )
+
+    async def fetch_content(path: str, ref: str) -> str:
+        return await fetch_file_content(
+            context.installation_id,
+            context.owner,
+            context.repo,
+            path,
+            ref,
+        )
+
+    with tempfile.TemporaryDirectory() as workspace:
+        await build_sandbox_workspace(
+            context.changed_files, fetch_content, head_sha, workspace
+        )
+        coverage_before = measure_coverage(workspace)
+        test_paths: list[str] = []
+        for test in generated.tests:
+            try:
+                write_generated_test(workspace, test.name, test.code)
+            except ValueError:
+                logger.warning(
+                    "skipping unsafe generated test path: %s", test.name
+                )
+                continue
+            test_paths.append(test.name)
+        coverage_after = measure_coverage(workspace, test_paths=test_paths)
+        execution = run_tests_in_sandbox(workspace, test_paths=test_paths)
+
+    outcomes = execution.outcomes
+    if execution.timed_out:
+        outcomes = outcomes + [
+            TestOutcome(name="(sandbox timed out)", status=STATUS_FAILED)
+        ]
+    context.test_results = outcomes
+    create_test_runs(
+        session,
+        context.analysis_run_id,
+        [
+            {"test_name": outcome.name, "status": outcome.status}
+            for outcome in outcomes
+        ],
+    )
+    delta = compute_coverage_delta(coverage_before, coverage_after)
+    context.coverage = create_coverage_result(
+        session, context.analysis_run_id, coverage_before, coverage_after, delta
+    )
+    logger.info(
+        "test writer ran %d test(s) for %s/%s#%s: coverage %.1f%% -> %.1f%% "
+        "(delta %+.1f)",
+        len(execution.outcomes),
+        context.owner,
+        context.repo,
+        context.pr_number,
+        coverage_before,
+        coverage_after,
+        delta,
     )

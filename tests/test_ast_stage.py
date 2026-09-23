@@ -225,7 +225,7 @@ class TestIntegration:
         monkeypatch.setattr("quorum.orchestrator.stages.run_semgrep", fake_run_semgrep)
         monkeypatch.setattr(
             "quorum.orchestrator.stages.create_llm_provider",
-            lambda role=None: _FakeLLM(),
+            lambda role=None: _FakeLLM(role),
         )
 
         run_id = await run_analysis_for_pull_request(
@@ -241,8 +241,11 @@ class TestIntegration:
 
 
 class _FakeLLM:
+    def __init__(self, role: str | None = None) -> None:
+        self.role = role
+
     async def generate(self, prompt: str) -> str:
-        return '{"findings": []}'
+        return '{"tests": []}' if self.role == "test" else '{"findings": []}'
 
 
 class TestRegistration:

@@ -3,9 +3,11 @@ from sqlalchemy.orm import Session
 
 from quorum.database.models import (
     AnalysisRun,
+    CoverageResult,
     PullRequest,
     Repository,
     SecurityFinding,
+    TestRun,
     User,
     utcnow,
 )
@@ -321,6 +323,48 @@ def create_security_findings(
     db.add_all(rows)
     db.commit()
     return rows
+
+
+def create_test_runs(
+    db: Session, analysis_run_id: int, outcomes: list[dict]
+) -> list[TestRun]:
+    """Persist sandbox test outcomes for an analysis run and return the rows."""
+    if not outcomes:
+        return []
+    rows = [
+        TestRun(
+            analysis_run_id=analysis_run_id,
+            test_name=outcome.get("test_name", ""),
+            status=outcome.get("status", ""),
+            duration=outcome.get("duration"),
+            stdout=outcome.get("stdout"),
+            stderr=outcome.get("stderr"),
+            failure_reason=outcome.get("failure_reason"),
+        )
+        for outcome in outcomes
+    ]
+    db.add_all(rows)
+    db.commit()
+    return rows
+
+
+def create_coverage_result(
+    db: Session,
+    analysis_run_id: int,
+    coverage_before: float,
+    coverage_after: float,
+    coverage_delta: float,
+) -> CoverageResult:
+    """Persist a coverage result for an analysis run and return the row."""
+    row = CoverageResult(
+        analysis_run_id=analysis_run_id,
+        coverage_before=coverage_before,
+        coverage_after=coverage_after,
+        coverage_delta=coverage_delta,
+    )
+    db.add(row)
+    db.commit()
+    return row
 
 
 def replace_security_findings(
