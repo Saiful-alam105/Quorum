@@ -123,6 +123,7 @@ from quorum.orchestrator.stages import (
     extract_ast_stage,
     extract_diff_stage,
     generate_tests_stage,
+    post_review_comment_stage,
     security_agent_stage,
     semgrep_stage,
     synthesize_stage,
@@ -135,3 +136,4 @@ STAGES.append(semgrep_stage)
 STAGES.append(security_agent_stage)
 STAGES.append(generate_tests_stage)
 STAGES.append(synthesize_stage)
+STAGES.append(post_review_comment_stage)

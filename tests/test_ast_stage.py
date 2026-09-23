@@ -228,6 +228,14 @@ class TestIntegration:
             lambda role=None: _FakeLLM(role),
         )
 
+        async def fake_post_review_comment(installation_id, owner, repo, pr_number, body):
+            return {"id": 1}
+
+        monkeypatch.setattr(
+            "quorum.orchestrator.stages.post_review_comment", fake_post_review_comment
+        )
+
+
         run_id = await run_analysis_for_pull_request(
             pr.id, db=db_session, stages=list(runner.STAGES) + [capture_stage]
         )

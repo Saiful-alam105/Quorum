@@ -158,6 +158,14 @@ class TestEndToEnd:
         monkeypatch.setattr(
             "quorum.orchestrator.stages.run_semgrep", _fake_run_semgrep("{}")
         )
+
+        async def fake_post_review_comment(installation_id, owner, repo, pr_number, body):
+            return {"id": 1}
+
+        monkeypatch.setattr(
+            "quorum.orchestrator.stages.post_review_comment", fake_post_review_comment
+        )
+
         run_id = await run_analysis_for_pull_request(pr.id, db=db_session)
         assert run_id is not None
         assert get_analysis_run(db_session, run_id).status == STATUS_COMPLETED

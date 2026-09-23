@@ -146,6 +146,14 @@ def _mock_dependencies(monkeypatch: pytest.MonkeyPatch, timed_out: bool = False)
         "quorum.orchestrator.stages.run_tests_in_sandbox", fake_run_tests
     )
 
+    async def fake_post_review_comment(installation_id, owner, repo, pr_number, body):
+        return {"id": 1}
+
+    monkeypatch.setattr(
+        "quorum.orchestrator.stages.post_review_comment", fake_post_review_comment
+    )
+
+
 
 class TestTestWriterEndToEnd:
     @pytest.mark.asyncio

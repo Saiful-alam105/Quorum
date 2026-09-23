@@ -111,6 +111,14 @@ def _mock_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:
         lambda role=None: _FakeLLM(role),
     )
 
+    async def fake_post_review_comment(installation_id, owner, repo, pr_number, body):
+        return {"id": 1}
+
+    monkeypatch.setattr(
+        "quorum.orchestrator.stages.post_review_comment", fake_post_review_comment
+    )
+
+
 
 class _FakeLLM:
     def __init__(self, role: str | None = None) -> None:
