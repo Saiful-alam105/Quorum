@@ -15,9 +15,11 @@ from quorum.agents.security_agent import (
     filter_unsupported_findings,
 )
 from quorum.agents.test_runner import (
+    STATUS_FAILED,
+    TestOutcome,
+    compute_coverage_delta,
     measure_coverage,
     run_tests_in_sandbox,
-    compute_coverage_delta,
 )
 from quorum.agents.test_writer import TestWriterAgent, TestWriterError
 from quorum.analysis.ast_parser import analyze_changed_python
@@ -373,18 +375,29 @@ async def generate_tests_stage(
         coverage_before = measure_coverage(workspace)
         test_paths: list[str] = []
         for test in generated.tests:
-            write_generated_test(workspace, test.name, test.code)
+            try:
+                write_generated_test(workspace, test.name, test.code)
+            except ValueError:
+                logger.warning(
+                    "skipping unsafe generated test path: %s", test.name
+                )
+                continue
             test_paths.append(test.name)
         coverage_after = measure_coverage(workspace, test_paths=test_paths)
         execution = run_tests_in_sandbox(workspace, test_paths=test_paths)
 
-    context.test_results = execution.outcomes
+    outcomes = execution.outcomes
+    if execution.timed_out:
+        outcomes = outcomes + [
+            TestOutcome(name="(sandbox timed out)", status=STATUS_FAILED)
+        ]
+    context.test_results = outcomes
     create_test_runs(
         session,
         context.analysis_run_id,
         [
             {"test_name": outcome.name, "status": outcome.status}
-            for outcome in execution.outcomes
+            for outcome in outcomes
         ],
     )
     delta = compute_coverage_delta(coverage_before, coverage_after)
