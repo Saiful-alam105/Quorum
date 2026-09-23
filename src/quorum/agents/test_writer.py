@@ -13,6 +13,9 @@ import json
 
 from pydantic import BaseModel, Field, ValidationError
 
+from quorum.analysis.ast_parser import AstFileInfo
+from quorum.analysis.context import PreparedContext
+
 
 class GeneratedTest(BaseModel):
     """A single generated pytest file."""
@@ -72,3 +75,61 @@ def parse_and_validate(raw: str) -> GeneratedTests:
     for test in generated.tests:
         validate_test_syntax(test.code)
     return generated
+
+
+_TEST_WRITER_INSTRUCTIONS = """You are the Quorum Test Writer Agent. Generate pytest tests for the modified Python functions below.
+
+Output ONLY strict JSON with this exact shape:
+{"tests": [{"name": "test_<function>.py", "code": "<full pytest code>"}]}
+
+Rules:
+- Write one test file per modified function, named test_<function>.py.
+- Tests must be valid, self-contained Python; import only the changed modules.
+- Use only the standard library and pytest (already installed in the sandbox).
+- Cover the function's normal behavior and its argument cases.
+- Do not use network, subprocess, or filesystem writes outside /tmp.
+- If there are no functions worth testing, return {"tests": []}."""
+
+
+def build_test_writer_prompt(
+    ast_files: list[AstFileInfo],
+    prepared_context: PreparedContext | None,
+    owner: str = "",
+    repo: str = "",
+    pr_number: int | None = None,
+) -> str:
+    """Build a bounded, deterministic test-generation prompt from AST."""
+    pr_label = f"{owner}/{repo}#{pr_number}" if pr_number is not None else f"{owner}/{repo}"
+    sections = [f"Pull request: {pr_label}", ""]
+
+    sections.append("## Modified functions")
+    modified = [
+        (info.path, function)
+        for info in ast_files
+        for function in info.functions
+        if function.modified
+    ]
+    if modified:
+        for path, function in modified:
+            header = f"### {path} — {function.name}"
+            if function.class_name:
+                header += f" (method of {function.class_name})"
+            sections.append(header)
+            if function.decorators:
+                sections.append(f"decorators: {', '.join(function.decorators)}")
+            sections.append(f"arguments: {', '.join(function.arguments)}")
+            sections.append("source:")
+            sections.append(function.source)
+            sections.append("")
+    else:
+        sections.append("(none)")
+        sections.append("")
+
+    sections.append("## Changed code context (bounded)")
+    sections.append(
+        prepared_context.render_text() if prepared_context is not None else "(no context)"
+    )
+    sections.append("")
+    sections.append(_TEST_WRITER_INSTRUCTIONS)
+
+    return "\n".join(sections)
