@@ -32,6 +32,8 @@ _LINE_RE = re.compile(
     r"(?P<name>\S+::\S+)\s+(?P<result>PASSED|FAILED|ERROR|SKIPPED|XFAIL|XPASS)\b"
 )
 
+_TOTAL_RE = re.compile(r"^TOTAL\b.*?(\d+)%", re.MULTILINE)
+
 
 @dataclass
 class TestOutcome:
@@ -100,3 +102,40 @@ def run_tests_in_sandbox(
         stderr=result.stderr,
         duration_seconds=result.duration_seconds,
     )
+
+
+def _coverage_command(test_paths: list[str] | None) -> str:
+    parts = [
+        "COVERAGE_FILE=/tmp/.coverage",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--cov=/workspace",
+        "--cov-report=term",
+    ]
+    if test_paths:
+        parts.extend(shlex.quote(path) for path in test_paths)
+    return " ".join(parts)
+
+
+def measure_coverage(
+    workspace_dir: str | Path,
+    test_paths: list[str] | None = None,
+    config: SandboxConfig | None = None,
+) -> float:
+    """Measure total workspace coverage via ``pytest --cov`` in the sandbox.
+
+    Returns the ``TOTAL`` percentage from the term report, or ``0.0`` when no
+    coverage data was produced (for example no tests collected).
+    """
+    result = run_in_sandbox(config, workspace_dir, _coverage_command(test_paths))
+    match = _TOTAL_RE.search(result.stdout)
+    if match is None:
+        return 0.0
+    return float(match.group(1))
+
+
+def compute_coverage_delta(before: float, after: float) -> float:
+    """Return the coverage delta (after - before), rounded to two decimals."""
+    return round(after - before, 2)
