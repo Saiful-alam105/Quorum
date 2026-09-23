@@ -367,6 +367,18 @@ def create_coverage_result(
     return row
 
 
+def set_merge_readiness_score(
+    db: Session, analysis_run_id: int, score: int
+) -> AnalysisRun | None:
+    """Store the Merge Readiness Score on an analysis run."""
+    analysis_run = db.get(AnalysisRun, analysis_run_id)
+    if analysis_run is None:
+        return None
+    analysis_run.merge_readiness_score = score
+    db.commit()
+    return analysis_run
+
+
 def replace_security_findings(
     db: Session, analysis_run_id: int, findings: list[dict]
 ) -> list[SecurityFinding]:

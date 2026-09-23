@@ -20,6 +20,10 @@ from quorum.agents.test_runner import STATUS_ERROR, STATUS_FAILED
 _SECURITY_DEDUCTIONS = {"high": 20, "medium": 10, "low": 5}
 
 
+class SynthesisError(Exception):
+    """Raised when the synthesis stage cannot run."""
+
+
 @dataclass(frozen=True)
 class MergeReadinessResult:
     """The deterministic scoring outcome plus its component deductions."""

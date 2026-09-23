@@ -14,6 +14,10 @@ from quorum.agents.security_agent import (
     SecurityAgentError,
     filter_unsupported_findings,
 )
+from quorum.agents.synthesis import (
+    SynthesisError,
+    compute_merge_readiness_score,
+)
 from quorum.agents.test_runner import (
     STATUS_FAILED,
     TestOutcome,
@@ -41,6 +45,7 @@ from quorum.database.repository import (
     create_security_findings,
     create_test_runs,
     replace_security_findings,
+    set_merge_readiness_score,
 )
 from quorum.github.content_service import (
     ContentFetchError,
@@ -414,4 +419,31 @@ async def generate_tests_stage(
         coverage_before,
         coverage_after,
         delta,
+    )
+
+
+async def synthesize_stage(
+    session: "Session", context: "AnalysisContext"
+) -> None:
+    """Compute and store the deterministic Merge Readiness Score."""
+    if context.analysis_run_id is None:
+        raise SynthesisError("cannot store score: no analysis run id")
+
+    coverage_after = (
+        context.coverage.coverage_after if context.coverage is not None else None
+    )
+    result = compute_merge_readiness_score(
+        context.security_findings,
+        context.test_results,
+        coverage_after,
+    )
+    context.merge_readiness = result
+    set_merge_readiness_score(session, context.analysis_run_id, result.score)
+    logger.info(
+        "merge readiness for %s/%s#%s: %d (%s)",
+        context.owner,
+        context.repo,
+        context.pr_number,
+        result.score,
+        result.recommendation,
     )
