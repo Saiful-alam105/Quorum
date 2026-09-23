@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from quorum.analysis.ast_parser import AstFileInfo
 from quorum.analysis.context import PreparedContext
+from quorum.llm.base import LLMError, LLMProvider
 
 
 class GeneratedTest(BaseModel):
@@ -133,3 +134,54 @@ def build_test_writer_prompt(
     sections.append(_TEST_WRITER_INSTRUCTIONS)
 
     return "\n".join(sections)
+
+
+class TestWriterError(Exception):
+    """Raised when the Test Writer Agent cannot produce valid tests."""
+
+    __test__ = False
+
+
+class TestWriterAgent:
+    """Generates pytest tests using an injected :class:`LLMProvider`."""
+
+    __test__ = False
+
+    def __init__(self, llm: LLMProvider) -> None:
+        self.llm = llm
+
+    async def generate_tests(
+        self,
+        ast_files: list[AstFileInfo],
+        prepared_context: PreparedContext | None,
+        owner: str = "",
+        repo: str = "",
+        pr_number: int | None = None,
+    ) -> GeneratedTests:
+        """Generate and validate tests for the modified functions.
+
+        With no modified functions the LLM is not called and an empty result is
+        returned — the agent must not generate tests without a target.
+        """
+        has_modified = any(
+            function.modified
+            for info in ast_files
+            for function in info.functions
+        )
+        if not has_modified:
+            return GeneratedTests(tests=[])
+
+        prompt = build_test_writer_prompt(
+            ast_files, prepared_context, owner, repo, pr_number
+        )
+        try:
+            raw = await self.llm.generate(prompt)
+        except LLMError as exc:
+            raise TestWriterError(f"test writer LLM call failed: {exc}") from exc
+
+        try:
+            return parse_and_validate(raw)
+        except (GeneratedTestParseError, InvalidTestSyntaxError) as exc:
+            raise TestWriterError(
+                f"test writer produced invalid output: {exc}"
+            ) from exc
