@@ -8,7 +8,7 @@ from sqlalchemy.pool import StaticPool
 
 from quorum.agents.test_runner import STATUS_FAILED, STATUS_PASSED, TestExecution, TestOutcome
 from quorum.database.base import Base
-from quorum.database.models import CoverageResult, PullRequest, Repository, TestRun, User
+from quorum.database.models import PullRequest, Repository, User
 from quorum.database.repository import STATUS_COMPLETED, get_analysis_run
 from quorum.orchestrator import runner
 from quorum.orchestrator.runner import AnalysisContext, run_analysis_for_pull_request
@@ -75,19 +75,32 @@ class _FakeLLM:
     async def generate(self, prompt: str) -> str:
         if self.role == "test":
             return json.dumps(
-                {
-                    "tests": [
-                        {"name": "test_alpha.py", "code": "def test_alpha():\n    assert True\n"},
-                        {"name": "../evil.py", "code": "def test_evil():\n    assert True\n"},
-                    ]
-                }
+                {"tests": [{"name": "test_alpha.py", "code": "def test_alpha():\n    assert True\n"}]}
             )
-        return '{"findings": []}'
+        return json.dumps(
+            {
+                "findings": [
+                    {
+                        "severity": "high",
+                        "title": "dangerous",
+                        "file": "app.py",
+                        "line": 2,
+                        "evidence": "return x + 1",
+                        "explanation": "high risk",
+                        "confidence": 0.9,
+                    }
+                ]
+            }
+        )
 
 
-def _mock_dependencies(monkeypatch: pytest.MonkeyPatch, timed_out: bool = False) -> None:
+def _mock_dependencies(
+    monkeypatch: pytest.MonkeyPatch, diff_text: str = DIFF_TEXT
+) -> list[str]:
+    posted: list[str] = []
+
     async def fake_fetch_pr_diff(installation_id, owner, repo, pr_number):
-        return DIFF_TEXT
+        return diff_text
 
     async def fake_fetch_pull_request(installation_id, owner, repo, pr_number):
         return {"head": {"sha": "abc123"}}
@@ -96,14 +109,24 @@ def _mock_dependencies(monkeypatch: pytest.MonkeyPatch, timed_out: bool = False)
         return GOOD_SOURCE
 
     def fake_run_semgrep(scan_dir, ruleset=None, timeout_seconds=None):
-        return '{"results": [], "errors": []}'
+        return json.dumps(
+            {
+                "results": [
+                    {
+                        "check_id": "r1",
+                        "path": str(Path(scan_dir) / "app.py"),
+                        "start": {"line": 2},
+                        "extra": {"severity": "ERROR", "message": "m", "lines": "x"},
+                    }
+                ],
+                "errors": [],
+            }
+        )
 
     async def fake_build_workspace(changed_files, fetch_content, head_sha, workspace_dir):
         return Path(workspace_dir)
 
     def fake_write_test(workspace_dir, path, content):
-        if path == "../evil.py" or ".." in Path(path).parts:
-            raise ValueError(f"unsafe generated test path: {path}")
         return Path(workspace_dir) / path
 
     covs = [0.0, 80.0]
@@ -114,12 +137,15 @@ def _mock_dependencies(monkeypatch: pytest.MonkeyPatch, timed_out: bool = False)
     def fake_run_tests(workspace_dir, test_paths=None, config=None):
         return TestExecution(
             outcomes=[
-                TestOutcome(name="test_alpha.py::test_alpha", status=STATUS_PASSED)
+                TestOutcome(name="test_alpha.py::t1", status=STATUS_PASSED),
+                TestOutcome(name="test_alpha.py::t2", status=STATUS_FAILED),
             ],
-            return_code=0,
+            return_code=1,
             duration_seconds=1.0,
-            timed_out=timed_out,
         )
+
+    async def fake_post_review_comment(installation_id, owner, repo, pr_number, body):
+        posted.append(body)
 
     monkeypatch.setattr("quorum.orchestrator.stages.fetch_pr_diff", fake_fetch_pr_diff)
     monkeypatch.setattr(
@@ -145,23 +171,19 @@ def _mock_dependencies(monkeypatch: pytest.MonkeyPatch, timed_out: bool = False)
     monkeypatch.setattr(
         "quorum.orchestrator.stages.run_tests_in_sandbox", fake_run_tests
     )
-
-    async def fake_post_review_comment(installation_id, owner, repo, pr_number, body):
-        return {"id": 1}
-
     monkeypatch.setattr(
         "quorum.orchestrator.stages.post_review_comment", fake_post_review_comment
     )
+    return posted
 
 
-
-class TestTestWriterEndToEnd:
+class TestSynthesisCommentEndToEnd:
     @pytest.mark.asyncio
-    async def test_full_pipeline_stores_tests_and_coverage(
+    async def test_full_pipeline_scores_and_posts(
         self, db_session: Session, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         pr = _create_pr_with_user(db_session)
-        _mock_dependencies(monkeypatch)
+        posted = _mock_dependencies(monkeypatch)
 
         seen: list[AnalysisContext] = []
 
@@ -172,42 +194,42 @@ class TestTestWriterEndToEnd:
             pr.id, db=db_session, stages=list(runner.STAGES) + [capture_stage]
         )
 
-        assert run_id is not None
-        assert get_analysis_run(db_session, run_id).status == STATUS_COMPLETED
+        run = get_analysis_run(db_session, run_id)
+        assert run.status == STATUS_COMPLETED
+        assert run.merge_readiness_score == 75  # -20 high, -5 one failed test, 0 coverage(80)
+
         context = seen[0]
-        assert [t.name for t in context.generated_tests] == ["test_alpha.py", "../evil.py"]
+        assert context.merge_readiness is not None
+        assert context.merge_readiness.recommendation == "Approve with minor concerns"
 
-        test_runs = db_session.scalars(
-            select(TestRun).where(TestRun.analysis_run_id == run_id)
-        ).all()
-        assert len(test_runs) == 1
-        assert test_runs[0].test_name == "test_alpha.py::test_alpha"
-        assert test_runs[0].status == STATUS_PASSED
-
-        coverage = db_session.scalar(
-            select(CoverageResult).where(CoverageResult.analysis_run_id == run_id)
-        )
-        assert coverage is not None
-        assert coverage.coverage_after == 80.0
-        assert coverage.coverage_delta == 80.0
+        assert len(posted) == 1
+        body = posted[0]
+        assert "## Quorum Review" in body
+        assert "75/100" in body
+        assert "1 High, 0 Medium, 0 Low" in body
+        assert "Generated tests: 2" in body
+        assert "Passed: 1" in body
+        assert "Failed: 1" in body
+        assert "0% → 80%" in body
+        assert "Approve with minor concerns" in body
 
     @pytest.mark.asyncio
-    async def test_timeout_records_failure(
+    async def test_empty_pr_still_scores_and_posts(
         self, db_session: Session, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         pr = _create_pr_with_user(db_session)
-        _mock_dependencies(monkeypatch, timed_out=True)
+        posted = _mock_dependencies(monkeypatch, diff_text="")
 
         run_id = await run_analysis_for_pull_request(pr.id, db=db_session)
 
-        assert run_id is not None
-        assert get_analysis_run(db_session, run_id).status == STATUS_COMPLETED
-        test_runs = db_session.scalars(
-            select(TestRun).where(TestRun.analysis_run_id == run_id)
-        ).all()
-        statuses = {t.status for t in test_runs}
-        assert STATUS_FAILED in statuses
-        assert any("timed out" in t.test_name for t in test_runs)
+        run = get_analysis_run(db_session, run_id)
+        assert run.status == STATUS_COMPLETED
+        assert run.merge_readiness_score == 80  # no tests (-10), no coverage (-10)
+        assert len(posted) == 1
+        body = posted[0]
+        assert "None" in body
+        assert "Generated tests: 0" in body
+        assert "Not measured" in body
 
     @pytest.mark.asyncio
     async def test_pipeline_is_deterministic(
@@ -217,17 +239,10 @@ class TestTestWriterEndToEnd:
 
         _mock_dependencies(monkeypatch)
         first_id = await run_analysis_for_pull_request(pr.id, db=db_session)
-        first = db_session.scalars(
-            select(TestRun).where(TestRun.analysis_run_id == first_id)
-        ).all()
+        first = get_analysis_run(db_session, first_id).merge_readiness_score
 
         _mock_dependencies(monkeypatch)
         second_id = await run_analysis_for_pull_request(pr.id, db=db_session)
-        second = db_session.scalars(
-            select(TestRun).where(TestRun.analysis_run_id == second_id)
-        ).all()
+        second = get_analysis_run(db_session, second_id).merge_readiness_score
 
-        def _sig(rows):
-            return [(r.test_name, r.status) for r in rows]
-
-        assert _sig(first) == _sig(second)
+        assert first == second

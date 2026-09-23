@@ -137,6 +137,14 @@ def _mock_dependencies(monkeypatch: pytest.MonkeyPatch, diff_text: str = DIFF_TE
         lambda role=None: _FakeSecurityLLM(),
     )
 
+    async def fake_post_review_comment(installation_id, owner, repo, pr_number, body):
+        return {"id": 1}
+
+    monkeypatch.setattr(
+        "quorum.orchestrator.stages.post_review_comment", fake_post_review_comment
+    )
+
+
 
 class TestSecurityAgentEndToEnd:
     @pytest.mark.asyncio

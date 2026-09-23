@@ -9,10 +9,15 @@ import logging
 import tempfile
 from typing import TYPE_CHECKING
 
+from quorum.agents.review_comment import build_review_comment
 from quorum.agents.security_agent import (
     SecurityAgent,
     SecurityAgentError,
     filter_unsupported_findings,
+)
+from quorum.agents.synthesis import (
+    SynthesisError,
+    compute_merge_readiness_score,
 )
 from quorum.agents.test_runner import (
     STATUS_FAILED,
@@ -41,12 +46,14 @@ from quorum.database.repository import (
     create_security_findings,
     create_test_runs,
     replace_security_findings,
+    set_merge_readiness_score,
 )
 from quorum.github.content_service import (
     ContentFetchError,
     fetch_file_content,
     fetch_pull_request,
 )
+from quorum.github.comment_service import CommentPostError, post_review_comment
 from quorum.github.diff_service import DiffFetchError, fetch_pr_diff
 from quorum.llm.factory import create_llm_provider
 from quorum.sandbox.workspace import build_sandbox_workspace, write_generated_test
@@ -414,4 +421,66 @@ async def generate_tests_stage(
         coverage_before,
         coverage_after,
         delta,
+    )
+
+
+async def synthesize_stage(
+    session: "Session", context: "AnalysisContext"
+) -> None:
+    """Compute and store the deterministic Merge Readiness Score."""
+    if context.analysis_run_id is None:
+        raise SynthesisError("cannot store score: no analysis run id")
+
+    coverage_after = (
+        context.coverage.coverage_after if context.coverage is not None else None
+    )
+    result = compute_merge_readiness_score(
+        context.security_findings,
+        context.test_results,
+        coverage_after,
+    )
+    context.merge_readiness = result
+    set_merge_readiness_score(session, context.analysis_run_id, result.score)
+    logger.info(
+        "merge readiness for %s/%s#%s: %d (%s)",
+        context.owner,
+        context.repo,
+        context.pr_number,
+        result.score,
+        result.recommendation,
+    )
+
+
+async def post_review_comment_stage(
+    session: "Session", context: "AnalysisContext"
+) -> None:
+    """Build and post the Quorum review summary to the pull request."""
+    if context.analysis_run_id is None:
+        raise CommentPostError("cannot post comment: no analysis run id")
+    if context.merge_readiness is None:
+        raise CommentPostError("cannot post comment: no merge readiness result")
+    if context.installation_id is None:
+        raise CommentPostError(
+            f"cannot post comment for {context.owner}/{context.repo}#"
+            f"{context.pr_number}: no GitHub installation id"
+        )
+
+    body = build_review_comment(
+        context.merge_readiness,
+        context.security_findings,
+        context.test_results,
+        context.coverage,
+    )
+    await post_review_comment(
+        context.installation_id,
+        context.owner,
+        context.repo,
+        context.pr_number,
+        body,
+    )
+    logger.info(
+        "posted review comment for %s/%s#%s",
+        context.owner,
+        context.repo,
+        context.pr_number,
     )

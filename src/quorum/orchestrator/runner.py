@@ -13,6 +13,7 @@ from typing import Callable
 from sqlalchemy.orm import Session
 
 from quorum.agents.security_agent import SecurityAgentFinding
+from quorum.agents.synthesis import MergeReadinessResult
 from quorum.agents.test_runner import TestOutcome
 from quorum.agents.test_writer import GeneratedTest
 from quorum.analysis.ast_parser import AstFileInfo
@@ -53,6 +54,7 @@ class AnalysisContext:
     generated_tests: list[GeneratedTest] = field(default_factory=list)
     test_results: list[TestOutcome] = field(default_factory=list)
     coverage: CoverageResult | None = None
+    merge_readiness: MergeReadinessResult | None = None
 
 
 def _build_context(db: Session, pull_request: PullRequest) -> AnalysisContext:
@@ -120,9 +122,11 @@ from quorum.orchestrator.stages import (
     build_context_stage,
     extract_ast_stage,
     extract_diff_stage,
+    generate_tests_stage,
+    post_review_comment_stage,
     security_agent_stage,
     semgrep_stage,
-    generate_tests_stage,
+    synthesize_stage,
 )
 
 STAGES.append(extract_diff_stage)
@@ -131,3 +135,5 @@ STAGES.append(build_context_stage)
 STAGES.append(semgrep_stage)
 STAGES.append(security_agent_stage)
 STAGES.append(generate_tests_stage)
+STAGES.append(synthesize_stage)
+STAGES.append(post_review_comment_stage)
