@@ -3,7 +3,7 @@ import { GitPullRequest } from "lucide-react"
 
 import { EmptyState } from "@/components/EmptyState"
 import { ErrorState } from "@/components/ErrorState"
-import { PullRequestListItem } from "@/components/PullRequestListItem"
+import { PullRequestReviewCard } from "@/components/PullRequestReviewCard"
 import { SignInRequired } from "@/components/SignInRequired"
 import { Skeleton } from "@/components/ui/Skeleton"
 import { getPullRequests, isUnauthorized, type PullRequestSummary } from "@/lib/api"
@@ -81,7 +81,7 @@ export default function PullRequestsPage() {
       ) : (
         <ul className="space-y-3">
           {pullRequests.map((pullRequest) => (
-            <PullRequestListItem key={pullRequest.id} pullRequest={pullRequest} />
+            <PullRequestReviewCard key={pullRequest.id} pullRequest={pullRequest} />
           ))}
         </ul>
       )}
