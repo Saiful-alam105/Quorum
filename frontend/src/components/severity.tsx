@@ -16,6 +16,7 @@ type SeverityConfig = {
   icon: LucideIcon
   badgeClass: string
   dotClass: string
+  borderClass: string
 }
 
 export const severityConfig: Record<SeverityLevel, SeverityConfig> = {
@@ -25,6 +26,7 @@ export const severityConfig: Record<SeverityLevel, SeverityConfig> = {
     badgeClass:
       "border-severity-critical/40 bg-severity-critical/15 text-severity-critical",
     dotClass: "bg-severity-critical",
+    borderClass: "border-l-severity-critical",
   },
   high: {
     label: "High",
@@ -32,6 +34,7 @@ export const severityConfig: Record<SeverityLevel, SeverityConfig> = {
     badgeClass:
       "border-severity-high/40 bg-severity-high/15 text-severity-high",
     dotClass: "bg-severity-high",
+    borderClass: "border-l-severity-high",
   },
   medium: {
     label: "Medium",
@@ -39,18 +42,21 @@ export const severityConfig: Record<SeverityLevel, SeverityConfig> = {
     badgeClass:
       "border-severity-medium/40 bg-severity-medium/15 text-severity-medium",
     dotClass: "bg-severity-medium",
+    borderClass: "border-l-severity-medium",
   },
   low: {
     label: "Low",
     icon: Info,
     badgeClass: "border-severity-low/40 bg-severity-low/15 text-severity-low",
     dotClass: "bg-severity-low",
+    borderClass: "border-l-severity-low",
   },
   info: {
     label: "Info",
     icon: Info,
     badgeClass: "border-severity-info/40 bg-severity-info/15 text-severity-info",
     dotClass: "bg-severity-info",
+    borderClass: "border-l-severity-info",
   },
 }
 

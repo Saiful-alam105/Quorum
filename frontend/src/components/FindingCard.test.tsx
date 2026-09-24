@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it } from "vitest"
 
-import { FindingListItem } from "@/components/FindingListItem"
+import { FindingCard } from "@/components/FindingCard"
 import type { Finding } from "@/lib/api"
 
 const finding: Finding = {
@@ -13,7 +13,7 @@ const finding: Finding = {
   title: "Shell injection",
   file: "app.py",
   line: 5,
-  evidence: "evidence",
+  evidence: "subprocess.call(cmd, shell=True)",
   explanation: "explanation",
   confidence: 0.9,
   pull_request_id: 1,
@@ -23,24 +23,29 @@ const finding: Finding = {
   repository_full_name: "octocat/hello-world",
 }
 
-describe("FindingListItem", () => {
-  it("renders severity, title and file location", () => {
-    render(
-      <MemoryRouter>
-        <FindingListItem finding={finding} />
-      </MemoryRouter>,
-    )
+function renderCard() {
+  return render(
+    <MemoryRouter>
+      <FindingCard finding={finding} />
+    </MemoryRouter>,
+  )
+}
+
+describe("FindingCard", () => {
+  it("renders severity, title, file location, and evidence", () => {
+    renderCard()
     expect(screen.getByText("High")).toBeInTheDocument()
     expect(screen.getByText("Shell injection")).toBeInTheDocument()
-    expect(screen.getByText("app.py:5")).toBeInTheDocument()
+    expect(
+      screen.getByText("app.py:5 · python.security.example"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("subprocess.call(cmd, shell=True)"),
+    ).toBeInTheDocument()
   })
 
   it("renders the PR context link", () => {
-    render(
-      <MemoryRouter>
-        <FindingListItem finding={finding} />
-      </MemoryRouter>,
-    )
+    renderCard()
     expect(
       screen.getByRole("link", { name: "octocat/hello-world #42 · Add authentication" }),
     ).toHaveAttribute("href", "/pull-requests/1")
@@ -49,9 +54,9 @@ describe("FindingListItem", () => {
   it("renders the file without a line when line is missing", () => {
     render(
       <MemoryRouter>
-        <FindingListItem finding={{ ...finding, line: null }} />
+        <FindingCard finding={{ ...finding, line: null, evidence: "" }} />
       </MemoryRouter>,
     )
-    expect(screen.getByText("app.py")).toBeInTheDocument()
+    expect(screen.getByText("app.py · python.security.example")).toBeInTheDocument()
   })
 })

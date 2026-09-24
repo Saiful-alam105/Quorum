@@ -12,7 +12,7 @@ import {
 
 import { EmptyState } from "@/components/EmptyState"
 import { ErrorState } from "@/components/ErrorState"
-import { FindingListItem } from "@/components/FindingListItem"
+import { FindingCard } from "@/components/FindingCard"
 import { MetricCard } from "@/components/MetricCard"
 import { PullRequestReviewCard } from "@/components/PullRequestReviewCard"
 import { ReviewCard } from "@/components/ReviewCard"
@@ -209,7 +209,7 @@ export default function RepositoryDetailPage() {
           <h2 className="mb-3 mt-8 text-lg font-semibold">Recent Findings</h2>
           <ul className="space-y-3">
             {findings.map((finding) => (
-              <FindingListItem key={finding.id} finding={finding} />
+              <FindingCard key={finding.id} finding={finding} />
             ))}
           </ul>
         </>

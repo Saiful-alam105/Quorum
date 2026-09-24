@@ -3,7 +3,7 @@ import { ShieldCheck, ShieldAlert } from "lucide-react"
 
 import { EmptyState } from "@/components/EmptyState"
 import { ErrorState } from "@/components/ErrorState"
-import { FindingListItem } from "@/components/FindingListItem"
+import { FindingCard } from "@/components/FindingCard"
 import { MetricCard } from "@/components/MetricCard"
 import { SignInRequired } from "@/components/SignInRequired"
 import { Skeleton } from "@/components/ui/Skeleton"
@@ -123,7 +123,7 @@ export default function FindingsPage() {
       ) : (
         <ul className="mt-8 space-y-3">
           {findings.map((finding) => (
-            <FindingListItem key={finding.id} finding={finding} />
+            <FindingCard key={finding.id} finding={finding} />
           ))}
         </ul>
       )}

@@ -9,7 +9,7 @@ import {
 
 import { EmptyState } from "@/components/EmptyState"
 import { ErrorState } from "@/components/ErrorState"
-import { FindingListItem } from "@/components/FindingListItem"
+import { FindingCard } from "@/components/FindingCard"
 import { MetricCard } from "@/components/MetricCard"
 import { PullRequestReviewCard } from "@/components/PullRequestReviewCard"
 import { ReviewCard } from "@/components/ReviewCard"
@@ -203,7 +203,7 @@ export default function DashboardPage() {
       ) : (
         <ul className="space-y-3">
           {findings.map((finding) => (
-            <FindingListItem key={finding.id} finding={finding} />
+            <FindingCard key={finding.id} finding={finding} />
           ))}
         </ul>
       )}
