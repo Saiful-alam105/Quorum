@@ -1,5 +1,5 @@
 from sqlalchemy import delete, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from quorum.database.models import (
     AnalysisRun,
@@ -395,3 +395,75 @@ def replace_security_findings(
     db.add_all(rows)
     db.commit()
     return rows
+
+
+def list_security_findings_for_run(
+    db: Session, analysis_run_id: int
+) -> list[SecurityFinding]:
+    return list(
+        db.scalars(
+            select(SecurityFinding)
+            .where(SecurityFinding.analysis_run_id == analysis_run_id)
+            .order_by(SecurityFinding.id)
+        )
+    )
+
+
+def list_test_runs_for_run(db: Session, analysis_run_id: int) -> list[TestRun]:
+    return list(
+        db.scalars(
+            select(TestRun)
+            .where(TestRun.analysis_run_id == analysis_run_id)
+            .order_by(TestRun.id)
+        )
+    )
+
+
+def get_coverage_result_for_run(
+    db: Session, analysis_run_id: int
+) -> CoverageResult | None:
+    return db.scalar(
+        select(CoverageResult)
+        .where(CoverageResult.analysis_run_id == analysis_run_id)
+        .order_by(CoverageResult.id.desc())
+    )
+
+
+def list_reviews_for_user(db: Session, user_id: int) -> list[AnalysisRun]:
+    """List all analysis runs (reviews) for the repositories owned by a user."""
+    return list(
+        db.scalars(
+            select(AnalysisRun)
+            .options(
+                selectinload(AnalysisRun.security_findings),
+                selectinload(AnalysisRun.test_runs),
+                selectinload(AnalysisRun.pull_request).selectinload(
+                    PullRequest.repository
+                ),
+            )
+            .join(PullRequest, AnalysisRun.pull_request_id == PullRequest.id)
+            .join(Repository, PullRequest.repository_id == Repository.id)
+            .where(Repository.user_id == user_id)
+            .order_by(AnalysisRun.id.desc())
+        )
+    )
+
+
+def get_review_for_user(
+    db: Session, review_id: int, user_id: int
+) -> AnalysisRun | None:
+    """Return an analysis run scoped to a user's repositories, or None."""
+    return db.scalar(
+        select(AnalysisRun)
+        .options(
+            selectinload(AnalysisRun.security_findings),
+            selectinload(AnalysisRun.test_runs),
+            selectinload(AnalysisRun.coverage_results),
+            selectinload(AnalysisRun.pull_request).selectinload(
+                PullRequest.repository
+            ),
+        )
+        .join(PullRequest, AnalysisRun.pull_request_id == PullRequest.id)
+        .join(Repository, PullRequest.repository_id == Repository.id)
+        .where(AnalysisRun.id == review_id, Repository.user_id == user_id)
+    )
