@@ -15,7 +15,7 @@ import { ErrorState } from "@/components/ErrorState"
 import { FindingListItem } from "@/components/FindingListItem"
 import { MetricCard } from "@/components/MetricCard"
 import { PullRequestReviewCard } from "@/components/PullRequestReviewCard"
-import { ReviewListItem } from "@/components/ReviewListItem"
+import { ReviewCard } from "@/components/ReviewCard"
 import { SignInRequired } from "@/components/SignInRequired"
 import { Skeleton } from "@/components/ui/Skeleton"
 import {
@@ -220,7 +220,7 @@ export default function RepositoryDetailPage() {
           <h2 className="mb-3 mt-8 text-lg font-semibold">Analysis Activity</h2>
           <ul className="space-y-3">
             {reviews.map((review) => (
-              <ReviewListItem key={review.id} review={review} />
+              <ReviewCard key={review.id} review={review} />
             ))}
           </ul>
         </>

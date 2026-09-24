@@ -12,7 +12,7 @@ import { ErrorState } from "@/components/ErrorState"
 import { FindingListItem } from "@/components/FindingListItem"
 import { MetricCard } from "@/components/MetricCard"
 import { PullRequestReviewCard } from "@/components/PullRequestReviewCard"
-import { ReviewListItem } from "@/components/ReviewListItem"
+import { ReviewCard } from "@/components/ReviewCard"
 import { SignInRequired } from "@/components/SignInRequired"
 import { Skeleton } from "@/components/ui/Skeleton"
 import {
@@ -218,7 +218,7 @@ export default function DashboardPage() {
       ) : (
         <ul className="space-y-3">
           {reviews.slice(0, 8).map((review) => (
-            <ReviewListItem key={review.id} review={review} />
+            <ReviewCard key={review.id} review={review} />
           ))}
         </ul>
       )}
