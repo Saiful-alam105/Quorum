@@ -13,6 +13,13 @@ function renderPage() {
 }
 
 describe("LandingPage", () => {
+  it("provides a skip-to-content link", () => {
+    renderPage()
+    expect(
+      screen.getByRole("link", { name: "Skip to content" }),
+    ).toHaveAttribute("href", "#landing-content")
+  })
+
   it("renders the hero headline and value proposition", () => {
     renderPage()
     expect(

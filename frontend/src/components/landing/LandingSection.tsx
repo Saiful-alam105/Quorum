@@ -12,7 +12,7 @@ export function LandingSection({
   children?: ReactNode
 }) {
   return (
-    <section id={id} className="border-t border-border/60">
+    <section id={id} className="scroll-mt-16 border-t border-border/60">
       <div className="mx-auto max-w-6xl px-4 py-16 lg:px-6 lg:py-20">
         {eyebrow ? (
           <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-primary">

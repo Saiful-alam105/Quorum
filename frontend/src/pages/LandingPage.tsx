@@ -75,9 +75,15 @@ function HeroPreview() {
 export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <a
+        href="#landing-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:border focus:border-border focus:bg-background focus:px-3 focus:py-2 focus:text-sm"
+      >
+        Skip to content
+      </a>
       <LandingNav />
 
-      <main className="flex-1">
+      <main id="landing-content" className="flex-1">
         <section className="relative overflow-hidden border-b border-border/60">
           <div
             aria-hidden="true"
