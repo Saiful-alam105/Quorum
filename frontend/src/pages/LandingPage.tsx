@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom"
 import { GitPullRequestArrow } from "lucide-react"
 
+import { HowItWorksSection } from "@/components/landing/HowItWorksSection"
 import { LandingFooter } from "@/components/landing/LandingFooter"
 import { LandingNav } from "@/components/landing/LandingNav"
 import { LandingSection } from "@/components/landing/LandingSection"
+import { ProblemSection } from "@/components/landing/ProblemSection"
 import { SeverityDot } from "@/components/severity"
 import { buttonVariants } from "@/components/ui/Button"
 import { cn } from "@/lib/utils"
@@ -112,18 +114,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <LandingSection
-          id="how-it-works"
-          eyebrow="How it works"
-          title="From Pull Request to findings"
-        >
-          <p className="max-w-3xl text-muted-foreground">
-            Quorum takes a GitHub Pull Request through a structured analysis
-            pipeline — from receiving the Pull Request and extracting its
-            changes, to preparing bounded context, running analysis, and
-            presenting findings and recommendations.
-          </p>
-        </LandingSection>
+        <ProblemSection />
+
+        <HowItWorksSection />
 
         <LandingSection
           id="features"

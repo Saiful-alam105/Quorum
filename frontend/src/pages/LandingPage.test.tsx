@@ -56,6 +56,31 @@ describe("LandingPage", () => {
     ).toBeInTheDocument()
   })
 
+  it("renders the problem section with honest pain points", () => {
+    renderPage()
+    expect(
+      screen.getByRole("heading", {
+        name: "Pull Requests deserve more than a quick look.",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("Security issues slip through"),
+    ).toBeInTheDocument()
+  })
+
+  it("renders the six-step pipeline in order", () => {
+    renderPage()
+    expect(
+      screen.getByText("Quorum receives the Pull Request"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Changed code is extracted")).toBeInTheDocument()
+    expect(screen.getByText("Context is prepared")).toBeInTheDocument()
+    expect(screen.getByText("The analysis pipeline runs")).toBeInTheDocument()
+    expect(screen.getByText("Merge Readiness is scored")).toBeInTheDocument()
+    expect(screen.getByText("Findings are presented")).toBeInTheDocument()
+    expect(screen.getByText("01")).toBeInTheDocument()
+  })
+
   it("connects the primary CTA to the existing login route", () => {
     renderPage()
     const cta = screen.getByRole("link", { name: "Continue with GitHub" })
