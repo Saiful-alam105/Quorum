@@ -149,6 +149,7 @@ export type ReviewSummary = {
   repository_full_name: string
   status: string
   merge_readiness_score: number | null
+  recommendation: string | null
   started_at: string | null
   completed_at: string | null
   finding_count: number
@@ -163,6 +164,10 @@ export type ReviewDetail = ReviewSummary & {
   findings: SecurityFinding[]
   tests: TestRun[]
   coverage: CoverageResult | null
+}
+
+export function getReview(id: number): Promise<ReviewDetail> {
+  return request<ReviewDetail>(`/api/reviews/${id}`)
 }
 
 export type SecurityFinding = {

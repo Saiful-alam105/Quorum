@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import {
   ArrowLeft,
-  ClipboardCheck,
   ExternalLink,
   FolderGit2,
   GitPullRequest,
@@ -10,8 +9,10 @@ import {
   TestTube2,
 } from "lucide-react"
 
+import { CoverageBlock } from "@/components/CoverageBlock"
 import { EmptyState } from "@/components/EmptyState"
 import { ErrorState } from "@/components/ErrorState"
+import { MergeReadinessBlock } from "@/components/MergeReadinessBlock"
 import { SecurityFindingCard } from "@/components/SecurityFindingCard"
 import { SignInRequired } from "@/components/SignInRequired"
 import { AnalysisStatusBadge, PrStateBadge } from "@/components/status"
@@ -44,71 +45,6 @@ type PageState =
       tests: TestRun[]
       coverage: CoverageResult | null
     }
-
-function recommendationClass(score: number): string {
-  if (score >= 70) {
-    return "text-success"
-  }
-  if (score >= 50) {
-    return "text-warning"
-  }
-  return "text-severity-critical"
-}
-
-function ScoreBlock({ run }: { run: AnalysisRun | null }) {
-  if (!run || run.merge_readiness_score == null) {
-    return (
-      <div>
-        <p className="text-sm text-muted-foreground">Merge Readiness</p>
-        <p className="mt-1 text-4xl font-semibold text-muted-foreground">—</p>
-        <p className="mt-1 text-sm text-muted-foreground">No score yet</p>
-      </div>
-    )
-  }
-  return (
-    <div>
-      <p className="text-sm text-muted-foreground">Merge Readiness</p>
-      <p className="mt-1 font-mono text-4xl font-semibold">
-        {run.merge_readiness_score}
-        <span className="text-lg text-muted-foreground">/100</span>
-      </p>
-      {run.recommendation ? (
-        <p className={`mt-1 text-sm font-medium ${recommendationClass(run.merge_readiness_score)}`}>
-          {run.recommendation}
-        </p>
-      ) : null}
-    </div>
-  )
-}
-
-function CoverageBlock({ coverage }: { coverage: CoverageResult | null }) {
-  if (!coverage) {
-    return (
-      <EmptyState
-        icon={ClipboardCheck}
-        title="Coverage not measured"
-        description="Coverage was not measured for the latest analysis run."
-      />
-    )
-  }
-  const rows = [
-    { label: "Before", value: coverage.coverage_before },
-    { label: "After", value: coverage.coverage_after },
-    { label: "Delta", value: coverage.coverage_delta },
-  ]
-  return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      {rows.map((row) => (
-        <div key={row.label} className="rounded-lg border border-border bg-card p-4">
-          <p className="text-sm text-muted-foreground">{row.label}</p>
-          <p className="mt-1 font-mono text-2xl font-semibold">
-            {row.value != null ? `${row.value.toFixed(1)}%` : "—"}
-          </p>
-        </div>
-      ))}
-    </div>
-  )
-}
 
 export default function PullRequestDetailPage() {
   const { pullRequestId } = useParams<{ pullRequestId: string }>()
@@ -248,7 +184,10 @@ export default function PullRequestDetailPage() {
 
       <div className="mb-8 grid gap-4 lg:grid-cols-3">
         <div className="rounded-lg border border-border bg-card p-4">
-          <ScoreBlock run={latestRun} />
+          <MergeReadinessBlock
+            score={latestRun?.merge_readiness_score ?? null}
+            recommendation={latestRun?.recommendation ?? null}
+          />
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-sm text-muted-foreground">Analysis</p>

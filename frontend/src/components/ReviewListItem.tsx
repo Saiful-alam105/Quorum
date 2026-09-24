@@ -13,7 +13,7 @@ export function ReviewListItem({ review }: { review: ReviewSummary }) {
         <div className="flex items-center gap-2">
           <ClipboardCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
           <Link
-            to={`/pull-requests/${review.pull_request_id}`}
+            to={`/reviews/${review.id}`}
             className="truncate font-medium transition-colors hover:text-primary hover:underline"
           >
             {review.repository_full_name}

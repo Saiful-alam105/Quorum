@@ -3,12 +3,14 @@ import { BrowserRouter, Route, Routes } from "react-router-dom"
 import { AppLayout } from "@/components/AppLayout"
 import AskQuorumPage from "@/pages/AskQuorumPage"
 import DashboardPage from "@/pages/DashboardPage"
+import FindingsPage from "@/pages/FindingsPage"
 import LoginPage from "@/pages/LoginPage"
 import NotFoundPage from "@/pages/NotFoundPage"
 import PullRequestDetailPage from "@/pages/PullRequestDetailPage"
 import PullRequestsPage from "@/pages/PullRequestsPage"
 import RepositoriesPage from "@/pages/RepositoriesPage"
 import RepositoryDetailPage from "@/pages/RepositoryDetailPage"
+import ReviewDetailPage from "@/pages/ReviewDetailPage"
 import ReviewsPage from "@/pages/ReviewsPage"
 import SettingsPage from "@/pages/SettingsPage"
 
@@ -32,6 +34,8 @@ export default function App() {
             element={<PullRequestDetailPage />}
           />
           <Route path="reviews" element={<ReviewsPage />} />
+          <Route path="reviews/:reviewId" element={<ReviewDetailPage />} />
+          <Route path="findings" element={<FindingsPage />} />
           <Route path="ask-quorum" element={<AskQuorumPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<NotFoundPage />} />
