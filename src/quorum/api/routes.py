@@ -77,6 +77,8 @@ def read_current_user(
         github_id=user.github_id,
         username=user.username,
         avatar_url=user.avatar_url,
+        created_at=user.created_at,
+        github_authorized=user.github_installation_id is not None,
     )
 
 

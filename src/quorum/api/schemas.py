@@ -7,6 +7,8 @@ class UserOut(BaseModel):
     github_id: int | None
     username: str | None
     avatar_url: str | None = None
+    created_at: datetime | None = None
+    github_authorized: bool = False
 
 
 class RepositoryOut(BaseModel):

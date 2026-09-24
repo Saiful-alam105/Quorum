@@ -6,6 +6,7 @@ import DashboardPage from "@/pages/DashboardPage"
 import FindingsPage from "@/pages/FindingsPage"
 import LoginPage from "@/pages/LoginPage"
 import NotFoundPage from "@/pages/NotFoundPage"
+import ProfilePage from "@/pages/ProfilePage"
 import PullRequestDetailPage from "@/pages/PullRequestDetailPage"
 import PullRequestsPage from "@/pages/PullRequestsPage"
 import RepositoriesPage from "@/pages/RepositoriesPage"
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="reviews" element={<ReviewsPage />} />
           <Route path="reviews/:reviewId" element={<ReviewDetailPage />} />
           <Route path="findings" element={<FindingsPage />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="ask-quorum" element={<AskQuorumPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<NotFoundPage />} />

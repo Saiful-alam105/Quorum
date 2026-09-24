@@ -173,6 +173,8 @@ def test_me_authenticated(mock_github_config: None, monkeypatch: pytest.MonkeyPa
     assert data["username"] == "testuser"
     assert data["github_id"] == 12345
     assert data["avatar_url"] == "https://example.com/avatar.png"
+    assert data["github_authorized"] is False
+    assert data["created_at"] is not None
 
 
 def test_logout(mock_github_config: None, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -140,6 +140,8 @@ async def me(
         "github_id": user.github_id,
         "username": user.username,
         "avatar_url": user.avatar_url,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+        "github_authorized": user.github_installation_id is not None,
     }
 
 

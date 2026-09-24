@@ -206,6 +206,8 @@ export type CurrentUser = {
   github_id: number | null
   username: string | null
   avatar_url: string | null
+  created_at: string | null
+  github_authorized: boolean
 }
 
 export function getCurrentUser(): Promise<CurrentUser> {
