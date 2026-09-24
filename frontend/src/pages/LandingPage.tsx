@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom"
 import { GitPullRequestArrow } from "lucide-react"
 
-import { ArchitectureSection } from "@/components/landing/ArchitectureSection"
 import { CapabilitiesSection } from "@/components/landing/CapabilitiesSection"
 import { FinalCtaSection } from "@/components/landing/FinalCtaSection"
 import { HowItWorksSection } from "@/components/landing/HowItWorksSection"
@@ -134,8 +133,6 @@ export default function LandingPage() {
         <ReviewExperienceSection />
 
         <SecurityTestingSection />
-
-        <ArchitectureSection />
 
         <WhyQuorumSection />
       </main>

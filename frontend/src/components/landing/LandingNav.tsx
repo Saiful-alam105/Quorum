@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils"
 const links = [
   { href: "#how-it-works", label: "How it works" },
   { href: "#features", label: "Features" },
-  { href: "#architecture", label: "Architecture" },
   { href: "#why-quorum", label: "Why Quorum" },
 ]
 

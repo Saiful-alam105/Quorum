@@ -54,7 +54,7 @@ export function AuthStatus() {
     try {
       await logout()
     } finally {
-      load()
+      window.location.assign("/")
     }
   }
 

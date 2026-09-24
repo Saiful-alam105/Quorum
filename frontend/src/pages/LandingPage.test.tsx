@@ -38,10 +38,6 @@ describe("LandingPage", () => {
       "href",
       "#features",
     )
-    expect(screen.getByRole("link", { name: "Architecture" })).toHaveAttribute(
-      "href",
-      "#architecture",
-    )
     expect(
       screen.getByRole("link", { name: "Why Quorum" }),
     ).toHaveAttribute("href", "#why-quorum")
@@ -54,9 +50,6 @@ describe("LandingPage", () => {
     ).toBeInTheDocument()
     expect(
       screen.getByRole("heading", { name: "Everything a Pull Request review needs" }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole("heading", { name: "How Quorum is built" }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole("heading", { name: "Built around the developer workflow" }),
@@ -143,15 +136,6 @@ describe("LandingPage", () => {
     ).toBeInTheDocument()
     expect(screen.getByText("Security evidence")).toBeInTheDocument()
     expect(screen.getByText("Generated tests")).toBeInTheDocument()
-  })
-
-  it("renders the architecture pipeline", () => {
-    renderPage()
-    expect(screen.getByText("How Quorum is built")).toBeInTheDocument()
-    expect(screen.getByText("FastAPI backend")).toBeInTheDocument()
-    expect(screen.getByText("Orchestrator")).toBeInTheDocument()
-    expect(screen.getByText("PostgreSQL")).toBeInTheDocument()
-    expect(screen.getAllByText("01").length).toBeGreaterThan(0)
   })
 
   it("renders the why-quorum points", () => {
