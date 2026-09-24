@@ -75,6 +75,10 @@ export type PullRequestSummary = {
   merge_readiness_score: number | null
   finding_count: number
   critical_count: number
+  high_count: number
+  medium_count: number
+  low_count: number
+  info_count: number
   test_count: number
 }
 

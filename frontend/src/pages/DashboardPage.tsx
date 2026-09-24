@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/EmptyState"
 import { ErrorState } from "@/components/ErrorState"
 import { FindingListItem } from "@/components/FindingListItem"
 import { MetricCard } from "@/components/MetricCard"
-import { PullRequestListItem } from "@/components/PullRequestListItem"
+import { PullRequestReviewCard } from "@/components/PullRequestReviewCard"
 import { ReviewListItem } from "@/components/ReviewListItem"
 import { SignInRequired } from "@/components/SignInRequired"
 import { Skeleton } from "@/components/ui/Skeleton"
@@ -188,7 +188,7 @@ export default function DashboardPage() {
       ) : (
         <ul className="space-y-3">
           {pullRequests.slice(0, 8).map((pullRequest) => (
-            <PullRequestListItem key={pullRequest.id} pullRequest={pullRequest} />
+            <PullRequestReviewCard key={pullRequest.id} pullRequest={pullRequest} />
           ))}
         </ul>
       )}

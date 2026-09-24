@@ -19,6 +19,10 @@ const base: PullRequestSummary = {
   merge_readiness_score: 82,
   finding_count: 3,
   critical_count: 1,
+  high_count: 1,
+  medium_count: 1,
+  low_count: 0,
+  info_count: 0,
   test_count: 5,
 }
 

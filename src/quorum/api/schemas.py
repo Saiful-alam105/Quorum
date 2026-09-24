@@ -48,6 +48,10 @@ class PullRequestSummaryOut(BaseModel):
     merge_readiness_score: int | None = None
     finding_count: int = 0
     critical_count: int = 0
+    high_count: int = 0
+    medium_count: int = 0
+    low_count: int = 0
+    info_count: int = 0
     test_count: int = 0
 
 

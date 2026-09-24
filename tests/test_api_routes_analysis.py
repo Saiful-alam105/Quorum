@@ -598,13 +598,19 @@ def test_pull_requests_summary_counts_critical(
             _finding(severity="critical"),
             _finding(severity="critical"),
             _finding(severity="medium"),
+            _finding(severity="high"),
+            _finding(severity="low"),
         ],
     )
 
     response = client.get("/api/pull-requests", **_auth(session_token))
     data = response.json()
-    assert data[0]["finding_count"] == 3
+    assert data[0]["finding_count"] == 5
     assert data[0]["critical_count"] == 2
+    assert data[0]["high_count"] == 1
+    assert data[0]["medium_count"] == 1
+    assert data[0]["low_count"] == 1
+    assert data[0]["info_count"] == 0
 
 
 def test_upsert_pull_request_refreshes_updated_at(

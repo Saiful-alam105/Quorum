@@ -123,11 +123,10 @@ def _repository_out(repository: Repository) -> RepositoryOut:
 def _pull_request_summary(pull_request: PullRequest) -> PullRequestSummaryOut:
     latest = _latest_analysis_run_of(pull_request)
     findings = latest.security_findings if latest is not None else []
-    critical = sum(
-        1
-        for finding in findings
-        if (finding.severity or "").lower() == "critical"
-    )
+    severity_counts: dict[str, int] = {}
+    for finding in findings:
+        severity = (finding.severity or "").lower() or "info"
+        severity_counts[severity] = severity_counts.get(severity, 0) + 1
     return PullRequestSummaryOut(
         id=pull_request.id,
         github_id=pull_request.github_id,
@@ -147,7 +146,11 @@ def _pull_request_summary(pull_request: PullRequest) -> PullRequestSummaryOut:
             latest.merge_readiness_score if latest is not None else None
         ),
         finding_count=len(findings),
-        critical_count=critical,
+        critical_count=severity_counts.get("critical", 0),
+        high_count=severity_counts.get("high", 0),
+        medium_count=severity_counts.get("medium", 0),
+        low_count=severity_counts.get("low", 0),
+        info_count=severity_counts.get("info", 0),
         test_count=len(latest.test_runs) if latest is not None else 0,
     )
 
