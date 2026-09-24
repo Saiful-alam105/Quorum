@@ -50,7 +50,10 @@ def _current_user_id(db: Session, session: str | None) -> int:
 
 
 @router.get("/me", response_model=UserOut)
-def read_current_user(session: str | None = Cookie(default=None)) -> UserOut:
+def read_current_user(
+    session: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),
+) -> UserOut:
     if not session:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
@@ -58,9 +61,14 @@ def read_current_user(session: str | None = Cookie(default=None)) -> UserOut:
     if not session_data:
         raise HTTPException(status_code=401, detail="Invalid session")
 
+    user = get_user_by_github_id(db, session_data.get("github_id"))
+    if user is None:
+        raise HTTPException(status_code=401, detail="Invalid session")
+
     return UserOut(
-        github_id=session_data.get("github_id"),
-        username=session_data.get("username"),
+        github_id=user.github_id,
+        username=user.username,
+        avatar_url=user.avatar_url,
     )
 
 

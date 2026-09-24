@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 class UserOut(BaseModel):
     github_id: int | None
     username: str | None
+    avatar_url: str | None = None
 
 
 class RepositoryOut(BaseModel):

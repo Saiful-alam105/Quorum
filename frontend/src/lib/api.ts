@@ -87,6 +87,7 @@ export function getPullRequest(id: number): Promise<PullRequestSummary> {
 export type CurrentUser = {
   github_id: number | null
   username: string | null
+  avatar_url: string | null
 }
 
 export function getCurrentUser(): Promise<CurrentUser> {
