@@ -138,7 +138,15 @@ class ReviewSummaryOut(BaseModel):
     started_at: datetime | None
     completed_at: datetime | None
     finding_count: int
+    critical_count: int = 0
+    high_count: int = 0
+    medium_count: int = 0
+    low_count: int = 0
+    info_count: int = 0
     test_count: int
+    coverage_before: float | None = None
+    coverage_after: float | None = None
+    coverage_delta: float | None = None
 
 
 class ReviewDetailOut(ReviewSummaryOut):

@@ -217,6 +217,11 @@ def read_repository_pull_requests(
 def _review_summary(run: AnalysisRun) -> ReviewSummaryOut:
     pull_request = run.pull_request
     repository = pull_request.repository if pull_request is not None else None
+    severity_counts: dict[str, int] = {}
+    for finding in run.security_findings:
+        severity = (finding.severity or "").lower() or "info"
+        severity_counts[severity] = severity_counts.get(severity, 0) + 1
+    coverage = run.coverage_results[0] if run.coverage_results else None
     return ReviewSummaryOut(
         id=run.id,
         pull_request_id=run.pull_request_id,
@@ -238,7 +243,15 @@ def _review_summary(run: AnalysisRun) -> ReviewSummaryOut:
         started_at=run.started_at,
         completed_at=run.completed_at,
         finding_count=len(run.security_findings),
+        critical_count=severity_counts.get("critical", 0),
+        high_count=severity_counts.get("high", 0),
+        medium_count=severity_counts.get("medium", 0),
+        low_count=severity_counts.get("low", 0),
+        info_count=severity_counts.get("info", 0),
         test_count=len(run.test_runs),
+        coverage_before=coverage.coverage_before if coverage is not None else None,
+        coverage_after=coverage.coverage_after if coverage is not None else None,
+        coverage_delta=coverage.coverage_delta if coverage is not None else None,
     )
 
 

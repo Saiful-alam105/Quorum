@@ -411,11 +411,16 @@ def test_reviews_returns_summaries_with_counts(
         db_session,
         pull_request,
         score=82,
-        findings=[_finding(severity="high"), _finding(severity="medium")],
+        findings=[
+            _finding(severity="high"),
+            _finding(severity="medium"),
+            _finding(severity="critical"),
+        ],
         tests=[
             {"test_name": "t1", "status": "passed"},
             {"test_name": "t2", "status": "failed"},
         ],
+        coverage=(72.0, 81.0, 9.0),
     )
 
     response = client.get("/api/reviews", **_auth(session_token))
@@ -432,8 +437,15 @@ def test_reviews_returns_summaries_with_counts(
     assert item["status"] == "completed"
     assert item["merge_readiness_score"] == 82
     assert item["recommendation"] == "Approve with minor concerns"
-    assert item["finding_count"] == 2
+    assert item["finding_count"] == 3
+    assert item["critical_count"] == 1
+    assert item["high_count"] == 1
+    assert item["medium_count"] == 1
+    assert item["low_count"] == 0
     assert item["test_count"] == 2
+    assert item["coverage_before"] == 72.0
+    assert item["coverage_after"] == 81.0
+    assert item["coverage_delta"] == 9.0
     assert item["started_at"] is None
     assert item["completed_at"] is None
 

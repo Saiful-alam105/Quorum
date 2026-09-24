@@ -157,7 +157,15 @@ export type ReviewSummary = {
   started_at: string | null
   completed_at: string | null
   finding_count: number
+  critical_count: number
+  high_count: number
+  medium_count: number
+  low_count: number
+  info_count: number
   test_count: number
+  coverage_before: number | null
+  coverage_after: number | null
+  coverage_delta: number | null
 }
 
 export function getReviews(): Promise<ReviewSummary[]> {

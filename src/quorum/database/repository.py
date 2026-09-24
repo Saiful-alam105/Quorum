@@ -474,6 +474,7 @@ def list_reviews_for_user(db: Session, user_id: int) -> list[AnalysisRun]:
             .options(
                 selectinload(AnalysisRun.security_findings),
                 selectinload(AnalysisRun.test_runs),
+                selectinload(AnalysisRun.coverage_results),
                 selectinload(AnalysisRun.pull_request).selectinload(
                     PullRequest.repository
                 ),
