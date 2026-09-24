@@ -46,7 +46,7 @@ describe("LandingPage", () => {
       screen.getByRole("heading", { name: "From Pull Request to findings" }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("heading", { name: "Core capabilities" }),
+      screen.getByRole("heading", { name: "Everything a Pull Request review needs" }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole("heading", { name: "How Quorum is built" }),
@@ -54,6 +54,27 @@ describe("LandingPage", () => {
     expect(
       screen.getByRole("heading", { name: "Built for developers" }),
     ).toBeInTheDocument()
+  })
+
+  it("renders capability cards including the roadmap-only one", () => {
+    renderPage()
+    expect(screen.getByText("Security analysis")).toBeInTheDocument()
+    expect(
+      screen.getAllByText("Merge Readiness").length,
+    ).toBeGreaterThan(0)
+    expect(screen.getByText("Ask Quorum")).toBeInTheDocument()
+    expect(screen.getByText("Roadmap")).toBeInTheDocument()
+  })
+
+  it("renders the labeled review experience preview", () => {
+    renderPage()
+    expect(
+      screen.getByText("One screen, everything about the Pull Request"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Shell command injection")).toBeInTheDocument()
+    expect(
+      screen.getAllByText("Product preview — example review outcome").length,
+    ).toBeGreaterThan(0)
   })
 
   it("renders the problem section with honest pain points", () => {
@@ -98,9 +119,9 @@ describe("LandingPage", () => {
   it("shows a clearly labeled product preview", () => {
     renderPage()
     expect(
-      screen.getByText("Product preview — example review outcome"),
-    ).toBeInTheDocument()
-    expect(screen.getByText("Pull Request #42")).toBeInTheDocument()
+      screen.getAllByText("Product preview — example review outcome").length,
+    ).toBeGreaterThan(0)
+    expect(screen.getAllByText("Pull Request #42").length).toBeGreaterThan(0)
   })
 
   it("opens the mobile navigation menu", () => {

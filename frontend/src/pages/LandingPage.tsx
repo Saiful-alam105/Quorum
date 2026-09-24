@@ -2,10 +2,12 @@ import { Link } from "react-router-dom"
 import { GitPullRequestArrow } from "lucide-react"
 
 import { HowItWorksSection } from "@/components/landing/HowItWorksSection"
+import { CapabilitiesSection } from "@/components/landing/CapabilitiesSection"
 import { LandingFooter } from "@/components/landing/LandingFooter"
 import { LandingNav } from "@/components/landing/LandingNav"
 import { LandingSection } from "@/components/landing/LandingSection"
 import { ProblemSection } from "@/components/landing/ProblemSection"
+import { ReviewExperienceSection } from "@/components/landing/ReviewExperienceSection"
 import { SeverityDot } from "@/components/severity"
 import { buttonVariants } from "@/components/ui/Button"
 import { cn } from "@/lib/utils"
@@ -118,17 +120,9 @@ export default function LandingPage() {
 
         <HowItWorksSection />
 
-        <LandingSection
-          id="features"
-          eyebrow="Capabilities"
-          title="Core capabilities"
-        >
-          <p className="max-w-3xl text-muted-foreground">
-            Security analysis, Pull Request analysis, context management,
-            analysis history, and a central review dashboard — grounded in the
-            Quorum roadmap.
-          </p>
-        </LandingSection>
+        <CapabilitiesSection />
+
+        <ReviewExperienceSection />
 
         <LandingSection
           id="architecture"
