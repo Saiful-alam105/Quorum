@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it } from "vitest"
 
@@ -17,7 +17,7 @@ describe("LandingPage", () => {
     renderPage()
     expect(
       screen.getByRole("heading", {
-        name: "AI-powered Pull Request review for developers.",
+        name: "Understand every Pull Request before you merge.",
       }),
     ).toBeInTheDocument()
   })
@@ -68,5 +68,28 @@ describe("LandingPage", () => {
       "href",
       "https://github.com/Saiful-alam105/Quorum",
     )
+  })
+
+  it("shows a clearly labeled product preview", () => {
+    renderPage()
+    expect(
+      screen.getByText("Product preview — example review outcome"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Pull Request #42")).toBeInTheDocument()
+  })
+
+  it("opens the mobile navigation menu", () => {
+    renderPage()
+    const toggle = screen.getByRole("button", {
+      name: "Toggle navigation menu",
+    })
+    fireEvent.click(toggle)
+    const mobileNav = screen.getByRole("navigation", { name: "Landing mobile" })
+    expect(
+      within(mobileNav).getByRole("link", { name: "How it works" }),
+    ).toHaveAttribute("href", "#how-it-works")
+    expect(
+      within(mobileNav).getByRole("link", { name: "Sign in with GitHub" }),
+    ).toHaveAttribute("href", "/login")
   })
 })

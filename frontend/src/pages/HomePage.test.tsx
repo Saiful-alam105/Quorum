@@ -50,7 +50,7 @@ describe("HomePage", () => {
     )
     expect(
       await screen.findByRole("heading", {
-        name: "AI-powered Pull Request review for developers.",
+        name: "Understand every Pull Request before you merge.",
       }),
     ).toBeInTheDocument()
     expect(
