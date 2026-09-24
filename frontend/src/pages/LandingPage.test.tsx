@@ -73,7 +73,8 @@ describe("LandingPage", () => {
     expect(
       screen.getByText("One screen, everything about the Pull Request"),
     ).toBeInTheDocument()
-    expect(screen.getByText("Shell command injection")).toBeInTheDocument()
+    expect(screen.getByText("Approve with minor concerns")).toBeInTheDocument()
+    expect(screen.getByText("2 findings")).toBeInTheDocument()
     expect(
       screen.getAllByText("Product preview — example review outcome").length,
     ).toBeGreaterThan(0)

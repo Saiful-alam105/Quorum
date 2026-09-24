@@ -64,7 +64,7 @@ export default function SettingsPage() {
     try {
       await logout()
     } finally {
-      window.location.reload()
+      window.location.assign("/")
     }
   }
 
