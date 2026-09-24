@@ -8,7 +8,7 @@ import { formatDateTime } from "@/lib/format"
 export function ReviewListItem({ review }: { review: ReviewSummary }) {
   const timestamp = review.completed_at ?? review.started_at
   return (
-    <li className="flex items-center justify-between gap-4 rounded-lg border border-border bg-card p-4">
+    <li className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-card p-4">
       <div className="min-w-0 space-y-1">
         <div className="flex items-center gap-2">
           <ClipboardCheck className="h-4 w-4 shrink-0 text-muted-foreground" />

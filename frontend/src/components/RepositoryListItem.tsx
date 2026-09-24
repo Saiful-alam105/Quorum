@@ -8,7 +8,7 @@ export function RepositoryListItem({ repository }: { repository: Repository }) {
   const prCount = repository.pull_request_count
 
   return (
-    <li className="flex items-center justify-between gap-4 rounded-lg border border-border bg-card p-4">
+    <li className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-card p-4">
       <Link
         to={`/repositories/${repository.id}`}
         className="min-w-0 space-y-1.5"

@@ -15,7 +15,7 @@ export function PullRequestListItem({
     : null
 
   return (
-    <li className="flex items-center justify-between gap-4 rounded-lg border border-border bg-card p-4">
+    <li className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-card p-4">
       <div className="min-w-0 space-y-1.5">
         <div className="flex items-center gap-2">
           <GitPullRequest className="h-4 w-4 shrink-0 text-muted-foreground" />

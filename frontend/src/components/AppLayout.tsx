@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation } from "react-router-dom"
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom"
 import { GitPullRequestArrow } from "lucide-react"
 
 import { AuthStatus } from "@/components/AuthStatus"
@@ -28,13 +28,23 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-screen bg-background">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:border focus:border-border focus:bg-background focus:px-3 focus:py-2 focus:text-sm"
+      >
+        Skip to content
+      </a>
       <aside className="flex w-16 shrink-0 flex-col border-r bg-card/40 lg:w-60">
-        <div className="flex h-14 items-center justify-center gap-2 border-b px-3 lg:justify-start lg:px-4">
+        <Link
+          to="/"
+          aria-label="Quorum home"
+          className="flex h-14 items-center justify-center gap-2 border-b px-3 transition-colors hover:bg-accent lg:justify-start lg:px-4"
+        >
           <QuorumMark />
           <span className="hidden text-[15px] font-semibold tracking-tight lg:block">
             Quorum
           </span>
-        </div>
+        </Link>
 
         <nav className="flex-1 space-y-1 p-2 lg:p-3">
           {navItems.map((item) => (
@@ -66,7 +76,13 @@ export function AppLayout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b bg-background/80 px-4 backdrop-blur lg:px-6">
           <div className="flex min-w-0 items-center gap-2">
-            <QuorumMark className="lg:hidden" />
+            <Link
+              to="/"
+              aria-label="Quorum home"
+              className="flex items-center rounded-md transition-colors hover:bg-accent lg:hidden"
+            >
+              <QuorumMark className="m-1" />
+            </Link>
             <span className="hidden text-sm font-medium text-muted-foreground lg:block">
               {current.label}
             </span>
@@ -77,7 +93,7 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main className="flex-1 p-4 lg:p-6">
+        <main id="main-content" className="flex-1 p-4 lg:p-6">
           <Outlet />
         </main>
       </div>

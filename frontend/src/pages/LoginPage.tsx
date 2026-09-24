@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Activity, Github, Loader2 } from "lucide-react"
+import { GitPullRequestArrow, Github, Loader2 } from "lucide-react"
 
 import { getLoginUrl } from "@/lib/api"
 
@@ -23,7 +23,9 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-background p-8">
       <div className="w-full max-w-sm space-y-6 rounded-lg border border-border p-8 text-center">
         <div className="space-y-2">
-          <Activity className="mx-auto h-8 w-8 text-primary" />
+          <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg border border-primary/40 bg-primary/15 text-primary">
+            <GitPullRequestArrow className="h-5 w-5" />
+          </span>
           <h1 className="text-2xl font-bold tracking-tight">Quorum</h1>
           <p className="text-sm text-muted-foreground">
             Sign in with GitHub to review your Pull Requests.
