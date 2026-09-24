@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Cookie, Depends, HTTPException
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from quorum.api.schemas import (
     AnalysisRunOut,
     CoverageResultOut,
+    FindingOut,
     PullRequestOut,
     PullRequestSummaryOut,
     RepositoryOut,
@@ -15,7 +16,13 @@ from quorum.api.schemas import (
 )
 from quorum.auth.sessions import get_session
 from quorum.database.base import get_db
-from quorum.database.models import AnalysisRun, PullRequest, Repository, User
+from quorum.database.models import (
+    AnalysisRun,
+    PullRequest,
+    Repository,
+    SecurityFinding,
+    User,
+)
 from quorum.database.repository import (
     get_coverage_result_for_run,
     get_pull_request_for_user,
@@ -24,6 +31,7 @@ from quorum.database.repository import (
     get_user_by_github_id,
     list_analysis_runs_for_pull_request,
     list_pull_requests_for_user,
+    list_recent_findings_for_user,
     list_repositories_for_user,
     list_repository_pull_requests_for_user,
     list_reviews_for_user,
@@ -88,6 +96,13 @@ async def read_repositories(
 
 
 def _pull_request_summary(pull_request: PullRequest) -> PullRequestSummaryOut:
+    latest = _latest_analysis_run_of(pull_request)
+    findings = latest.security_findings if latest is not None else []
+    critical = sum(
+        1
+        for finding in findings
+        if (finding.severity or "").lower() == "critical"
+    )
     return PullRequestSummaryOut(
         id=pull_request.id,
         github_id=pull_request.github_id,
@@ -101,7 +116,21 @@ def _pull_request_summary(pull_request: PullRequest) -> PullRequestSummaryOut:
             if pull_request.repository is not None
             else None
         ),
+        updated_at=pull_request.updated_at,
+        latest_analysis_status=latest.status if latest is not None else None,
+        merge_readiness_score=(
+            latest.merge_readiness_score if latest is not None else None
+        ),
+        finding_count=len(findings),
+        critical_count=critical,
+        test_count=len(latest.test_runs) if latest is not None else 0,
     )
+
+
+def _latest_analysis_run_of(pull_request: PullRequest) -> AnalysisRun | None:
+    if not pull_request.analysis_runs:
+        return None
+    return max(pull_request.analysis_runs, key=lambda run: run.id)
 
 
 @router.get("/pull-requests", response_model=list[PullRequestSummaryOut])
@@ -308,3 +337,41 @@ def read_review(
     if run is None:
         raise HTTPException(status_code=404, detail="Review not found")
     return _review_detail(run)
+
+
+def _finding_out(finding: SecurityFinding) -> FindingOut:
+    run = finding.analysis_run
+    pull_request = run.pull_request if run is not None else None
+    repository = pull_request.repository if pull_request is not None else None
+    return FindingOut(
+        id=finding.id,
+        analysis_run_id=finding.analysis_run_id,
+        rule_id=finding.rule_id,
+        severity=finding.severity,
+        title=finding.title,
+        file=finding.file,
+        line=finding.line,
+        evidence=finding.evidence,
+        explanation=finding.explanation,
+        confidence=finding.confidence,
+        pull_request_id=pull_request.id if pull_request is not None else 0,
+        pr_number=pull_request.number if pull_request is not None else 0,
+        pr_title=pull_request.title if pull_request is not None else "",
+        repository_id=repository.id if repository is not None else 0,
+        repository_full_name=(
+            repository.full_name if repository is not None else ""
+        ),
+    )
+
+
+@router.get("/findings", response_model=list[FindingOut])
+def read_findings(
+    limit: int = Query(default=10, ge=1, le=100),
+    session: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),
+) -> list[FindingOut]:
+    user_id = _current_user_id(db, session)
+    return [
+        _finding_out(finding)
+        for finding in list_recent_findings_for_user(db, user_id, limit)
+    ]

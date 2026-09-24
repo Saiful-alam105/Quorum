@@ -74,6 +74,12 @@ export type PullRequestSummary = {
   state: string
   repository_id: number | null
   repository_full_name: string | null
+  updated_at: string | null
+  latest_analysis_status: string | null
+  merge_readiness_score: number | null
+  finding_count: number
+  critical_count: number
+  test_count: number
 }
 
 export function getPullRequests(): Promise<PullRequestSummary[]> {
@@ -82,6 +88,87 @@ export function getPullRequests(): Promise<PullRequestSummary[]> {
 
 export function getPullRequest(id: number): Promise<PullRequestSummary> {
   return request<PullRequestSummary>(`/api/pull-requests/${id}`)
+}
+
+export type Finding = {
+  id: number
+  analysis_run_id: number
+  rule_id: string | null
+  severity: string
+  title: string
+  file: string
+  line: number | null
+  evidence: string
+  explanation: string | null
+  confidence: number | null
+  pull_request_id: number
+  pr_number: number
+  pr_title: string
+  repository_id: number
+  repository_full_name: string
+}
+
+export function getFindings(limit = 10): Promise<Finding[]> {
+  return request<Finding[]>(`/api/findings?limit=${limit}`)
+}
+
+export type ReviewSummary = {
+  id: number
+  pull_request_id: number
+  pr_number: number
+  pr_title: string
+  pr_author: string
+  pr_state: string
+  repository_id: number
+  repository_full_name: string
+  status: string
+  merge_readiness_score: number | null
+  started_at: string | null
+  completed_at: string | null
+  finding_count: number
+  test_count: number
+}
+
+export function getReviews(): Promise<ReviewSummary[]> {
+  return request<ReviewSummary[]>("/api/reviews")
+}
+
+export type ReviewDetail = ReviewSummary & {
+  findings: SecurityFinding[]
+  tests: TestRun[]
+  coverage: CoverageResult | null
+}
+
+export type SecurityFinding = {
+  id: number
+  analysis_run_id: number
+  rule_id: string | null
+  severity: string
+  title: string
+  file: string
+  line: number | null
+  evidence: string
+  explanation: string | null
+  confidence: number | null
+}
+
+export type TestRun = {
+  id: number
+  analysis_run_id: number
+  test_name: string
+  status: string
+  duration: number | null
+  stdout: string | null
+  stderr: string | null
+  failure_reason: string | null
+}
+
+export type CoverageResult = {
+  id: number
+  analysis_run_id: number
+  coverage_before: number | null
+  coverage_after: number | null
+  coverage_delta: number | null
 }
 
 export type CurrentUser = {

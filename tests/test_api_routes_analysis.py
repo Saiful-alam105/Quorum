@@ -14,7 +14,9 @@ from quorum.database.models import (
     SecurityFinding,
     TestRun,
     User,
+    utcnow,
 )
+from quorum.database.repository import upsert_pull_request
 from quorum.main import app
 
 
@@ -501,3 +503,236 @@ def test_review_by_id_not_owned(
         f"/api/reviews/{other_run.id}", **_auth(session_token)
     )
     assert response.status_code == 404
+
+
+# --- pull request summaries include latest analysis ---
+
+
+def test_pull_requests_summary_includes_latest_analysis(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_repository(db_session, user)
+    pull_request = _add_pull_request(db_session, repo)
+    _add_run(
+        db_session,
+        pull_request,
+        score=50,
+        findings=[
+            _finding(severity="critical", title="old critical"),
+            _finding(severity="high", title="old high"),
+        ],
+        tests=[{"test_name": "t1", "status": "passed"}],
+    )
+    _add_run(
+        db_session,
+        pull_request,
+        score=95,
+        findings=[_finding(severity="low", title="new low")],
+    )
+
+    response = client.get("/api/pull-requests", **_auth(session_token))
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    item = data[0]
+    assert item["latest_analysis_status"] == "completed"
+    assert item["merge_readiness_score"] == 95
+    assert item["finding_count"] == 1
+    assert item["critical_count"] == 0
+    assert item["test_count"] == 0
+    assert item["updated_at"] is not None
+
+
+def test_pull_requests_summary_no_analysis_defaults(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_repository(db_session, user)
+    _add_pull_request(db_session, repo)
+
+    response = client.get("/api/pull-requests", **_auth(session_token))
+    data = response.json()
+    assert len(data) == 1
+    item = data[0]
+    assert item["latest_analysis_status"] is None
+    assert item["merge_readiness_score"] is None
+    assert item["finding_count"] == 0
+    assert item["critical_count"] == 0
+    assert item["test_count"] == 0
+
+
+def test_pull_requests_summary_counts_critical(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_repository(db_session, user)
+    pull_request = _add_pull_request(db_session, repo)
+    _add_run(
+        db_session,
+        pull_request,
+        score=40,
+        findings=[
+            _finding(severity="critical"),
+            _finding(severity="critical"),
+            _finding(severity="medium"),
+        ],
+    )
+
+    response = client.get("/api/pull-requests", **_auth(session_token))
+    data = response.json()
+    assert data[0]["finding_count"] == 3
+    assert data[0]["critical_count"] == 2
+
+
+def test_upsert_pull_request_refreshes_updated_at(
+    db_session: Session, user: User
+) -> None:
+    from datetime import datetime, timedelta, timezone
+
+    repo = _add_repository(db_session, user)
+    pull_request = PullRequest(
+        github_id=301,
+        repository_id=repo.id,
+        number=7,
+        title="Add authentication",
+        author="octocat",
+        state="open",
+        updated_at=utcnow() - timedelta(days=1),
+    )
+    db_session.add(pull_request)
+    db_session.commit()
+
+    upsert_pull_request(
+        db_session,
+        {
+            "id": 301,
+            "number": 7,
+            "title": "Add authentication",
+            "state": "open",
+            "user": {"login": "octocat"},
+        },
+        repo,
+    )
+
+    db_session.refresh(pull_request)
+    naive_now = datetime.now(timezone.utc).replace(tzinfo=None)
+    assert pull_request.updated_at is not None
+    assert pull_request.updated_at > naive_now - timedelta(hours=1)
+
+
+# --- recent findings feed ---
+
+
+def test_findings_requires_auth(client: TestClient) -> None:
+    assert client.get("/api/findings").status_code == 401
+
+
+def test_findings_empty(client: TestClient, session_token: str) -> None:
+    response = client.get("/api/findings", **_auth(session_token))
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_findings_returns_findings_with_pr_context(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_repository(db_session, user)
+    pull_request = _add_pull_request(db_session, repo)
+    _add_run(
+        db_session,
+        pull_request,
+        score=50,
+        findings=[
+            _finding(severity="high", title="subprocess shell"),
+            _finding(severity="medium", title="eval detected"),
+        ],
+    )
+
+    response = client.get("/api/findings", **_auth(session_token))
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+    item = data[0]
+    assert item["severity"] == "medium"
+    assert item["title"] == "eval detected"
+    assert item["file"] == "app.py"
+    assert item["line"] == 5
+    assert item["pr_number"] == 7
+    assert item["pr_title"] == "PR 7"
+    assert item["repository_full_name"] == "octocat/hello-world"
+    assert item["rule_id"] == "python.security.example"
+
+
+def test_findings_sorted_newest_first(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_repository(db_session, user)
+    pull_request = _add_pull_request(db_session, repo)
+    _add_run(
+        db_session,
+        pull_request,
+        findings=[
+            _finding(severity="low", title="one"),
+            _finding(severity="low", title="two"),
+        ],
+    )
+
+    response = client.get("/api/findings", **_auth(session_token))
+    titles = [item["title"] for item in response.json()]
+    assert titles == ["two", "one"]
+
+
+def test_findings_only_include_latest_run(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_repository(db_session, user)
+    pull_request = _add_pull_request(db_session, repo)
+    _add_run(
+        db_session,
+        pull_request,
+        findings=[_finding(severity="high", title="old run finding")],
+    )
+    _add_run(
+        db_session,
+        pull_request,
+        findings=[_finding(severity="medium", title="latest run finding")],
+    )
+
+    response = client.get("/api/findings", **_auth(session_token))
+    titles = [item["title"] for item in response.json()]
+    assert titles == ["latest run finding"]
+
+
+def test_findings_respects_limit(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_repository(db_session, user)
+    pull_request = _add_pull_request(db_session, repo)
+    _add_run(
+        db_session,
+        pull_request,
+        findings=[
+            _finding(severity="low", title="one"),
+            _finding(severity="low", title="two"),
+            _finding(severity="low", title="three"),
+        ],
+    )
+
+    response = client.get("/api/findings?limit=2", **_auth(session_token))
+    data = response.json()
+    assert len(data) == 2
+    assert [item["title"] for item in data] == ["three", "two"]
+
+
+def test_findings_only_returns_own(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_repository(db_session, user)
+    pull_request = _add_pull_request(db_session, repo)
+    _add_run(db_session, pull_request, findings=[_finding(severity="high")])
+
+    _, _, other_pr = _other_user_repo_pr(db_session)
+    _add_run(db_session, other_pr, findings=[_finding(severity="critical")])
+
+    response = client.get("/api/findings", **_auth(session_token))
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["severity"] == "high"

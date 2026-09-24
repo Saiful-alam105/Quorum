@@ -40,6 +40,30 @@ class PullRequestSummaryOut(BaseModel):
     state: str
     repository_id: int | None
     repository_full_name: str | None
+    updated_at: datetime | None = None
+    latest_analysis_status: str | None = None
+    merge_readiness_score: int | None = None
+    finding_count: int = 0
+    critical_count: int = 0
+    test_count: int = 0
+
+
+class FindingOut(BaseModel):
+    id: int
+    analysis_run_id: int
+    rule_id: str | None
+    severity: str
+    title: str
+    file: str
+    line: int | None
+    evidence: str
+    explanation: str | None
+    confidence: float | None
+    pull_request_id: int
+    pr_number: int
+    pr_title: str
+    repository_id: int
+    repository_full_name: str
 
 
 class AnalysisRunOut(BaseModel):

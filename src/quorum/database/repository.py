@@ -1,4 +1,4 @@
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from quorum.database.models import (
@@ -109,6 +109,7 @@ def upsert_pull_request(
     pull_request.title = data.get("title", "")
     pull_request.author = author.get("login", "")
     pull_request.state = data.get("state", "")
+    pull_request.updated_at = utcnow()
     db.commit()
     return pull_request
 
@@ -205,6 +206,15 @@ def list_pull_requests_for_user(db: Session, user_id: int) -> list[PullRequest]:
     return list(
         db.scalars(
             select(PullRequest)
+            .options(
+                selectinload(PullRequest.repository),
+                selectinload(PullRequest.analysis_runs).selectinload(
+                    AnalysisRun.security_findings
+                ),
+                selectinload(PullRequest.analysis_runs).selectinload(
+                    AnalysisRun.test_runs
+                ),
+            )
             .join(Repository, PullRequest.repository_id == Repository.id)
             .where(Repository.user_id == user_id)
             .order_by(PullRequest.id.desc())
@@ -233,6 +243,15 @@ def get_pull_request_for_user(
 ) -> PullRequest | None:
     return db.scalar(
         select(PullRequest)
+        .options(
+            selectinload(PullRequest.repository),
+            selectinload(PullRequest.analysis_runs).selectinload(
+                AnalysisRun.security_findings
+            ),
+            selectinload(PullRequest.analysis_runs).selectinload(
+                AnalysisRun.test_runs
+            ),
+        )
         .join(Repository, PullRequest.repository_id == Repository.id)
         .where(PullRequest.id == pull_request_id, Repository.user_id == user_id)
     )
@@ -466,4 +485,35 @@ def get_review_for_user(
         .join(PullRequest, AnalysisRun.pull_request_id == PullRequest.id)
         .join(Repository, PullRequest.repository_id == Repository.id)
         .where(AnalysisRun.id == review_id, Repository.user_id == user_id)
+    )
+
+
+def list_recent_findings_for_user(
+    db: Session, user_id: int, limit: int = 10
+) -> list[SecurityFinding]:
+    """List the latest-run security findings for a user's repositories.
+
+    Only findings from each pull request's most recent analysis run are
+    returned, so re-analysed pull requests do not duplicate the feed.
+    """
+    latest_run_ids = (
+        select(func.max(AnalysisRun.id))
+        .join(PullRequest, AnalysisRun.pull_request_id == PullRequest.id)
+        .join(Repository, PullRequest.repository_id == Repository.id)
+        .where(Repository.user_id == user_id)
+        .group_by(PullRequest.id)
+    )
+    return list(
+        db.scalars(
+            select(SecurityFinding)
+            .options(
+                selectinload(SecurityFinding.analysis_run)
+                .selectinload(AnalysisRun.pull_request)
+                .selectinload(PullRequest.repository),
+            )
+            .join(AnalysisRun, SecurityFinding.analysis_run_id == AnalysisRun.id)
+            .where(SecurityFinding.analysis_run_id.in_(latest_run_ids))
+            .order_by(SecurityFinding.id.desc())
+            .limit(limit)
+        )
     )
