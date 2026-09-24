@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom"
 import { GitPullRequestArrow } from "lucide-react"
 
+import { ArchitectureSection } from "@/components/landing/ArchitectureSection"
 import { HowItWorksSection } from "@/components/landing/HowItWorksSection"
 import { CapabilitiesSection } from "@/components/landing/CapabilitiesSection"
 import { LandingFooter } from "@/components/landing/LandingFooter"
@@ -8,6 +9,7 @@ import { LandingNav } from "@/components/landing/LandingNav"
 import { LandingSection } from "@/components/landing/LandingSection"
 import { ProblemSection } from "@/components/landing/ProblemSection"
 import { ReviewExperienceSection } from "@/components/landing/ReviewExperienceSection"
+import { SecurityTestingSection } from "@/components/landing/SecurityTestingSection"
 import { SeverityDot } from "@/components/severity"
 import { buttonVariants } from "@/components/ui/Button"
 import { cn } from "@/lib/utils"
@@ -124,17 +126,9 @@ export default function LandingPage() {
 
         <ReviewExperienceSection />
 
-        <LandingSection
-          id="architecture"
-          eyebrow="Architecture"
-          title="How Quorum is built"
-        >
-          <p className="max-w-3xl text-muted-foreground">
-            GitHub webhooks and the GitHub API feed a FastAPI backend. The
-            Quorum orchestrator drives the analysis pipeline, and results are
-            stored in PostgreSQL for the web dashboard.
-          </p>
-        </LandingSection>
+        <SecurityTestingSection />
+
+        <ArchitectureSection />
 
         <LandingSection
           id="why-quorum"

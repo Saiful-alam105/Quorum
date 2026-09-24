@@ -58,7 +58,9 @@ describe("LandingPage", () => {
 
   it("renders capability cards including the roadmap-only one", () => {
     renderPage()
-    expect(screen.getByText("Security analysis")).toBeInTheDocument()
+    expect(
+      screen.getAllByText("Security analysis").length,
+    ).toBeGreaterThan(0)
     expect(
       screen.getAllByText("Merge Readiness").length,
     ).toBeGreaterThan(0)
@@ -124,7 +126,24 @@ describe("LandingPage", () => {
     expect(screen.getAllByText("Pull Request #42").length).toBeGreaterThan(0)
   })
 
-  it("opens the mobile navigation menu", () => {
+  it("renders the security and testing section", () => {
+    renderPage()
+    expect(
+      screen.getByText("Beyond a simple code review assistant"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Security evidence")).toBeInTheDocument()
+    expect(screen.getByText("Generated tests")).toBeInTheDocument()
+  })
+
+  it("renders the architecture pipeline", () => {
+    renderPage()
+    expect(screen.getByText("How Quorum is built")).toBeInTheDocument()
+    expect(screen.getByText("FastAPI backend")).toBeInTheDocument()
+    expect(screen.getByText("Orchestrator")).toBeInTheDocument()
+    expect(screen.getByText("PostgreSQL")).toBeInTheDocument()
+  })
+
+  it("renders the mobile navigation menu", () => {
     renderPage()
     const toggle = screen.getByRole("button", {
       name: "Toggle navigation menu",
