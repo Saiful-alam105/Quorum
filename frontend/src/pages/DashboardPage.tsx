@@ -41,6 +41,8 @@ type DashboardState =
       findings: Finding[]
     }
 
+const RECENT_LIMIT = 4
+
 function DashboardSkeleton() {
   return (
     <div className="space-y-6">
@@ -69,7 +71,7 @@ export default function DashboardPage() {
       getRepositories(),
       getPullRequests(),
       getReviews(),
-      getFindings(10),
+      getFindings(RECENT_LIMIT),
     ])
       .then(([user, repositories, pullRequests, reviews, findings]) =>
         setState({
@@ -187,7 +189,7 @@ export default function DashboardPage() {
         />
       ) : (
         <ul className="space-y-3">
-          {pullRequests.slice(0, 8).map((pullRequest) => (
+          {pullRequests.slice(0, RECENT_LIMIT).map((pullRequest) => (
             <PullRequestReviewCard key={pullRequest.id} pullRequest={pullRequest} />
           ))}
         </ul>
@@ -202,7 +204,7 @@ export default function DashboardPage() {
         />
       ) : (
         <ul className="space-y-3">
-          {findings.map((finding) => (
+          {findings.slice(0, RECENT_LIMIT).map((finding) => (
             <FindingCard key={finding.id} finding={finding} />
           ))}
         </ul>
@@ -217,7 +219,7 @@ export default function DashboardPage() {
         />
       ) : (
         <ul className="space-y-3">
-          {reviews.slice(0, 8).map((review) => (
+          {reviews.slice(0, RECENT_LIMIT).map((review) => (
             <ReviewCard key={review.id} review={review} />
           ))}
         </ul>
