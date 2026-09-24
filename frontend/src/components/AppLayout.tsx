@@ -1,25 +1,13 @@
+import type { ReactNode } from "react"
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom"
-import { GitPullRequestArrow } from "lucide-react"
 
 import { AuthStatus } from "@/components/AuthStatus"
 import { BackendStatus } from "@/components/BackendStatus"
+import { QuorumMark } from "@/components/QuorumMark"
 import { navItems } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 
-function QuorumMark({ className }: { className?: string }) {
-  return (
-    <span
-      className={cn(
-        "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-primary/40 bg-primary/15 text-primary",
-        className,
-      )}
-    >
-      <GitPullRequestArrow className="h-4 w-4" />
-    </span>
-  )
-}
-
-export function AppLayout() {
+export function AppLayout({ children }: { children?: ReactNode }) {
   const { pathname } = useLocation()
   const current =
     navItems.find((item) =>
@@ -94,7 +82,7 @@ export function AppLayout() {
         </header>
 
         <main id="main-content" className="flex-1 p-4 lg:p-6">
-          <Outlet />
+          {children ?? <Outlet />}
         </main>
       </div>
     </div>

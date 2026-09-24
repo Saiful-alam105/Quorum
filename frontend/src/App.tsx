@@ -2,8 +2,8 @@ import { BrowserRouter, Route, Routes } from "react-router-dom"
 
 import { AppLayout } from "@/components/AppLayout"
 import AskQuorumPage from "@/pages/AskQuorumPage"
-import DashboardPage from "@/pages/DashboardPage"
 import FindingsPage from "@/pages/FindingsPage"
+import HomePage from "@/pages/HomePage"
 import LoginPage from "@/pages/LoginPage"
 import NotFoundPage from "@/pages/NotFoundPage"
 import ProfilePage from "@/pages/ProfilePage"
@@ -22,8 +22,8 @@ export default function App() {
     >
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<HomePage />} />
         <Route element={<AppLayout />}>
-          <Route index element={<DashboardPage />} />
           <Route path="repositories" element={<RepositoriesPage />} />
           <Route
             path="repositories/:repositoryId"
@@ -40,8 +40,8 @@ export default function App() {
           <Route path="profile" element={<ProfilePage />} />
           <Route path="ask-quorum" element={<AskQuorumPage />} />
           <Route path="settings" element={<SettingsPage />} />
-          <Route path="*" element={<NotFoundPage />} />
         </Route>
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   )

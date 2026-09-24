@@ -70,4 +70,17 @@ describe("AppLayout", () => {
     const active = screen.getByRole("link", { name: "Repositories" })
     expect(active.className).toContain("text-primary")
   })
+
+  it("renders children when passed instead of the outlet", () => {
+    vi.stubGlobal("fetch", mockFetch())
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <AppLayout>
+          <div>Direct child content</div>
+        </AppLayout>
+      </MemoryRouter>,
+    )
+    expect(screen.getByText("Direct child content")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Repositories" })).toBeInTheDocument()
+  })
 })
