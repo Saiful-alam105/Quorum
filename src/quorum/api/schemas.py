@@ -76,6 +76,7 @@ class AnalysisRunOut(BaseModel):
     merge_readiness_score: int | None
     started_at: datetime | None
     completed_at: datetime | None
+    recommendation: str | None = None
 
 
 class SecurityFindingOut(BaseModel):
@@ -127,6 +128,7 @@ class ReviewSummaryOut(BaseModel):
     repository_full_name: str
     status: str
     merge_readiness_score: int | None
+    recommendation: str | None = None
     started_at: datetime | None
     completed_at: datetime | None
     finding_count: int

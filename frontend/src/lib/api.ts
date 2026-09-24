@@ -86,6 +86,36 @@ export function getPullRequest(id: number): Promise<PullRequestSummary> {
   return request<PullRequestSummary>(`/api/pull-requests/${id}`)
 }
 
+export type AnalysisRun = {
+  id: number
+  pull_request_id: number
+  status: string
+  merge_readiness_score: number | null
+  started_at: string | null
+  completed_at: string | null
+  recommendation: string | null
+}
+
+export function getPullRequestAnalysis(id: number): Promise<AnalysisRun[]> {
+  return request<AnalysisRun[]>(`/api/pull-requests/${id}/analysis`)
+}
+
+export function getPullRequestSecurity(
+  id: number,
+): Promise<SecurityFinding[]> {
+  return request<SecurityFinding[]>(`/api/pull-requests/${id}/security`)
+}
+
+export function getPullRequestTests(id: number): Promise<TestRun[]> {
+  return request<TestRun[]>(`/api/pull-requests/${id}/tests`)
+}
+
+export function getPullRequestCoverage(
+  id: number,
+): Promise<CoverageResult | null> {
+  return request<CoverageResult | null>(`/api/pull-requests/${id}/coverage`)
+}
+
 export type Finding = {
   id: number
   analysis_run_id: number

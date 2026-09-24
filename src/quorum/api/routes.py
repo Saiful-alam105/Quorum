@@ -14,6 +14,7 @@ from quorum.api.schemas import (
     UserOut,
 )
 from quorum.auth.sessions import get_session
+from quorum.agents.synthesis import recommendation_for
 from quorum.database.base import get_db
 from quorum.database.models import (
     AnalysisRun,
@@ -224,6 +225,11 @@ def _review_summary(run: AnalysisRun) -> ReviewSummaryOut:
         ),
         status=run.status,
         merge_readiness_score=run.merge_readiness_score,
+        recommendation=(
+            recommendation_for(run.merge_readiness_score)
+            if run.merge_readiness_score is not None
+            else None
+        ),
         started_at=run.started_at,
         completed_at=run.completed_at,
         finding_count=len(run.security_findings),
@@ -274,9 +280,25 @@ def read_pull_request_analysis(
     user_id = _current_user_id(db, session)
     _require_owned_pull_request(db, pull_request_id, user_id)
     return [
-        AnalysisRunOut.model_validate(run)
+        _analysis_run_out(run)
         for run in list_analysis_runs_for_pull_request(db, pull_request_id)
     ]
+
+
+def _analysis_run_out(run: AnalysisRun) -> AnalysisRunOut:
+    return AnalysisRunOut(
+        id=run.id,
+        pull_request_id=run.pull_request_id,
+        status=run.status,
+        merge_readiness_score=run.merge_readiness_score,
+        started_at=run.started_at,
+        completed_at=run.completed_at,
+        recommendation=(
+            recommendation_for(run.merge_readiness_score)
+            if run.merge_readiness_score is not None
+            else None
+        ),
+    )
 
 
 @router.get(

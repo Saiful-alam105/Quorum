@@ -228,8 +228,32 @@ def test_analysis_returns_runs_newest_first(
     assert [item["id"] for item in data] == [second.id, first.id]
     assert data[0]["status"] == "in_progress"
     assert data[0]["merge_readiness_score"] is None
+    assert data[0]["recommendation"] is None
     assert data[1]["merge_readiness_score"] == 70
+    assert data[1]["recommendation"] == "Approve with minor concerns"
     assert data[1]["pull_request_id"] == pull_request.id
+
+
+def test_analysis_recommendation_bands(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_repository(db_session, user)
+    pull_request = _add_pull_request(db_session, repo)
+    _add_run(db_session, pull_request, score=95)
+    _add_run(db_session, pull_request, score=60)
+    _add_run(db_session, pull_request, score=30)
+
+    response = client.get(
+        f"/api/pull-requests/{pull_request.id}/analysis", **_auth(session_token)
+    )
+    data = response.json()
+    recommendations = {
+        item["merge_readiness_score"]: item["recommendation"]
+        for item in data
+    }
+    assert recommendations[95] == "Ready to merge"
+    assert recommendations[60] == "Needs review"
+    assert recommendations[30] == "Do not merge"
 
 
 # --- security / tests / coverage for the latest run ---
@@ -407,6 +431,7 @@ def test_reviews_returns_summaries_with_counts(
     assert item["repository_id"] == repo.id
     assert item["status"] == "completed"
     assert item["merge_readiness_score"] == 82
+    assert item["recommendation"] == "Approve with minor concerns"
     assert item["finding_count"] == 2
     assert item["test_count"] == 2
     assert item["started_at"] is None
