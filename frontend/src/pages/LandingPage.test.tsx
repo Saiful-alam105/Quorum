@@ -108,7 +108,7 @@ describe("LandingPage", () => {
     expect(screen.getByText("The analysis pipeline runs")).toBeInTheDocument()
     expect(screen.getByText("Merge Readiness is scored")).toBeInTheDocument()
     expect(screen.getByText("Findings are presented")).toBeInTheDocument()
-    expect(screen.getByText("01")).toBeInTheDocument()
+    expect(screen.getAllByText("01").length).toBeGreaterThan(0)
   })
 
   it("connects the primary CTA to the existing login route", () => {
@@ -151,6 +151,7 @@ describe("LandingPage", () => {
     expect(screen.getByText("FastAPI backend")).toBeInTheDocument()
     expect(screen.getByText("Orchestrator")).toBeInTheDocument()
     expect(screen.getByText("PostgreSQL")).toBeInTheDocument()
+    expect(screen.getAllByText("01").length).toBeGreaterThan(0)
   })
 
   it("renders the why-quorum points", () => {
