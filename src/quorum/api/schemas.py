@@ -10,14 +10,15 @@ class UserOut(BaseModel):
 
 
 class RepositoryOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: int
     github_id: int
     owner: str
     name: str
     full_name: str
     is_private: bool
+    pull_request_count: int = 0
+    open_pull_request_count: int = 0
+    latest_analysis_status: str | None = None
 
 
 class PullRequestOut(BaseModel):

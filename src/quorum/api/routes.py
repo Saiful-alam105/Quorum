@@ -5,7 +5,6 @@ from quorum.api.schemas import (
     AnalysisRunOut,
     CoverageResultOut,
     FindingOut,
-    PullRequestOut,
     PullRequestSummaryOut,
     RepositoryOut,
     ReviewDetailOut,
@@ -90,9 +89,32 @@ async def read_repositories(
     if user is not None:
         await sync_user_repositories(db, user)
     return [
-        RepositoryOut.model_validate(repo)
+        _repository_out(repo)
         for repo in list_repositories_for_user(db, user_id)
     ]
+
+
+def _repository_out(repository: Repository) -> RepositoryOut:
+    pull_requests = repository.pull_requests
+    runs = [
+        run
+        for pull_request in pull_requests
+        for run in pull_request.analysis_runs
+    ]
+    latest_status = max(runs, key=lambda run: run.id).status if runs else None
+    return RepositoryOut(
+        id=repository.id,
+        github_id=repository.github_id,
+        owner=repository.owner,
+        name=repository.name,
+        full_name=repository.full_name,
+        is_private=repository.is_private,
+        pull_request_count=len(pull_requests),
+        open_pull_request_count=sum(
+            1 for pull_request in pull_requests if pull_request.state == "open"
+        ),
+        latest_analysis_status=latest_status,
+    )
 
 
 def _pull_request_summary(pull_request: PullRequest) -> PullRequestSummaryOut:
@@ -165,23 +187,23 @@ def read_repository(
     repository = get_repository_for_user(db, repository_id, user_id)
     if repository is None:
         raise HTTPException(status_code=404, detail="Repository not found")
-    return RepositoryOut.model_validate(repository)
+    return _repository_out(repository)
 
 
 @router.get(
     "/repositories/{repository_id}/pull-requests",
-    response_model=list[PullRequestOut],
+    response_model=list[PullRequestSummaryOut],
 )
 def read_repository_pull_requests(
     repository_id: int,
     session: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
-) -> list[PullRequestOut]:
+) -> list[PullRequestSummaryOut]:
     user_id = _current_user_id(db, session)
     if get_repository_for_user(db, repository_id, user_id) is None:
         raise HTTPException(status_code=404, detail="Repository not found")
     return [
-        PullRequestOut.model_validate(pr)
+        _pull_request_summary(pr)
         for pr in list_repository_pull_requests_for_user(db, repository_id, user_id)
     ]
 

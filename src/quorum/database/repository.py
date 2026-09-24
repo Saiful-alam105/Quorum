@@ -172,6 +172,11 @@ def list_repositories_for_user(db: Session, user_id: int) -> list[Repository]:
     return list(
         db.scalars(
             select(Repository)
+            .options(
+                selectinload(Repository.pull_requests).selectinload(
+                    PullRequest.analysis_runs
+                )
+            )
             .where(Repository.user_id == user_id)
             .order_by(Repository.full_name)
         )
@@ -196,9 +201,13 @@ def get_repository_for_user(
     db: Session, repository_id: int, user_id: int
 ) -> Repository | None:
     return db.scalar(
-        select(Repository).where(
-            Repository.id == repository_id, Repository.user_id == user_id
+        select(Repository)
+        .options(
+            selectinload(Repository.pull_requests).selectinload(
+                PullRequest.analysis_runs
+            )
         )
+        .where(Repository.id == repository_id, Repository.user_id == user_id)
     )
 
 
@@ -228,6 +237,15 @@ def list_repository_pull_requests_for_user(
     return list(
         db.scalars(
             select(PullRequest)
+            .options(
+                selectinload(PullRequest.repository),
+                selectinload(PullRequest.analysis_runs).selectinload(
+                    AnalysisRun.security_findings
+                ),
+                selectinload(PullRequest.analysis_runs).selectinload(
+                    AnalysisRun.test_runs
+                ),
+            )
             .join(Repository, PullRequest.repository_id == Repository.id)
             .where(
                 PullRequest.repository_id == repository_id,

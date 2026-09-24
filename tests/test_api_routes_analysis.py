@@ -736,3 +736,84 @@ def test_findings_only_returns_own(
     data = response.json()
     assert len(data) == 1
     assert data[0]["severity"] == "high"
+
+
+# --- repository summaries include counts and latest analysis status ---
+
+
+def test_repositories_summary_counts(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_repository(db_session, user)
+    first = _add_pull_request(db_session, repo, number=1)
+    second = _add_pull_request(db_session, repo, number=2)
+    _add_run(db_session, first, status="completed", score=90)
+    _add_run(db_session, second, status="failed", score=None)
+
+    response = client.get("/api/repositories", **_auth(session_token))
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    item = data[0]
+    assert item["full_name"] == "octocat/hello-world"
+    assert item["pull_request_count"] == 2
+    assert item["open_pull_request_count"] == 2
+    assert item["latest_analysis_status"] == "failed"
+
+
+def test_repositories_summary_empty_defaults(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    _add_repository(db_session, user)
+
+    response = client.get("/api/repositories", **_auth(session_token))
+    data = response.json()
+    assert len(data) == 1
+    item = data[0]
+    assert item["pull_request_count"] == 0
+    assert item["open_pull_request_count"] == 0
+    assert item["latest_analysis_status"] is None
+
+
+def test_repository_by_id_summary(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_repository(db_session, user)
+    pull_request = _add_pull_request(db_session, repo)
+    _add_run(db_session, pull_request, status="completed", score=82)
+
+    response = client.get(
+        f"/api/repositories/{repo.id}", **_auth(session_token)
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["pull_request_count"] == 1
+    assert data["latest_analysis_status"] == "completed"
+
+
+def test_repository_pull_requests_return_analysis_summaries(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_repository(db_session, user)
+    pull_request = _add_pull_request(db_session, repo, number=3)
+    _add_run(
+        db_session,
+        pull_request,
+        status="completed",
+        score=82,
+        findings=[_finding(severity="critical")],
+    )
+
+    response = client.get(
+        f"/api/repositories/{repo.id}/pull-requests", **_auth(session_token)
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    item = data[0]
+    assert item["number"] == 3
+    assert item["latest_analysis_status"] == "completed"
+    assert item["merge_readiness_score"] == 82
+    assert item["finding_count"] == 1
+    assert item["critical_count"] == 1
+    assert item["repository_full_name"] == "octocat/hello-world"
