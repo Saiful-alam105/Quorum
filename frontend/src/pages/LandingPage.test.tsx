@@ -52,7 +52,7 @@ describe("LandingPage", () => {
       screen.getByRole("heading", { name: "How Quorum is built" }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("heading", { name: "Built for developers" }),
+      screen.getByRole("heading", { name: "Built around the developer workflow" }),
     ).toBeInTheDocument()
   })
 
@@ -106,8 +106,11 @@ describe("LandingPage", () => {
 
   it("connects the primary CTA to the existing login route", () => {
     renderPage()
-    const cta = screen.getByRole("link", { name: "Continue with GitHub" })
-    expect(cta).toHaveAttribute("href", "/login")
+    const ctas = screen.getAllByRole("link", { name: "Continue with GitHub" })
+    expect(ctas.length).toBeGreaterThan(0)
+    for (const cta of ctas) {
+      expect(cta).toHaveAttribute("href", "/login")
+    }
   })
 
   it("renders the footer with a GitHub link", () => {
@@ -141,6 +144,32 @@ describe("LandingPage", () => {
     expect(screen.getByText("FastAPI backend")).toBeInTheDocument()
     expect(screen.getByText("Orchestrator")).toBeInTheDocument()
     expect(screen.getByText("PostgreSQL")).toBeInTheDocument()
+  })
+
+  it("renders the why-quorum points", () => {
+    renderPage()
+    expect(
+      screen.getByRole("heading", { name: "Built around the developer workflow" }),
+    ).toBeInTheDocument()
+    expect(screen.getByText("GitHub-native")).toBeInTheDocument()
+    expect(screen.getByText("Evidence-based findings")).toBeInTheDocument()
+  })
+
+  it("renders the final call to action", () => {
+    renderPage()
+    expect(
+      screen.getByRole("heading", {
+        name: "Bring Quorum into your Pull Request workflow.",
+      }),
+    ).toBeInTheDocument()
+    const ctas = screen.getAllByRole("link", { name: "Continue with GitHub" })
+    expect(ctas.length).toBeGreaterThan(0)
+    for (const cta of ctas) {
+      expect(cta).toHaveAttribute("href", "/login")
+    }
+    expect(
+      screen.getByRole("link", { name: "Explore the workflow" }),
+    ).toHaveAttribute("href", "#how-it-works")
   })
 
   it("renders the mobile navigation menu", () => {

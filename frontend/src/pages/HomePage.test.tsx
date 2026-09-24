@@ -53,9 +53,11 @@ describe("HomePage", () => {
         name: "Understand every Pull Request before you merge.",
       }),
     ).toBeInTheDocument()
-    expect(
-      screen.getByRole("link", { name: "Continue with GitHub" }),
-    ).toHaveAttribute("href", "/login")
+    const ctas = screen.getAllByRole("link", { name: "Continue with GitHub" })
+    expect(ctas.length).toBeGreaterThan(0)
+    for (const cta of ctas) {
+      expect(cta).toHaveAttribute("href", "/login")
+    }
   })
 
   it("shows the dashboard shell when authenticated", async () => {

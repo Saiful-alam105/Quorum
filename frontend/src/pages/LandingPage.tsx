@@ -2,14 +2,15 @@ import { Link } from "react-router-dom"
 import { GitPullRequestArrow } from "lucide-react"
 
 import { ArchitectureSection } from "@/components/landing/ArchitectureSection"
-import { HowItWorksSection } from "@/components/landing/HowItWorksSection"
 import { CapabilitiesSection } from "@/components/landing/CapabilitiesSection"
+import { FinalCtaSection } from "@/components/landing/FinalCtaSection"
+import { HowItWorksSection } from "@/components/landing/HowItWorksSection"
 import { LandingFooter } from "@/components/landing/LandingFooter"
 import { LandingNav } from "@/components/landing/LandingNav"
-import { LandingSection } from "@/components/landing/LandingSection"
 import { ProblemSection } from "@/components/landing/ProblemSection"
 import { ReviewExperienceSection } from "@/components/landing/ReviewExperienceSection"
 import { SecurityTestingSection } from "@/components/landing/SecurityTestingSection"
+import { WhyQuorumSection } from "@/components/landing/WhyQuorumSection"
 import { SeverityDot } from "@/components/severity"
 import { buttonVariants } from "@/components/ui/Button"
 import { cn } from "@/lib/utils"
@@ -130,17 +131,10 @@ export default function LandingPage() {
 
         <ArchitectureSection />
 
-        <LandingSection
-          id="why-quorum"
-          eyebrow="Why Quorum"
-          title="Built for developers"
-        >
-          <p className="max-w-3xl text-muted-foreground">
-            A GitHub-native, evidence-driven review workflow with structured
-            findings and a centralized dashboard.
-          </p>
-        </LandingSection>
+        <WhyQuorumSection />
       </main>
+
+      <FinalCtaSection />
 
       <LandingFooter />
     </div>
