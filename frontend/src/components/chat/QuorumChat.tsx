@@ -169,7 +169,11 @@ export function QuorumChat({
                   — {review.pr_title} · {review.status}
                 </div>
               ) : null}
-              <div className="flex-1 space-y-3 overflow-y-auto p-4">
+              <div
+                role="log"
+                aria-live="polite"
+                className="flex-1 space-y-3 overflow-y-auto p-4"
+              >
                 {messages.length === 0 ? (
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">
