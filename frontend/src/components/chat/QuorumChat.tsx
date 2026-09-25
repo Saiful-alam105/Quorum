@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react"
 import { Loader2, Send } from "lucide-react"
 
 import {
@@ -21,13 +21,16 @@ const suggestions = [
 export function QuorumChat({
   selectedReviewId,
   onSelectedReviewChange,
+  messages,
+  setMessages,
 }: {
   selectedReviewId: number | null
   onSelectedReviewChange: (id: number | null) => void
+  messages: ChatMessage[]
+  setMessages: Dispatch<SetStateAction<ChatMessage[]>>
 }) {
   const [reviews, setReviews] = useState<ReviewSummary[]>([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
-  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [question, setQuestion] = useState("")
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)

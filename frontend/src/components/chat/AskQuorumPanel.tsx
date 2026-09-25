@@ -1,6 +1,8 @@
 import { ExternalLink, MessageSquare, X } from "lucide-react"
+import type { Dispatch, SetStateAction } from "react"
 
 import { QuorumChat } from "@/components/chat/QuorumChat"
+import type { ChatMessage } from "@/lib/api"
 
 export function AskQuorumPanel({
   open,
@@ -8,12 +10,16 @@ export function AskQuorumPanel({
   onOpenPage,
   selectedReviewId,
   onSelectedReviewChange,
+  messages,
+  setMessages,
 }: {
   open: boolean
   onClose: () => void
   onOpenPage: () => void
   selectedReviewId: number | null
   onSelectedReviewChange: (id: number | null) => void
+  messages: ChatMessage[]
+  setMessages: Dispatch<SetStateAction<ChatMessage[]>>
 }) {
   if (!open) {
     return null
@@ -60,6 +66,8 @@ export function AskQuorumPanel({
       <QuorumChat
         selectedReviewId={selectedReviewId}
         onSelectedReviewChange={onSelectedReviewChange}
+        messages={messages}
+        setMessages={setMessages}
       />
     </div>
   )

@@ -8,7 +8,7 @@ import { useAskQuorum } from "@/components/chat/askQuorumContext"
 export function AskQuorum() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { open, togglePanel, closePanel, selectedReviewId, setSelectedReviewId } =
+  const { open, togglePanel, closePanel, selectedReviewId, setSelectedReviewId, messages, setMessages } =
     useAskQuorum()
 
   useEffect(() => {
@@ -45,6 +45,8 @@ export function AskQuorum() {
         onOpenPage={openFullPage}
         selectedReviewId={selectedReviewId}
         onSelectedReviewChange={setSelectedReviewId}
+        messages={messages}
+        setMessages={setMessages}
       />
       <AskQuorumButton open={open} onToggle={togglePanel} />
     </>

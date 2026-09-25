@@ -4,13 +4,19 @@ import {
   useContext,
   useMemo,
   useState,
+  type Dispatch,
   type ReactNode,
+  type SetStateAction,
 } from "react"
+
+import type { ChatMessage } from "@/lib/api"
 
 type AskQuorumContextValue = {
   open: boolean
   selectedReviewId: number | null
   setSelectedReviewId: (id: number | null) => void
+  messages: ChatMessage[]
+  setMessages: Dispatch<SetStateAction<ChatMessage[]>>
   openWithReview: (reviewId: number) => void
   openPanel: () => void
   closePanel: () => void
@@ -22,6 +28,7 @@ const AskQuorumContext = createContext<AskQuorumContextValue | null>(null)
 export function AskQuorumProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)
   const [selectedReviewId, setSelectedReviewId] = useState<number | null>(null)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
 
   const openWithReview = useCallback((reviewId: number) => {
     setSelectedReviewId(reviewId)
@@ -37,12 +44,14 @@ export function AskQuorumProvider({ children }: { children: ReactNode }) {
       open,
       selectedReviewId,
       setSelectedReviewId,
+      messages,
+      setMessages,
       openWithReview,
       openPanel,
       closePanel,
       togglePanel,
     }),
-    [open, selectedReviewId, setSelectedReviewId, openWithReview, openPanel, closePanel, togglePanel],
+    [open, selectedReviewId, setSelectedReviewId, messages, setMessages, openWithReview, openPanel, closePanel, togglePanel],
   )
 
   return (

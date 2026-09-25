@@ -11,7 +11,8 @@ import { getCurrentUser } from "@/lib/api"
 type AuthState = "loading" | "anonymous" | "authenticated"
 
 export default function AskQuorumPage() {
-  const { selectedReviewId, setSelectedReviewId } = useAskQuorum()
+  const { selectedReviewId, setSelectedReviewId, messages, setMessages } =
+    useAskQuorum()
   const [searchParams] = useSearchParams()
   const [auth, setAuth] = useState<AuthState>("loading")
 
@@ -54,6 +55,8 @@ export default function AskQuorumPage() {
           <QuorumChat
             selectedReviewId={selectedReviewId}
             onSelectedReviewChange={setSelectedReviewId}
+            messages={messages}
+            setMessages={setMessages}
           />
         </div>
       </div>

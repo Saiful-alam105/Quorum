@@ -1,7 +1,9 @@
+import { useState } from "react"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { QuorumChat } from "@/components/chat/QuorumChat"
+import type { ChatMessage } from "@/lib/api"
 
 const reviews = [
   {
@@ -62,13 +64,26 @@ function mockFetch(options: { chat?: unknown[]; answer?: string }) {
   })
 }
 
-function renderChat(selectedReviewId: number | null) {
-  return render(
+function ChatHarness({
+  selectedReviewId,
+  onSelectedReviewChange = () => {},
+}: {
+  selectedReviewId: number | null
+  onSelectedReviewChange?: (id: number | null) => void
+}) {
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  return (
     <QuorumChat
       selectedReviewId={selectedReviewId}
-      onSelectedReviewChange={() => {}}
-    />,
+      onSelectedReviewChange={onSelectedReviewChange}
+      messages={messages}
+      setMessages={setMessages}
+    />
   )
+}
+
+function renderChat(selectedReviewId: number | null) {
+  return render(<ChatHarness selectedReviewId={selectedReviewId} />)
 }
 
 describe("QuorumChat", () => {
