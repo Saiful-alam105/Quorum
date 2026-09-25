@@ -3,6 +3,9 @@ from sqlalchemy.orm import Session
 
 from quorum.api.schemas import (
     AnalysisRunOut,
+    ChatMessageOut,
+    ChatPostRequest,
+    ChatPostResponse,
     CoverageResultOut,
     FindingOut,
     PullRequestSummaryOut,
@@ -15,6 +18,7 @@ from quorum.api.schemas import (
 )
 from quorum.auth.sessions import get_session
 from quorum.agents.synthesis import recommendation_for
+from quorum.chat.service import answer_question
 from quorum.database.base import get_db
 from quorum.database.models import (
     AnalysisRun,
@@ -24,12 +28,14 @@ from quorum.database.models import (
     User,
 )
 from quorum.database.repository import (
+    create_chat_message,
     get_coverage_result_for_run,
     get_pull_request_for_user,
     get_repository_for_user,
     get_review_for_user,
     get_user_by_github_id,
     list_analysis_runs_for_pull_request,
+    list_chat_messages_for_review,
     list_pull_requests_for_user,
     list_recent_findings_for_user,
     list_repositories_for_user,
@@ -39,6 +45,7 @@ from quorum.database.repository import (
     list_test_runs_for_run,
 )
 from quorum.github.repo_sync import sync_user_repositories
+from quorum.llm.base import LLMError
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -437,3 +444,47 @@ def read_findings(
         _finding_out(finding)
         for finding in list_recent_findings_for_user(db, user_id, limit)
     ]
+
+
+@router.get("/reviews/{review_id}/chat", response_model=list[ChatMessageOut])
+def read_review_chat(
+    review_id: int,
+    session: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),
+) -> list[ChatMessageOut]:
+    user_id = _current_user_id(db, session)
+    if get_review_for_user(db, review_id, user_id) is None:
+        raise HTTPException(status_code=404, detail="Review not found")
+    return [
+        ChatMessageOut.model_validate(message)
+        for message in list_chat_messages_for_review(db, review_id)
+    ]
+
+
+@router.post("/reviews/{review_id}/chat", response_model=ChatPostResponse)
+async def post_review_chat(
+    review_id: int,
+    body: ChatPostRequest,
+    session: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),
+) -> ChatPostResponse:
+    user_id = _current_user_id(db, session)
+    review = get_review_for_user(db, review_id, user_id)
+    if review is None:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    question = body.question.strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="Question must not be empty")
+
+    history = list_chat_messages_for_review(db, review_id)
+    create_chat_message(db, review_id, user_id, "user", question)
+    try:
+        answer = await answer_question(review, history, question)
+    except LLMError:
+        raise HTTPException(
+            status_code=503,
+            detail="Ask Quorum is temporarily unavailable",
+        )
+    create_chat_message(db, review_id, user_id, "assistant", answer)
+    return ChatPostResponse(answer=answer)
