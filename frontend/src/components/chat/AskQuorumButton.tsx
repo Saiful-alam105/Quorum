@@ -10,7 +10,7 @@ export function AskQuorumButton({
   onToggle: () => void
 }) {
   return (
-    <div className="group relative">
+    <div className="group fixed bottom-4 right-4 z-50">
       <button
         type="button"
         onClick={onToggle}
