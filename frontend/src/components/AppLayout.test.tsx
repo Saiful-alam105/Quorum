@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
@@ -82,5 +82,29 @@ describe("AppLayout", () => {
     )
     expect(screen.getByText("Direct child content")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Repositories" })).toBeInTheDocument()
+  })
+
+  it("collapses and expands the sidebar from the toggle", () => {
+    vi.stubGlobal("fetch", mockFetch())
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <AppLayout>
+          <div>Direct child content</div>
+        </AppLayout>
+      </MemoryRouter>,
+    )
+
+    const toggle = screen.getByRole("button", { name: "Collapse sidebar" })
+    expect(toggle).toHaveAttribute("aria-expanded", "true")
+
+    fireEvent.click(toggle)
+    expect(
+      screen.getByRole("button", { name: "Expand sidebar" }),
+    ).toHaveAttribute("aria-expanded", "false")
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand sidebar" }))
+    expect(
+      screen.getByRole("button", { name: "Collapse sidebar" }),
+    ).toHaveAttribute("aria-expanded", "true")
   })
 })
