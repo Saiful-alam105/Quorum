@@ -182,6 +182,29 @@ export function getReview(id: number): Promise<ReviewDetail> {
   return request<ReviewDetail>(`/api/reviews/${id}`)
 }
 
+export type ChatMessage = {
+  id: number
+  analysis_run_id: number
+  role: "user" | "assistant"
+  message: string
+  timestamp: string
+}
+
+export function getChatMessages(reviewId: number): Promise<ChatMessage[]> {
+  return request<ChatMessage[]>(`/api/reviews/${reviewId}/chat`)
+}
+
+export function postChatMessage(
+  reviewId: number,
+  question: string,
+): Promise<{ answer: string }> {
+  return request<{ answer: string }>(`/api/reviews/${reviewId}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question }),
+  })
+}
+
 export type SecurityFinding = {
   id: number
   analysis_run_id: number

@@ -4,6 +4,8 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react"
 
 import { AuthStatus } from "@/components/AuthStatus"
 import { BackendStatus } from "@/components/BackendStatus"
+import { AskQuorum } from "@/components/chat/AskQuorum"
+import { AskQuorumProvider } from "@/components/chat/askQuorumContext"
 import { QuorumMark } from "@/components/QuorumMark"
 import { navItems } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
@@ -17,7 +19,8 @@ export function AppLayout({ children }: { children?: ReactNode }) {
     ) ?? navItems[0]
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <AskQuorumProvider>
+      <div className="flex min-h-screen bg-background">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:border focus:border-border focus:bg-background focus:px-3 focus:py-2 focus:text-sm"
@@ -123,6 +126,9 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           {children ?? <Outlet />}
         </main>
       </div>
-    </div>
+
+      <AskQuorum />
+      </div>
+    </AskQuorumProvider>
   )
 }

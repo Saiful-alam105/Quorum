@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom"
-import { ClipboardCheck } from "lucide-react"
+import { ClipboardCheck, MessageSquare } from "lucide-react"
 
+import { useAskQuorum } from "@/components/chat/askQuorumContext"
 import { SeverityDot } from "@/components/severity"
 import { AnalysisStatusBadge } from "@/components/status"
 import type { ReviewSummary } from "@/lib/api"
@@ -13,6 +14,7 @@ type SeverityRow = {
 }
 
 export function ReviewCard({ review }: { review: ReviewSummary }) {
+  const { openWithReview } = useAskQuorum()
   const prUrl = review.repository_full_name
     ? `https://github.com/${review.repository_full_name}/pull/${review.pr_number}`
     : null
@@ -123,6 +125,14 @@ export function ReviewCard({ review }: { review: ReviewSummary }) {
             GitHub ↗
           </a>
         ) : null}
+        <button
+          type="button"
+          onClick={() => openWithReview(review.id)}
+          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <MessageSquare className="h-3 w-3" />
+          Ask Quorum
+        </button>
       </div>
     </li>
   )

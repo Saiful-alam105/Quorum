@@ -153,3 +153,21 @@ class ReviewDetailOut(ReviewSummaryOut):
     findings: list[SecurityFindingOut]
     tests: list[TestRunOut]
     coverage: CoverageResultOut | None
+
+
+class ChatMessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    analysis_run_id: int
+    role: str
+    message: str
+    timestamp: datetime
+
+
+class ChatPostRequest(BaseModel):
+    question: str
+
+
+class ChatPostResponse(BaseModel):
+    answer: str

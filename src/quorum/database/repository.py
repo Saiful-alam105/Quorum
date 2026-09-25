@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from quorum.database.models import (
     AnalysisRun,
+    ChatMessage,
     CoverageResult,
     PullRequest,
     Repository,
@@ -536,3 +537,35 @@ def list_recent_findings_for_user(
             .limit(limit)
         )
     )
+
+
+def list_chat_messages_for_review(
+    db: Session, analysis_run_id: int
+) -> list[ChatMessage]:
+    """Return the chat history for a review, oldest first."""
+    return list(
+        db.scalars(
+            select(ChatMessage)
+            .where(ChatMessage.analysis_run_id == analysis_run_id)
+            .order_by(ChatMessage.id)
+        )
+    )
+
+
+def create_chat_message(
+    db: Session,
+    analysis_run_id: int,
+    user_id: int | None,
+    role: str,
+    message: str,
+) -> ChatMessage:
+    """Persist a chat message for a review and return the row."""
+    row = ChatMessage(
+        analysis_run_id=analysis_run_id,
+        user_id=user_id,
+        role=role,
+        message=message,
+    )
+    db.add(row)
+    db.commit()
+    return row
