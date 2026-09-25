@@ -64,8 +64,8 @@ describe("LandingPage", () => {
     expect(
       screen.getAllByText("Merge Readiness").length,
     ).toBeGreaterThan(0)
-    expect(screen.getByText("Ask Quorum")).toBeInTheDocument()
-    expect(screen.getByText("Roadmap")).toBeInTheDocument()
+    expect(screen.getAllByText("Ask Quorum").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Roadmap").length).toBeGreaterThan(0)
   })
 
   it("renders the labeled review experience preview", () => {
@@ -165,6 +165,19 @@ describe("LandingPage", () => {
     expect(
       screen.getByRole("link", { name: "Explore the workflow" }),
     ).toHaveAttribute("href", "#how-it-works")
+  })
+
+  it("renders the how-to-use journey", () => {
+    renderPage()
+    expect(
+      screen.getByRole("heading", {
+        name: "From sign-in to insights in a few steps",
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Connect GitHub")).toBeInTheDocument()
+    expect(screen.getByText("Create a Pull Request")).toBeInTheDocument()
+    expect(screen.getByText("Check Review History")).toBeInTheDocument()
+    expect(screen.getAllByText("Roadmap").length).toBeGreaterThan(0)
   })
 
   it("renders the mobile navigation menu", () => {

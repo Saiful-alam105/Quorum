@@ -4,6 +4,7 @@ import { GitPullRequestArrow } from "lucide-react"
 import { CapabilitiesSection } from "@/components/landing/CapabilitiesSection"
 import { FinalCtaSection } from "@/components/landing/FinalCtaSection"
 import { HowItWorksSection } from "@/components/landing/HowItWorksSection"
+import { HowToUseSection } from "@/components/landing/HowToUseSection"
 import { LandingFooter } from "@/components/landing/LandingFooter"
 import { LandingNav } from "@/components/landing/LandingNav"
 import { ProblemSection } from "@/components/landing/ProblemSection"
@@ -127,6 +128,8 @@ export default function LandingPage() {
         <ProblemSection />
 
         <HowItWorksSection />
+
+        <HowToUseSection />
 
         <CapabilitiesSection />
 
