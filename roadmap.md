@@ -299,10 +299,10 @@ This section reflects the actual repository state (verified against the source, 
 
 | Phase | Status |
 | --- | --- |
-| Phase 0 — Project Setup | Partially implemented (repository, Python environment, FastAPI backend, README/roadmap, `.env.example`, `.gitignore`, `requirements.txt` exist; Docker/Ollama/local model/CI not yet set up) |
+| Phase 0 — Project Setup | Partially implemented (repository, Python environment, FastAPI backend, README/roadmap, `.env.example`, `.gitignore`, `requirements.txt` exist; Docker sandbox image built; CI not yet set up) |
 | Phase 1 — FastAPI Skeleton | Implemented and tested (`GET /`, `GET /health`, `POST /webhooks/github`) |
 | Phase 2 — GitHub App + Authentication | Implemented; OAuth login/callback/me/logout and App private-key/JWT verified manually against GitHub; webhook signature covered by automated tests (live webhook delivery via tunnel not yet exercised) |
-| Phase 3 — GitHub API Layer | Implemented (all 9 functions) with mocked tests; not yet consumed by the pipeline |
+| Phase 3 — GitHub API Layer | Implemented (all 9 functions) with mocked tests; consumed by the analysis pipeline |
 | Phase 4 — PostgreSQL | Implemented and verified against local PostgreSQL (migration `303b9ed314cd` applied; tables/PKs/FKs confirmed) |
 | Phase 5 — Orchestrator | Implemented (runner, STAGES registry, lifecycle; webhook scheduling) |
 | Phase 6 — Diff + AST Analysis | Implemented (diff parsing, GitHub diff service, Python AST extraction: modified functions/classes with arguments, decorators, source ranges, surrounding source; orchestrator stage). "Relevant existing tests" extraction remains a later-phase item |
@@ -314,13 +314,13 @@ This section reflects the actual repository state (verified against the source, 
 | Phase 12 — Test Writer Agent | Implemented (generated-test schema + syntax validation, bounded prompt, TestWriterAgent via role="test", sandbox pytest execution with per-test result parsing, pytest-cov coverage before/after/delta, persistence of test_runs + coverage_results, orchestrator stage; live-verified: 11 generated tests ran in Docker with coverage 0% -> 98%) |
 | Phase 13 — Result Synthesis + Merge Readiness | Implemented (deterministic documented 0-100 score from security/test/coverage evidence, recommendation bands, persistence on analysis_run, orchestrator stage; no LLM involvement) |
 | Phase 14 — GitHub Review Comment | Implemented (review comment markdown builder, comment service via installation token, orchestrator stage posting the summary to the PR) |
-| Phase 15 — Dashboard Backend API | Partially implemented — read API subset exists (`/api/me`, `/api/repositories`, `/api/repositories/{id}`, `/api/repositories/{id}/pull-requests`, `/api/pull-requests`, `/api/pull-requests/{id}`) |
-| Phase 16 — Quorum Web Dashboard | In progress — implemented early (see execution-order note in §16); Chunks 0–8 complete on `feature/web-dashboard` |
-| Phase 17 — Ask Quorum | Intentionally deferred until the analysis/chat backend exists |
-| Phase 18 — Evaluation Harness | Not started |
-| Phase 19 — Hardening + Final Demo | Not started |
+| Phase 15 — Dashboard Backend API | ✅ Completed — user-scoped read API for repositories, Pull Requests, per-PR analysis/security/tests/coverage, reviews, review detail, and findings |
+| Phase 16 — Quorum Web Dashboard | ✅ Completed except Ask Quorum — the authenticated dashboard (Dashboard, Repositories, Pull Requests, Review History, Findings, Profile, Settings) and the public landing page are implemented; Ask Quorum is a placeholder page (see execution-order note in §16) |
+| Phase 17 — Ask Quorum | ⏳ Planned — the grounded chat backend is not yet implemented; the dashboard shows an Ask Quorum placeholder page |
+| Phase 18 — Evaluation Harness | ⏳ Planned |
+| Phase 19 — Hardening + Final Demo | ⏳ Planned |
 
-**Execution order:** Phase 16 (Web Dashboard) is being implemented **early**, in parallel, immediately after PostgreSQL (Phase 4), on the `feature/web-dashboard` branch. It remains conceptually Phase 16; see the note in §16.
+**Execution order:** Phase 16 (Web Dashboard) was implemented **early**, in parallel with the remaining backend work, after PostgreSQL (Phase 4), on the `feature/web-dashboard` branch, and merged into `main`. It remains conceptually Phase 16. The public landing page is part of the Phase 16 web experience. See the note in §16.
 
 ## Phase 0 — Project Setup (Day 1)
 
@@ -822,7 +822,7 @@ GitHub comment
 
 # Phase 15 — Quorum Web Dashboard Backend API (Days 50–52)
 
-> **Status:** Partially implemented (built in parallel with the early dashboard work). The read API subset below is implemented and used by the dashboard: `GET /api/me`, `GET /api/repositories`, `GET /api/repositories/{id}`, `GET /api/repositories/{id}/pull-requests`, `GET /api/pull-requests`, `GET /api/pull-requests/{id}`. The remaining endpoints (analysis, security, tests, coverage, reviews, chat) are not implemented yet.
+> **Status:** ✅ Completed. The user-scoped read API is implemented and used by the dashboard: `GET /api/me`, `GET /api/repositories`, `GET /api/repositories/{id}`, `GET /api/repositories/{id}/pull-requests`, `GET /api/pull-requests`, `GET /api/pull-requests/{id}`, `GET /api/pull-requests/{id}/analysis`, `GET /api/pull-requests/{id}/security`, `GET /api/pull-requests/{id}/tests`, `GET /api/pull-requests/{id}/coverage`, `GET /api/reviews`, `GET /api/reviews/{id}`, and `GET /api/findings`. The chat endpoints (`GET`/`POST /api/reviews/{id}/chat`) are part of Phase 17.
 
 Before building the React pages, expose backend APIs for the frontend.
 
@@ -862,7 +862,7 @@ Rules:
 
 # Phase 16 — Quorum Web Dashboard (Days 53–58)
 
-> **Execution-order note:** Phase 16 is being implemented **early**, in parallel with the remaining backend work, immediately after PostgreSQL (Phase 4), on the `feature/web-dashboard` branch. It remains conceptually Phase 16 — the dashboard is a required MVP feature and the visual control center for the pipeline. Dashboard Chunks 0–8 are complete (foundation, layout/nav, read API, repositories, repository detail/PR list, login/auth, dashboard overview, PR review details, settings). The Ask Quorum UI is intentionally deferred until the chatbot/analysis backend exists.
+> **Execution-order note:** Phase 16 was implemented **early**, in parallel with the remaining backend work, after PostgreSQL (Phase 4), on the `feature/web-dashboard` branch (merged into `main`). It remains conceptually Phase 16 — the dashboard is a required MVP feature and the visual control center for the pipeline. The authenticated dashboard (Dashboard, Repositories, Repository detail, Pull Requests, PR review details, Review History, Review detail, Findings, Profile, Settings) and the public landing page are complete. The Ask Quorum UI is a placeholder page; the chatbot backend is deferred to Phase 17.
 
 The dashboard is now a required MVP feature.
 
@@ -1302,6 +1302,8 @@ Frontend responsibilities:
 
 # 18. Phase 17 — Ask Quorum Implementation (Days 59–63)
 
+> **Status:** ⏳ Planned. The dashboard is complete and shows an Ask Quorum placeholder page. The grounded chat backend (`GET`/`POST /api/reviews/{review_id}/chat`) is not yet implemented.
+
 If the core dashboard works, implement the chatbot.
 
 Backend:
@@ -1557,7 +1559,7 @@ backup demo video
 | M12 | 67 | Evaluation |
 | M13 | 70 | Hardening + Final Demo |
 
-> **Progress note:** M1 (FastAPI skeleton) is complete. M2 (GitHub App + GitHub API) is largely complete — the App/OAuth flow is verified and the full API layer is implemented. M3 (Database + Orchestrator) is half complete — the database part is implemented and verified; the Orchestrator is the next phase to build. M10 (Quorum Web Dashboard) is in progress early (Chunks 0–8 complete) because Phase 16 is being executed ahead of its conceptual position.
+> **Progress note:** M1–M9 are complete (FastAPI skeleton through the frontend read API). M10 (Quorum Web Dashboard) is complete — the authenticated dashboard and the public landing page are implemented. M11 (Ask Quorum) is pending — the grounded chatbot backend is not yet implemented. M12 (Evaluation) and M13 (Hardening + Final Demo) are planned.
 
 ---
 

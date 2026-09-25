@@ -1,56 +1,54 @@
 # Quorum
 
-AI-powered GitHub Pull Request review system with a web dashboard and an evidence-grounded **Ask Quorum** chatbot.
+AI-powered GitHub Pull Request review and analysis system with a public landing page, an authenticated web dashboard, and an evidence-grounded **Ask Quorum** assistant.
 
-Quorum reviews Pull Requests with specialized AI agents (static-analysis evidence, generated tests run in a Docker sandbox, measured coverage), produces a deterministic 0–100 Merge Readiness Score, and stores results in PostgreSQL.
+Quorum reviews Pull Requests with specialized AI agents (static-analysis evidence, generated tests run in a Docker sandbox, measured coverage), produces a deterministic 0–100 Merge Readiness Score, stores results in PostgreSQL, and posts a review summary back to GitHub.
 
 > **Measure, don't merely claim.** Quorum must not claim a test passed unless it actually passed, that coverage improved unless it was measured, or that a security issue exists without supporting evidence.
 
 ## What Quorum Does
 
-- Receives GitHub Pull Request events through webhooks.
-- Analyzes the changed code (diff, Python AST, Semgrep evidence).
-- Generates and executes tests inside an isolated Docker sandbox.
-- Measures coverage before/after and computes a deterministic Merge Readiness Score.
-- Stores results in PostgreSQL and posts a review summary back to GitHub.
-- Provides a React web dashboard and an evidence-grounded Ask Quorum chatbot.
-
-## Key Features
-
-- GitHub Pull Request integration (webhooks + REST API)
-- AI-assisted code/security analysis
-- Generated tests with real execution and verification
-- Coverage measurement and delta
-- Deterministic Merge Readiness Score
-- Quorum Web Dashboard
-- Ask Quorum — grounded in a selected review's evidence
-
-> Features beyond the currently implemented phases are planned by `roadmap.md`. Until the analysis pipeline exists, the dashboard's analysis views show honest "not yet available" states rather than fake data.
+- Provides a public **landing page** that introduces the product before login.
+- Signs users in with **GitHub OAuth** and connects repositories through the **Quorum GitHub App**.
+- Receives GitHub Pull Request events through **webhooks**.
+- Analyzes changed code (diff, Python AST, Semgrep evidence, context management).
+- Generates and executes tests inside an isolated **Docker sandbox** and measures coverage before/after.
+- Computes a deterministic **Merge Readiness Score** (0–100) from measured evidence.
+- Stores results in **PostgreSQL** and posts a review summary back to GitHub.
+- Provides an authenticated **React web dashboard** with repositories, Pull Requests, findings, Review History, and Settings.
+- **Ask Quorum** (chatbot) is planned: the UI placeholder exists; the grounded chat backend is not yet implemented.
 
 ## How Users Use Quorum
 
-1. Open the Quorum Web Dashboard.
-2. Sign in with GitHub (GitHub OAuth authenticates the user).
-3. Install/authorize the Quorum GitHub App.
-4. Select the repositories Quorum is allowed to access.
-5. Quorum receives Pull Request events automatically from GitHub.
-6. Quorum runs its existing analysis pipeline on the Pull Request.
-7. The user sees security findings, generated-test results, coverage, and the Merge Readiness result in the dashboard and as GitHub PR feedback.
-8. The user can ask questions about the review through Ask Quorum.
+```text
+Public Landing Page
+        ↓
+Sign in with GitHub (OAuth)
+        ↓
+Install / authorize the Quorum GitHub App and select repositories
+        ↓
+Open or update a Pull Request in GitHub
+        ↓
+Quorum's backend analyzes the Pull Request
+        ↓
+Results appear in the Quorum dashboard and as GitHub PR feedback
+        ↓
+Return later to Review History for previous analyses
+```
 
-> Users do not need to install Quorum or its analysis components locally. The Quorum backend runs the analysis infrastructure. Local installation is only relevant to Quorum development/self-hosted development environments.
+> Users do not install or run Quorum's analysis components. The backend runs the pipeline; local installation is only a development/demo detail.
 
 ## Architecture
 
 ```text
 GitHub
-  │  (webhooks / REST API)
+  │  (webhooks / REST API / OAuth)
   ▼
 FastAPI
   │
   ▼
-Quorum Analysis Pipeline
-  │
+Quorum Analysis Pipeline (Orchestrator)
+  │  Diff + AST → Context → Analysis → Synthesis
   ▼
 PostgreSQL
   │
@@ -69,20 +67,21 @@ The frontend communicates **only** with the FastAPI REST API. It never accesses 
 | --- | --- |
 | Backend | Python 3.13, FastAPI, Uvicorn |
 | Data | PostgreSQL, SQLAlchemy, Alembic |
-| GitHub | GitHub App, webhooks, REST API (`httpx`, `PyJWT`) |
-| Frontend | React, TypeScript, Vite, Tailwind CSS, shadcn/ui |
-| Analysis (planned) | Semgrep, LLM layer (OpenAI), Docker sandbox |
-| Tests | pytest, pytest-cov |
+| GitHub | GitHub App, OAuth, webhooks, REST API (`httpx`, `PyJWT`) |
+| Analysis | Semgrep, LLM layer (OpenAI), Docker sandbox |
+| Frontend | React, TypeScript, Vite, Tailwind CSS, shadcn-style design tokens |
+| Backend tests | pytest, pytest-cov |
+| Frontend tests | Vitest, React Testing Library |
 
 ### LLM providers
 
 Quorum talks to the LLM through a common `LLMProvider` interface. The active provider is OpenAI (`LLM_PROVIDER=openai`), with per-role models:
 
-- Security Agent → `gpt-5.6-terra` (GPT-5.6 Terra)
-- Test Writer → `gpt-5.6-terra` (GPT-5.6 Terra)
-- Ask Quorum → `gpt-5.6-luna` (GPT-5.6 Luna)
+- Security Agent → `gpt-5.6-terra`
+- Test Writer → `gpt-5.6-terra`
+- Ask Quorum → `gpt-5.6-luna`
 
-A single `OPENAI_API_KEY` authenticates all roles. The key is server-side only and is never sent to the frontend. A local Ollama provider also exists in the codebase but is not in use.
+A single `OPENAI_API_KEY` authenticates all roles (server-side only). A local Ollama provider also exists in the codebase but is not in use.
 
 ## Project Structure
 
@@ -93,9 +92,18 @@ Quorum/
 │   ├── config.py        # settings loaded from .env
 │   ├── api/             # dashboard REST API (/api/...)
 │   ├── auth/            # GitHub OAuth login + sessions
-│   ├── database/        # SQLAlchemy models, engine, repository helpers
-│   └── github/          # GitHub API client, App JWT, webhook signing
+│   ├── github/          # GitHub API client, App JWT, webhook signing, sync
+│   ├── orchestrator/    # analysis pipeline runner + stages
+│   ├── agents/          # security agent, test writer, synthesis, review comment
+│   ├── analysis/        # diff, AST, context management, Semgrep
+│   ├── llm/             # LLM provider interface + OpenAI/Ollama providers
+│   ├── sandbox/         # Docker sandbox for generated tests
+│   └── database/        # SQLAlchemy models, engine, repository helpers
 ├── frontend/            # React + Vite + TypeScript dashboard
+│   └── src/
+│       ├── components/  # shared UI, status/severity, landing sections
+│       ├── pages/       # dashboard + landing pages
+│       └── lib/         # API client, navigation, format helpers
 ├── tests/               # backend tests (pytest)
 ├── alembic/             # database migrations
 ├── roadmap.md           # phased build plan (source of truth)
@@ -103,6 +111,31 @@ Quorum/
 ├── requirements.txt
 └── .env.example
 ```
+
+## Landing Page (public)
+
+The root route (`/`) is a public landing page for visitors who are not signed in. It introduces Quorum and includes:
+
+- a hero with a "Continue with GitHub" call-to-action
+- a "How Quorum works" pipeline
+- a "How to Use Quorum" step-by-step journey
+- capabilities and a review-experience preview
+- security/testing and "Why Quorum" sections
+- a final call-to-action
+
+The landing page and dashboard share the same dark, GitHub-inspired visual language. After login, the same route shows the authenticated dashboard.
+
+## Web Dashboard (authenticated)
+
+A dark, developer-focused interface centered on repositories and Pull Requests:
+
+- **Dashboard** — overview metrics and recent Pull Requests, findings, and reviews
+- **Repositories** — connected repositories and per-repository Pull Requests
+- **Pull Requests** — PR list and a detailed review page (status, findings, tests, coverage, Merge Readiness Score)
+- **Findings** — security findings across repositories with severity information
+- **Review History** — every analysis run Quorum has produced
+- **Settings** — GitHub account, connected repositories, sign out
+- **Ask Quorum** — placeholder page (chatbot not implemented yet)
 
 ## Getting Started
 
@@ -115,8 +148,6 @@ cd Quorum
 
 ### 2. Python environment
 
-The project targets Python 3.13.x. Windows (PowerShell):
-
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -126,6 +157,9 @@ python -m venv .venv
 
 ```powershell
 pip install -r requirements.txt
+cd frontend
+npm install
+cd ..
 ```
 
 ### 4. Environment variables
@@ -136,20 +170,11 @@ Copy the template and fill in real values (never commit `.env`):
 Copy-Item .env.example .env
 ```
 
-Configure at least:
-
-- `GITHUB_WEBHOOK_SECRET` — secret shared with the GitHub App webhook.
-- `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY_PATH` — the GitHub App id and the filesystem path to its generated private key (`.pem`). Keep the key out of Git (`.gitignore` covers `*.pem` and `secrets/`).
-- `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_APP_SLUG` — used by the GitHub login flow.
-- `GITHUB_REDIRECT_URI` — OAuth callback (default `http://localhost:8000/auth/callback`).
-- `FRONTEND_URL` — frontend origin the OAuth callback redirects to after login (default `http://localhost:5173`).
-- `DATABASE_URL` — PostgreSQL connection string, e.g. `postgresql+psycopg://USER:PASSWORD@localhost:5432/quorum`.
-- `LLM_PROVIDER` — `openai` (default) or `ollama` (optional local, not in use). With OpenAI, set `OPENAI_API_KEY` (see `.env.example`). Never commit the key.
+At minimum configure `GITHUB_WEBHOOK_SECRET`, `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY_PATH`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI`, `FRONTEND_URL`, and `DATABASE_URL` (see `.env.example`). For analysis, set `LLM_PROVIDER=openai` and `OPENAI_API_KEY`.
 
 ### 5. PostgreSQL
 
-- Start PostgreSQL locally (default port `5432`).
-- Create the database named in `DATABASE_URL` (the example uses `quorum`).
+- Start PostgreSQL locally (default port `5432`) and create the database named in `DATABASE_URL`.
 - Apply migrations:
 
 ```powershell
@@ -157,8 +182,6 @@ alembic upgrade head
 ```
 
 ### 6. Start the backend
-
-From the repository root:
 
 ```powershell
 uvicorn --app-dir src quorum.main:app --reload
@@ -168,18 +191,17 @@ uvicorn --app-dir src quorum.main:app --reload
 
 ```powershell
 cd frontend
-npm install
 npm run dev
 ```
 
-### 8. Verify the application
+### 8. Access the application
 
-- Backend root: <http://localhost:8000/>
-- Health: <http://localhost:8000/health> → `{"status":"ok"}`
-- Frontend: <http://localhost:5173/>
-- Sign in: <http://localhost:5173/login> (or the header "Sign in")
+- Frontend: <http://localhost:5173> — the landing page; sign in with GitHub to reach the dashboard.
+- Backend: <http://localhost:8000> — health check at `/health`.
 
-### 9. Run tests
+> **Note:** use `http://localhost` consistently (not `127.0.0.1`). The GitHub OAuth state cookie is host-scoped, so mixing `localhost` and `127.0.0.1` breaks sign-in.
+
+## Running Tests
 
 Backend:
 
@@ -187,23 +209,21 @@ Backend:
 pytest
 ```
 
-Frontend (typecheck + production build; there are no frontend unit tests yet):
+Frontend (component tests, typecheck, and production build):
 
 ```powershell
 cd frontend
+npm test
 npm run build
 ```
 
-### 10. GitHub App local development
-
-To test **real** GitHub webhook delivery, expose the local backend with a tunnel such as Cloudflare Tunnel and point the GitHub App webhook at it. Signature verification is already implemented and tested; a tunnel is not required for local-only development.
-
 ## Current Status
 
-- **Phase 0–4:** implemented and verified — FastAPI skeleton, GitHub App + OAuth, GitHub API service layer, and PostgreSQL (models, migration, webhook persistence). (Phase 0 setup items such as Docker, Ollama, and CI are still pending.)
-- **Phase 16 Dashboard:** in progress — foundation through Settings are implemented (Chunks 0–8) on the `feature/web-dashboard` branch.
-- **Phase 5–14:** remaining backend analysis pipeline (orchestrator, diff/AST, Semgrep, LLM layer, agents, Docker sandbox, synthesis, GitHub comment).
-- **Ask Quorum:** pending — requires the analysis/chat backend.
+- **Phase 0–14 — complete:** FastAPI skeleton, GitHub App + OAuth, GitHub API layer, PostgreSQL, orchestrator, diff/AST, context management, Semgrep, LLM layer, Security Agent, Docker sandbox, Test Writer, Merge Readiness synthesis, GitHub review comment.
+- **Phase 15 (dashboard backend API) — complete:** user-scoped read APIs for repositories, Pull Requests, analysis/security/tests/coverage, reviews, and findings.
+- **Phase 16 (web dashboard) — complete except Ask Quorum:** the authenticated dashboard and public landing page are implemented; the Ask Quorum UI is a placeholder page.
+- **Ask Quorum (roadmap Phase 17) — planned:** the grounded chat backend is not implemented yet.
+- **Phase 18 (evaluation harness) and Phase 19 (hardening/demo) — planned.**
 
 ## Documentation
 
