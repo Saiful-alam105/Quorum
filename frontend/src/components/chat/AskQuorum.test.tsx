@@ -20,17 +20,37 @@ function renderAt(path: string) {
 }
 
 describe("AskQuorum", () => {
-  it("renders the launcher with an accessible label on dashboard pages", () => {
+  it("renders a closed launcher on dashboard pages", () => {
     renderAt("/")
     const button = screen.getByRole("button", { name: "Ask Quorum" })
-    expect(button).toBeInTheDocument()
-    expect(screen.getByText("Dashboard home")).toBeInTheDocument()
+    expect(button).toHaveAttribute("aria-expanded", "false")
+    expect(
+      screen.queryByRole("dialog", { name: "Ask Quorum" }),
+    ).not.toBeInTheDocument()
   })
 
-  it("navigates to /ask-quorum when clicked", () => {
+  it("toggles the floating chat panel", () => {
     renderAt("/")
     fireEvent.click(screen.getByRole("button", { name: "Ask Quorum" }))
+    expect(
+      screen.getByRole("dialog", { name: "Ask Quorum" }),
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "Close Ask Quorum" }))
+    expect(
+      screen.queryByRole("dialog", { name: "Ask Quorum" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("opens the full Ask Quorum page from the panel", () => {
+    renderAt("/")
+    fireEvent.click(screen.getByRole("button", { name: "Ask Quorum" }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open Ask Quorum in full page" }),
+    )
     expect(screen.getByText("Ask Quorum page")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("dialog", { name: "Ask Quorum" }),
+    ).not.toBeInTheDocument()
   })
 
   it("is hidden on the /ask-quorum page", () => {

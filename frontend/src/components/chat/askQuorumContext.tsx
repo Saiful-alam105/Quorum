@@ -6,31 +6,43 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import { useNavigate } from "react-router-dom"
 
 type AskQuorumContextValue = {
+  open: boolean
   selectedReviewId: number | null
   setSelectedReviewId: (id: number | null) => void
   openWithReview: (reviewId: number) => void
+  openPanel: () => void
+  closePanel: () => void
+  togglePanel: () => void
 }
 
 const AskQuorumContext = createContext<AskQuorumContextValue | null>(null)
 
 export function AskQuorumProvider({ children }: { children: ReactNode }) {
-  const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
   const [selectedReviewId, setSelectedReviewId] = useState<number | null>(null)
 
-  const openWithReview = useCallback(
-    (reviewId: number) => {
-      setSelectedReviewId(reviewId)
-      navigate("/ask-quorum")
-    },
-    [navigate],
-  )
+  const openWithReview = useCallback((reviewId: number) => {
+    setSelectedReviewId(reviewId)
+    setOpen(true)
+  }, [])
+
+  const openPanel = useCallback(() => setOpen(true), [])
+  const closePanel = useCallback(() => setOpen(false), [])
+  const togglePanel = useCallback(() => setOpen((value) => !value), [])
 
   const value = useMemo<AskQuorumContextValue>(
-    () => ({ selectedReviewId, setSelectedReviewId, openWithReview }),
-    [selectedReviewId, setSelectedReviewId, openWithReview],
+    () => ({
+      open,
+      selectedReviewId,
+      setSelectedReviewId,
+      openWithReview,
+      openPanel,
+      closePanel,
+      togglePanel,
+    }),
+    [open, selectedReviewId, setSelectedReviewId, openWithReview, openPanel, closePanel, togglePanel],
   )
 
   return (
