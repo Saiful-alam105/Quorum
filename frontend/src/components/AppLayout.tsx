@@ -4,6 +4,7 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react"
 
 import { AuthStatus } from "@/components/AuthStatus"
 import { BackendStatus } from "@/components/BackendStatus"
+import { AskQuorum } from "@/components/chat/AskQuorum"
 import { QuorumMark } from "@/components/QuorumMark"
 import { navItems } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
@@ -123,6 +124,8 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           {children ?? <Outlet />}
         </main>
       </div>
+
+      <AskQuorum />
     </div>
   )
 }
