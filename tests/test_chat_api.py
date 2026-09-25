@@ -225,6 +225,8 @@ def test_build_chat_prompt_is_grounded(
     assert "USER QUESTION:" in prompt
     assert "What security issues were found?" in prompt
     assert "UNTRUSTED" in prompt
+    assert "Response style:" in prompt
+    assert "Do not invent" in prompt
 
 
 # --- GET /api/reviews/{id}/chat ---

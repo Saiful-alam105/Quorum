@@ -8,6 +8,7 @@ import {
   type ChatMessage,
   type ReviewSummary,
 } from "@/lib/api"
+import { MarkdownMessage } from "@/components/chat/MarkdownMessage"
 import { cn } from "@/lib/utils"
 
 const suggestions = [
@@ -203,7 +204,11 @@ export function QuorumChat({
                           : "border-border bg-background",
                       )}
                     >
-                      {message.message}
+                      {message.role === "assistant" ? (
+                        <MarkdownMessage text={message.message} />
+                      ) : (
+                        message.message
+                      )}
                     </div>
                   ))
                 )}
