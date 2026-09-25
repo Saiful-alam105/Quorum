@@ -34,7 +34,11 @@ export function useInView<T extends HTMLElement>() {
 }
 
 export function useReducedMotion() {
-  const [reduced, setReduced] = useState(false)
+  const [reduced, setReduced] = useState(() =>
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      : false,
+  )
 
   useEffect(() => {
     if (typeof window.matchMedia !== "function") {
