@@ -86,6 +86,17 @@ describe("QuorumChat", () => {
     })
   })
 
+  it("shows the selected review in a context bar", async () => {
+    vi.stubGlobal("fetch", mockFetch({}))
+    renderChat(5)
+    await waitFor(() => {
+      expect(screen.getByText(/Answering about/)).toBeInTheDocument()
+    })
+    expect(
+      screen.getAllByText(/octocat\/hello-world #42/).length,
+    ).toBeGreaterThan(0)
+  })
+
   it("sends a question and renders the answer", async () => {
     vi.stubGlobal(
       "fetch",

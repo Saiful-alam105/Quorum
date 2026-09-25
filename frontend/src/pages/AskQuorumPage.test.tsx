@@ -33,9 +33,21 @@ const reviews = [
   },
 ]
 
-function mockFetch() {
+function mockFetch(options?: { authMe?: number }) {
   return vi.fn((input: RequestInfo | URL) => {
     const url = String(input)
+    if (url.includes("/auth/me")) {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify(
+            options?.authMe === 401
+              ? { detail: "Not authenticated" }
+              : { github_id: 1, username: "octocat" },
+          ),
+          { status: options?.authMe ?? 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+    }
     if (url.endsWith("/chat")) {
       return Promise.resolve(
         new Response("[]", {
@@ -72,11 +84,26 @@ describe("AskQuorumPage", () => {
     )
 
     expect(
-      screen.getByRole("heading", { name: "Ask Quorum" }),
+      await screen.findByRole("heading", { name: "Ask Quorum" }),
     ).toBeInTheDocument()
     await waitFor(() => {
       expect(screen.getByLabelText("Review")).toBeInTheDocument()
     })
     expect(screen.getByText("octocat/hello-world #42")).toBeInTheDocument()
+  })
+
+  it("shows the sign-in required state for unauthenticated visitors", async () => {
+    vi.stubGlobal("fetch", mockFetch({ authMe: 401 }))
+    render(
+      <MemoryRouter>
+        <AskQuorumProvider>
+          <AskQuorumPage />
+        </AskQuorumProvider>
+      </MemoryRouter>,
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "Sign in required" }),
+    ).toBeInTheDocument()
   })
 })

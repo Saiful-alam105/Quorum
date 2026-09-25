@@ -160,6 +160,15 @@ export function QuorumChat({
             </div>
           ) : (
             <>
+              {review ? (
+                <div className="border-b border-border bg-background/60 px-4 py-2 text-xs text-muted-foreground">
+                  Answering about{" "}
+                  <span className="font-medium text-foreground">
+                    {review.repository_full_name} #{review.pr_number}
+                  </span>{" "}
+                  — {review.pr_title} · {review.status}
+                </div>
+              ) : null}
               <div className="flex-1 space-y-3 overflow-y-auto p-4">
                 {messages.length === 0 ? (
                   <div className="space-y-2">

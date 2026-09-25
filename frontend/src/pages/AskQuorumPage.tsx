@@ -1,10 +1,31 @@
+import { useEffect, useState } from "react"
 import { MessageSquare } from "lucide-react"
 
 import { QuorumChat } from "@/components/chat/QuorumChat"
 import { useAskQuorum } from "@/components/chat/askQuorumContext"
+import { SignInRequired } from "@/components/SignInRequired"
+import { Skeleton } from "@/components/ui/Skeleton"
+import { getCurrentUser } from "@/lib/api"
+
+type AuthState = "loading" | "anonymous" | "authenticated"
 
 export default function AskQuorumPage() {
   const { selectedReviewId, setSelectedReviewId } = useAskQuorum()
+  const [auth, setAuth] = useState<AuthState>("loading")
+
+  useEffect(() => {
+    getCurrentUser()
+      .then(() => setAuth("authenticated"))
+      .catch(() => setAuth("anonymous"))
+  }, [])
+
+  if (auth === "loading") {
+    return <Skeleton className="h-[32rem]" />
+  }
+
+  if (auth === "anonymous") {
+    return <SignInRequired />
+  }
 
   return (
     <>
@@ -14,7 +35,8 @@ export default function AskQuorumPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Ask Quorum</h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Ask questions grounded in a specific review's analysis.
+          Ask questions about your repositories, Pull Requests, analysis results,
+          and findings.
         </p>
       </div>
 
