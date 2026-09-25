@@ -34,11 +34,11 @@ const review: ReviewSummary = {
 
 function renderCard() {
   return render(
-    <AskQuorumProvider>
-      <MemoryRouter>
+    <MemoryRouter>
+      <AskQuorumProvider>
         <ReviewCard review={review} />
-      </MemoryRouter>
-    </AskQuorumProvider>,
+      </AskQuorumProvider>
+    </MemoryRouter>,
   )
 }
 
@@ -67,8 +67,8 @@ describe("ReviewCard", () => {
 
   it("shows honest empty states when no analysis exists", () => {
     render(
-      <AskQuorumProvider>
-        <MemoryRouter>
+      <MemoryRouter>
+        <AskQuorumProvider>
           <ReviewCard
             review={{
               ...review,
@@ -84,8 +84,8 @@ describe("ReviewCard", () => {
               coverage_delta: null,
             }}
           />
-        </MemoryRouter>
-      </AskQuorumProvider>,
+        </AskQuorumProvider>
+      </MemoryRouter>,
     )
     expect(screen.getByText("No score")).toBeInTheDocument()
     expect(screen.getByText("No findings")).toBeInTheDocument()

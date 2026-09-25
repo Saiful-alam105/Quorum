@@ -64,11 +64,11 @@ describe("AskQuorumPage", () => {
   it("renders the page header and the review selector", async () => {
     vi.stubGlobal("fetch", mockFetch())
     render(
-      <AskQuorumProvider>
-        <MemoryRouter>
+      <MemoryRouter>
+        <AskQuorumProvider>
           <AskQuorumPage />
-        </MemoryRouter>
-      </AskQuorumProvider>,
+        </AskQuorumProvider>
+      </MemoryRouter>,
     )
 
     expect(

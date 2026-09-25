@@ -2,24 +2,15 @@ import { MessageSquare } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-export function AskQuorumButton({
-  open,
-  onToggle,
-}: {
-  open: boolean
-  onToggle: () => void
-}) {
+export function AskQuorumButton({ onNavigate }: { onNavigate: () => void }) {
   return (
     <div className="group fixed bottom-4 right-4 z-50">
       <button
         type="button"
-        onClick={onToggle}
+        onClick={onNavigate}
         aria-label="Ask Quorum"
-        aria-expanded={open}
-        aria-haspopup="dialog"
         className={cn(
           "flex h-12 w-12 items-center justify-center rounded-xl border border-primary/40 bg-primary/15 text-primary shadow-lg shadow-primary/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/25 hover:shadow-primary/20",
-          open && "bg-primary/25",
         )}
       >
         <MessageSquare className="h-5 w-5" />
