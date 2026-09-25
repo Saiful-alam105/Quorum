@@ -92,6 +92,27 @@ describe("AskQuorumPage", () => {
     expect(screen.getByText("octocat/hello-world #42")).toBeInTheDocument()
   })
 
+  it("pre-selects the review from the query param", async () => {
+    vi.stubGlobal("fetch", mockFetch())
+    render(
+      <MemoryRouter initialEntries={["/ask-quorum?review=5"]}>
+        <AskQuorumProvider>
+          <AskQuorumPage />
+        </AskQuorumProvider>
+      </MemoryRouter>,
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "Ask Quorum" }),
+    ).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByLabelText("Review")).toHaveValue("5")
+    })
+    await waitFor(() => {
+      expect(screen.getByLabelText("Ask Quorum question")).toBeInTheDocument()
+    })
+  })
+
   it("shows the sign-in required state for unauthenticated visitors", async () => {
     vi.stubGlobal("fetch", mockFetch({ authMe: 401 }))
     render(

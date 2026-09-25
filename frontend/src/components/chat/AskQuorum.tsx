@@ -30,7 +30,11 @@ export function AskQuorum() {
 
   const openFullPage = () => {
     closePanel()
-    navigate("/ask-quorum")
+    const target =
+      selectedReviewId != null
+        ? `/ask-quorum?review=${selectedReviewId}`
+        : "/ask-quorum"
+    navigate(target)
   }
 
   return (

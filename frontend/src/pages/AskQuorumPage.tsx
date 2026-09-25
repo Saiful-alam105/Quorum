@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import { MessageSquare } from "lucide-react"
 
 import { QuorumChat } from "@/components/chat/QuorumChat"
@@ -11,7 +12,15 @@ type AuthState = "loading" | "anonymous" | "authenticated"
 
 export default function AskQuorumPage() {
   const { selectedReviewId, setSelectedReviewId } = useAskQuorum()
+  const [searchParams] = useSearchParams()
   const [auth, setAuth] = useState<AuthState>("loading")
+
+  useEffect(() => {
+    const raw = searchParams.get("review")
+    if (raw && /^\d+$/.test(raw)) {
+      setSelectedReviewId(Number(raw))
+    }
+  }, [searchParams, setSelectedReviewId])
 
   useEffect(() => {
     getCurrentUser()
