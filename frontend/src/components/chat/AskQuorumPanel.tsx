@@ -20,13 +20,16 @@ const suggestions = [
 export function AskQuorumPanel({
   open,
   onClose,
+  selectedReviewId,
+  onSelectedReviewChange,
 }: {
   open: boolean
   onClose: () => void
+  selectedReviewId: number | null
+  onSelectedReviewChange: (id: number | null) => void
 }) {
   const [reviews, setReviews] = useState<ReviewSummary[]>([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
-  const [selectedReviewId, setSelectedReviewId] = useState<number | "">("")
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [question, setQuestion] = useState("")
   const [sending, setSending] = useState(false)
@@ -66,7 +69,7 @@ export function AskQuorumPanel({
   }, [])
 
   useEffect(() => {
-    if (selectedReviewId === "") {
+    if (selectedReviewId === null) {
       setMessages([])
       return
     }
@@ -79,7 +82,7 @@ export function AskQuorumPanel({
 
   const handleSend = async () => {
     const text = question.trim()
-    if (!text || selectedReviewId === "" || sending) {
+    if (!text || selectedReviewId === null || sending) {
       return
     }
     const reviewId = selectedReviewId
@@ -170,10 +173,10 @@ export function AskQuorumPanel({
               </label>
               <select
                 id="ask-quorum-review"
-                value={selectedReviewId}
+                value={selectedReviewId ?? ""}
                 onChange={(event) =>
-                  setSelectedReviewId(
-                    event.target.value === "" ? "" : Number(event.target.value),
+                  onSelectedReviewChange(
+                    event.target.value === "" ? null : Number(event.target.value),
                   )
                 }
                 className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
@@ -188,7 +191,7 @@ export function AskQuorumPanel({
             </div>
           )}
 
-          {selectedReviewId === "" ? (
+          {selectedReviewId === null ? (
             <div className="flex-1 overflow-y-auto p-4 text-sm text-muted-foreground">
               Select a review to ask questions grounded in its analysis.
             </div>

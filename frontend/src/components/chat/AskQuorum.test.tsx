@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { AskQuorum } from "@/components/chat/AskQuorum"
+import { AskQuorumProvider, useAskQuorum } from "@/components/chat/askQuorumContext"
 
 function mockFetch(options: {
   reviews: unknown[]
@@ -41,9 +42,33 @@ function mockFetch(options: {
 
 function renderChat() {
   return render(
-    <MemoryRouter>
+    <AskQuorumProvider>
+      <MemoryRouter>
+        <AskQuorum />
+      </MemoryRouter>
+    </AskQuorumProvider>,
+  )
+}
+
+function HarnessInner() {
+  const { openWithReview } = useAskQuorum()
+  return (
+    <>
       <AskQuorum />
-    </MemoryRouter>,
+      <button type="button" onClick={() => openWithReview(5)}>
+        Open review 5
+      </button>
+    </>
+  )
+}
+
+function renderHarness() {
+  return render(
+    <AskQuorumProvider>
+      <MemoryRouter>
+        <HarnessInner />
+      </MemoryRouter>
+    </AskQuorumProvider>,
   )
 }
 
@@ -163,6 +188,20 @@ describe("AskQuorum", () => {
       expect(
         screen.getByText("Two high-severity issues were found."),
       ).toBeInTheDocument()
+    })
+  })
+
+  it("opens pre-selected on a review when asked from a review", async () => {
+    vi.stubGlobal("fetch", mockFetch({ reviews }))
+    renderHarness()
+
+    fireEvent.click(screen.getByRole("button", { name: "Open review 5" }))
+    await waitFor(() => {
+      expect(screen.getByRole("dialog", { name: "Ask Quorum" })).toBeInTheDocument()
+    })
+    expect(screen.getByLabelText("Review")).toHaveValue("5")
+    await waitFor(() => {
+      expect(screen.getByLabelText("Ask Quorum question")).toBeInTheDocument()
     })
   })
 

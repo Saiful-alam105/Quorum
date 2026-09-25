@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it } from "vitest"
 
+import { AskQuorumProvider } from "@/components/chat/askQuorumContext"
 import { ReviewCard } from "@/components/ReviewCard"
 import type { ReviewSummary } from "@/lib/api"
 
@@ -33,9 +34,11 @@ const review: ReviewSummary = {
 
 function renderCard() {
   return render(
-    <MemoryRouter>
-      <ReviewCard review={review} />
-    </MemoryRouter>,
+    <AskQuorumProvider>
+      <MemoryRouter>
+        <ReviewCard review={review} />
+      </MemoryRouter>
+    </AskQuorumProvider>,
   )
 }
 
@@ -64,23 +67,25 @@ describe("ReviewCard", () => {
 
   it("shows honest empty states when no analysis exists", () => {
     render(
-      <MemoryRouter>
-        <ReviewCard
-          review={{
-            ...review,
-            status: "pending",
-            merge_readiness_score: null,
-            finding_count: 0,
-            critical_count: 0,
-            high_count: 0,
-            medium_count: 0,
-            test_count: 0,
-            coverage_before: null,
-            coverage_after: null,
-            coverage_delta: null,
-          }}
-        />
-      </MemoryRouter>,
+      <AskQuorumProvider>
+        <MemoryRouter>
+          <ReviewCard
+            review={{
+              ...review,
+              status: "pending",
+              merge_readiness_score: null,
+              finding_count: 0,
+              critical_count: 0,
+              high_count: 0,
+              medium_count: 0,
+              test_count: 0,
+              coverage_before: null,
+              coverage_after: null,
+              coverage_delta: null,
+            }}
+          />
+        </MemoryRouter>
+      </AskQuorumProvider>,
     )
     expect(screen.getByText("No score")).toBeInTheDocument()
     expect(screen.getByText("No findings")).toBeInTheDocument()

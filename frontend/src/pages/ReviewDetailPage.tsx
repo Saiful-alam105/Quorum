@@ -3,10 +3,12 @@ import { Link, useParams } from "react-router-dom"
 import {
   ArrowLeft,
   ExternalLink,
+  MessageSquare,
   ShieldCheck,
   TestTube2,
 } from "lucide-react"
 
+import { useAskQuorum } from "@/components/chat/askQuorumContext"
 import { CoverageBlock } from "@/components/CoverageBlock"
 import { EmptyState } from "@/components/EmptyState"
 import { ErrorState } from "@/components/ErrorState"
@@ -28,6 +30,7 @@ type PageState =
 export default function ReviewDetailPage() {
   const { reviewId } = useParams<{ reviewId: string }>()
   const id = Number(reviewId)
+  const { openWithReview } = useAskQuorum()
   const [state, setState] = useState<PageState>({ status: "loading" })
 
   const load = useCallback(() => {
@@ -131,6 +134,14 @@ export default function ReviewDetailPage() {
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
           ) : null}
+          <button
+            type="button"
+            onClick={() => openWithReview(review.id)}
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            Ask Quorum
+          </button>
         </div>
       </div>
 
