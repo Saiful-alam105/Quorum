@@ -11,18 +11,18 @@ const statusConfig: Record<
   { label: string; className: string; icon: typeof Activity }
 > = {
   loading: {
-    label: "Checking backend…",
-    className: "text-muted-foreground",
+    label: "Checking…",
+    className: "border-border text-muted-foreground",
     icon: Loader2,
   },
   connected: {
-    label: "Backend connected",
-    className: "text-emerald-600",
+    label: "Connected",
+    className: "border-success/40 bg-success/10 text-success",
     icon: Activity,
   },
   offline: {
     label: "Backend offline",
-    className: "text-destructive",
+    className: "border-destructive/40 bg-destructive/10 text-destructive",
     icon: AlertCircle,
   },
 }
@@ -56,7 +56,7 @@ export function BackendStatus() {
   return (
     <div
       className={cn(
-        "flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-xs",
+        "flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium",
         current.className,
       )}
     >

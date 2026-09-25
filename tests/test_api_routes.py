@@ -80,11 +80,38 @@ def test_api_me_invalid_session(client: TestClient) -> None:
     assert response.status_code == 401
 
 
-def test_api_me_authenticated(client: TestClient) -> None:
+def test_api_me_authenticated(
+    client: TestClient, db_session: Session
+) -> None:
+    db_session.add(
+        User(
+            github_id=12345,
+            username="testuser",
+            avatar_url="https://example.com/avatar.png",
+            github_installation_id=555,
+        )
+    )
+    db_session.commit()
     token = create_session({"github_id": 12345, "username": "testuser"})
     response = client.get("/api/me", cookies={"session": token})
     assert response.status_code == 200
-    assert response.json() == {"github_id": 12345, "username": "testuser"}
+    data = response.json()
+    assert data["github_id"] == 12345
+    assert data["username"] == "testuser"
+    assert data["avatar_url"] == "https://example.com/avatar.png"
+    assert data["github_authorized"] is True
+    assert data["created_at"] is not None
+
+
+def test_api_me_reports_unauthorized_installation(
+    client: TestClient, db_session: Session
+) -> None:
+    db_session.add(User(github_id=12345, username="testuser"))
+    db_session.commit()
+    token = create_session({"github_id": 12345, "username": "testuser"})
+    response = client.get("/api/me", cookies={"session": token})
+    data = response.json()
+    assert data["github_authorized"] is False
 
 
 def test_api_repositories_requires_auth(client: TestClient) -> None:

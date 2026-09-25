@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { FolderGit2, LogIn, LogOut, User as UserIcon } from "lucide-react"
 
+import { Avatar } from "@/components/Avatar"
 import { ErrorState } from "@/components/ErrorState"
-import { LoadingState } from "@/components/LoadingState"
 import { PageHeader } from "@/components/PageHeader"
+import { Skeleton } from "@/components/ui/Skeleton"
 import {
   getMe,
   getRepositories,
@@ -63,7 +64,7 @@ export default function SettingsPage() {
     try {
       await logout()
     } finally {
-      window.location.reload()
+      window.location.assign("/")
     }
   }
 
@@ -75,7 +76,10 @@ export default function SettingsPage() {
       />
 
       {state.status === "loading" ? (
-        <LoadingState label="Loading settings…" />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Skeleton className="h-64" />
+          <Skeleton className="h-64" />
+        </div>
       ) : null}
 
       {state.status === "error" ? (
@@ -92,9 +96,16 @@ export default function SettingsPage() {
 
             {state.user ? (
               <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Username</p>
-                  <p className="font-medium">{state.user.username}</p>
+                <div className="flex items-center gap-3">
+                  <Avatar
+                    name={state.user.username}
+                    src={state.user.avatar_url}
+                    size="md"
+                  />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Username</p>
+                    <p className="font-medium">{state.user.username}</p>
+                  </div>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">GitHub ID</p>
@@ -104,7 +115,7 @@ export default function SettingsPage() {
                   <p className="text-sm text-muted-foreground">
                     GitHub App authorization
                   </p>
-                  <p className="font-medium text-emerald-600">Authorized</p>
+                  <p className="font-medium text-success">Authorized</p>
                 </div>
                 <button
                   type="button"

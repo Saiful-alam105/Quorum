@@ -152,7 +152,11 @@ def test_me_authenticated(mock_github_config: None, monkeypatch: pytest.MonkeyPa
         return "mock-access-token"
 
     async def mock_get_user(access_token: str) -> dict:
-        return {"id": 12345, "login": "testuser"}
+        return {
+            "id": 12345,
+            "login": "testuser",
+            "avatar_url": "https://example.com/avatar.png",
+        }
 
     monkeypatch.setattr(routes_module, "exchange_code", mock_exchange)
     monkeypatch.setattr(routes_module, "get_github_user", mock_get_user)
@@ -168,6 +172,9 @@ def test_me_authenticated(mock_github_config: None, monkeypatch: pytest.MonkeyPa
     data = me_response.json()
     assert data["username"] == "testuser"
     assert data["github_id"] == 12345
+    assert data["avatar_url"] == "https://example.com/avatar.png"
+    assert data["github_authorized"] is False
+    assert data["created_at"] is not None
 
 
 def test_logout(mock_github_config: None, monkeypatch: pytest.MonkeyPatch) -> None:

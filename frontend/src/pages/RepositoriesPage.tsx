@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from "react"
-import { Link } from "react-router-dom"
-import { ExternalLink, FolderGit2, Lock } from "lucide-react"
+import { FolderGit2 } from "lucide-react"
 
 import { EmptyState } from "@/components/EmptyState"
 import { ErrorState } from "@/components/ErrorState"
-import { LoadingState } from "@/components/LoadingState"
-import { PageHeader } from "@/components/PageHeader"
+import { RepositoryListItem } from "@/components/RepositoryListItem"
 import { SignInRequired } from "@/components/SignInRequired"
+import { Skeleton } from "@/components/ui/Skeleton"
 import { getRepositories, isUnauthorized, type Repository } from "@/lib/api"
 
 type RepositoriesState =
@@ -14,40 +13,6 @@ type RepositoriesState =
   | { status: "auth-required" }
   | { status: "error"; message: string }
   | { status: "ready"; repositories: Repository[] }
-
-function RepositoryCard({ repository }: { repository: Repository }) {
-  return (
-    <li className="flex items-center justify-between gap-4 rounded-lg border border-border p-4">
-      <Link
-        to={`/repositories/${repository.id}`}
-        className="min-w-0 space-y-1"
-      >
-        <div className="flex items-center gap-2">
-          <FolderGit2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span className="truncate font-medium transition-colors hover:text-primary hover:underline">
-            {repository.full_name}
-          </span>
-          {repository.is_private ? (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-              <Lock className="h-3 w-3" />
-              Private
-            </span>
-          ) : null}
-        </div>
-        <p className="text-xs text-muted-foreground">Owner: {repository.owner}</p>
-      </Link>
-      <a
-        href={`https://github.com/${repository.full_name}`}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex shrink-0 items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        GitHub
-        <ExternalLink className="h-3.5 w-3.5" />
-      </a>
-    </li>
-  )
-}
 
 export default function RepositoriesPage() {
   const [state, setState] = useState<RepositoriesState>({ status: "loading" })
@@ -75,38 +40,51 @@ export default function RepositoriesPage() {
     load()
   }, [load])
 
+  if (state.status === "loading") {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-64" />
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-16" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (state.status === "error") {
+    return <ErrorState message={state.message} onRetry={load} />
+  }
+
+  if (state.status === "auth-required") {
+    return <SignInRequired />
+  }
+
+  const { repositories } = state
+
   return (
     <>
-      <PageHeader
-        title="Repositories"
-        description="Repositories connected through the Quorum GitHub App."
-      />
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight">Repositories</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Repositories connected through the Quorum GitHub App.
+        </p>
+      </div>
 
-      {state.status === "loading" ? (
-        <LoadingState label="Loading repositories…" />
-      ) : null}
-
-      {state.status === "error" ? (
-        <ErrorState message={state.message} onRetry={load} />
-      ) : null}
-
-      {state.status === "auth-required" ? <SignInRequired /> : null}
-
-      {state.status === "ready" && state.repositories.length === 0 ? (
+      {repositories.length === 0 ? (
         <EmptyState
           icon={FolderGit2}
           title="No repositories yet"
-          description="Repositories appear here after Quorum receives a webhook event from the GitHub App. None have been stored yet."
+          description="Repositories appear here after Quorum receives a webhook event from the GitHub App."
         />
-      ) : null}
-
-      {state.status === "ready" && state.repositories.length > 0 ? (
+      ) : (
         <ul className="space-y-3">
-          {state.repositories.map((repository) => (
-            <RepositoryCard key={repository.id} repository={repository} />
+          {repositories.map((repository) => (
+            <RepositoryListItem key={repository.id} repository={repository} />
           ))}
         </ul>
-      ) : null}
+      )}
     </>
   )
 }

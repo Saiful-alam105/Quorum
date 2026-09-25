@@ -16,7 +16,7 @@ from quorum.auth.github_oauth import build_authorize_url, exchange_code, get_git
 from quorum.auth.sessions import create_session, delete_session, get_session
 from quorum.config import settings
 from quorum.database.base import get_db
-from quorum.database.repository import upsert_user
+from quorum.database.repository import get_user_by_github_id, upsert_user
 from quorum.github.api import get_user_installations
 from quorum.github.repo_sync import sync_user_repositories
 
@@ -121,7 +121,10 @@ async def callback(
 
 
 @router.get("/me")
-async def me(session: str | None = Cookie(default=None)) -> dict:
+async def me(
+    session: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),
+) -> dict:
     if not session:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
@@ -129,9 +132,16 @@ async def me(session: str | None = Cookie(default=None)) -> dict:
     if not session_data:
         raise HTTPException(status_code=401, detail="Invalid session")
 
+    user = get_user_by_github_id(db, session_data.get("github_id"))
+    if user is None:
+        raise HTTPException(status_code=401, detail="Invalid session")
+
     return {
-        "github_id": session_data.get("github_id"),
-        "username": session_data.get("username"),
+        "github_id": user.github_id,
+        "username": user.username,
+        "avatar_url": user.avatar_url,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+        "github_authorized": user.github_installation_id is not None,
     }
 
 

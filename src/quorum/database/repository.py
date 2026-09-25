@@ -1,5 +1,5 @@
-from sqlalchemy import delete, select
-from sqlalchemy.orm import Session
+from sqlalchemy import delete, func, select
+from sqlalchemy.orm import Session, selectinload
 
 from quorum.database.models import (
     AnalysisRun,
@@ -109,6 +109,7 @@ def upsert_pull_request(
     pull_request.title = data.get("title", "")
     pull_request.author = author.get("login", "")
     pull_request.state = data.get("state", "")
+    pull_request.updated_at = utcnow()
     db.commit()
     return pull_request
 
@@ -171,6 +172,11 @@ def list_repositories_for_user(db: Session, user_id: int) -> list[Repository]:
     return list(
         db.scalars(
             select(Repository)
+            .options(
+                selectinload(Repository.pull_requests).selectinload(
+                    PullRequest.analysis_runs
+                )
+            )
             .where(Repository.user_id == user_id)
             .order_by(Repository.full_name)
         )
@@ -195,9 +201,13 @@ def get_repository_for_user(
     db: Session, repository_id: int, user_id: int
 ) -> Repository | None:
     return db.scalar(
-        select(Repository).where(
-            Repository.id == repository_id, Repository.user_id == user_id
+        select(Repository)
+        .options(
+            selectinload(Repository.pull_requests).selectinload(
+                PullRequest.analysis_runs
+            )
         )
+        .where(Repository.id == repository_id, Repository.user_id == user_id)
     )
 
 
@@ -205,6 +215,15 @@ def list_pull_requests_for_user(db: Session, user_id: int) -> list[PullRequest]:
     return list(
         db.scalars(
             select(PullRequest)
+            .options(
+                selectinload(PullRequest.repository),
+                selectinload(PullRequest.analysis_runs).selectinload(
+                    AnalysisRun.security_findings
+                ),
+                selectinload(PullRequest.analysis_runs).selectinload(
+                    AnalysisRun.test_runs
+                ),
+            )
             .join(Repository, PullRequest.repository_id == Repository.id)
             .where(Repository.user_id == user_id)
             .order_by(PullRequest.id.desc())
@@ -218,6 +237,15 @@ def list_repository_pull_requests_for_user(
     return list(
         db.scalars(
             select(PullRequest)
+            .options(
+                selectinload(PullRequest.repository),
+                selectinload(PullRequest.analysis_runs).selectinload(
+                    AnalysisRun.security_findings
+                ),
+                selectinload(PullRequest.analysis_runs).selectinload(
+                    AnalysisRun.test_runs
+                ),
+            )
             .join(Repository, PullRequest.repository_id == Repository.id)
             .where(
                 PullRequest.repository_id == repository_id,
@@ -233,6 +261,15 @@ def get_pull_request_for_user(
 ) -> PullRequest | None:
     return db.scalar(
         select(PullRequest)
+        .options(
+            selectinload(PullRequest.repository),
+            selectinload(PullRequest.analysis_runs).selectinload(
+                AnalysisRun.security_findings
+            ),
+            selectinload(PullRequest.analysis_runs).selectinload(
+                AnalysisRun.test_runs
+            ),
+        )
         .join(Repository, PullRequest.repository_id == Repository.id)
         .where(PullRequest.id == pull_request_id, Repository.user_id == user_id)
     )
@@ -395,3 +432,107 @@ def replace_security_findings(
     db.add_all(rows)
     db.commit()
     return rows
+
+
+def list_security_findings_for_run(
+    db: Session, analysis_run_id: int
+) -> list[SecurityFinding]:
+    return list(
+        db.scalars(
+            select(SecurityFinding)
+            .where(SecurityFinding.analysis_run_id == analysis_run_id)
+            .order_by(SecurityFinding.id)
+        )
+    )
+
+
+def list_test_runs_for_run(db: Session, analysis_run_id: int) -> list[TestRun]:
+    return list(
+        db.scalars(
+            select(TestRun)
+            .where(TestRun.analysis_run_id == analysis_run_id)
+            .order_by(TestRun.id)
+        )
+    )
+
+
+def get_coverage_result_for_run(
+    db: Session, analysis_run_id: int
+) -> CoverageResult | None:
+    return db.scalar(
+        select(CoverageResult)
+        .where(CoverageResult.analysis_run_id == analysis_run_id)
+        .order_by(CoverageResult.id.desc())
+    )
+
+
+def list_reviews_for_user(db: Session, user_id: int) -> list[AnalysisRun]:
+    """List all analysis runs (reviews) for the repositories owned by a user."""
+    return list(
+        db.scalars(
+            select(AnalysisRun)
+            .options(
+                selectinload(AnalysisRun.security_findings),
+                selectinload(AnalysisRun.test_runs),
+                selectinload(AnalysisRun.coverage_results),
+                selectinload(AnalysisRun.pull_request).selectinload(
+                    PullRequest.repository
+                ),
+            )
+            .join(PullRequest, AnalysisRun.pull_request_id == PullRequest.id)
+            .join(Repository, PullRequest.repository_id == Repository.id)
+            .where(Repository.user_id == user_id)
+            .order_by(AnalysisRun.id.desc())
+        )
+    )
+
+
+def get_review_for_user(
+    db: Session, review_id: int, user_id: int
+) -> AnalysisRun | None:
+    """Return an analysis run scoped to a user's repositories, or None."""
+    return db.scalar(
+        select(AnalysisRun)
+        .options(
+            selectinload(AnalysisRun.security_findings),
+            selectinload(AnalysisRun.test_runs),
+            selectinload(AnalysisRun.coverage_results),
+            selectinload(AnalysisRun.pull_request).selectinload(
+                PullRequest.repository
+            ),
+        )
+        .join(PullRequest, AnalysisRun.pull_request_id == PullRequest.id)
+        .join(Repository, PullRequest.repository_id == Repository.id)
+        .where(AnalysisRun.id == review_id, Repository.user_id == user_id)
+    )
+
+
+def list_recent_findings_for_user(
+    db: Session, user_id: int, limit: int = 10
+) -> list[SecurityFinding]:
+    """List the latest-run security findings for a user's repositories.
+
+    Only findings from each pull request's most recent analysis run are
+    returned, so re-analysed pull requests do not duplicate the feed.
+    """
+    latest_run_ids = (
+        select(func.max(AnalysisRun.id))
+        .join(PullRequest, AnalysisRun.pull_request_id == PullRequest.id)
+        .join(Repository, PullRequest.repository_id == Repository.id)
+        .where(Repository.user_id == user_id)
+        .group_by(PullRequest.id)
+    )
+    return list(
+        db.scalars(
+            select(SecurityFinding)
+            .options(
+                selectinload(SecurityFinding.analysis_run)
+                .selectinload(AnalysisRun.pull_request)
+                .selectinload(PullRequest.repository),
+            )
+            .join(AnalysisRun, SecurityFinding.analysis_run_id == AnalysisRun.id)
+            .where(SecurityFinding.analysis_run_id.in_(latest_run_ids))
+            .order_by(SecurityFinding.id.desc())
+            .limit(limit)
+        )
+    )
