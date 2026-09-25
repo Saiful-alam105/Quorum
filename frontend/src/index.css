@@ -57,6 +57,16 @@
     outline-offset: 2px;
   }
 
+  @layer components {
+    .card-lift {
+      @apply transition-all duration-200 ease-out;
+    }
+
+    .card-lift:hover {
+      @apply -translate-y-1 border-primary/40 shadow-lg;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -65,6 +75,10 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
+    }
+
+    .card-lift:hover {
+      transform: none;
     }
   }
 }

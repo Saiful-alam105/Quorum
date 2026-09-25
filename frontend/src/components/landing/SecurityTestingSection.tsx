@@ -46,7 +46,7 @@ export function SecurityTestingSection() {
     >
       <div className="grid gap-4 md:grid-cols-3">
         {pillars.map((pillar) => (
-          <div key={pillar.title} className="rounded-lg border border-border bg-card p-5">
+          <div key={pillar.title} className="card-lift rounded-lg border border-border bg-card p-5">
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/15 text-primary">
               <pillar.icon className="h-4 w-4" />
             </span>

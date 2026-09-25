@@ -74,7 +74,7 @@ export function CapabilitiesSection() {
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {capabilities.map((capability) => (
-          <div key={capability.title} className="rounded-lg border border-border bg-card p-5">
+          <div key={capability.title} className="card-lift rounded-lg border border-border bg-card p-5">
             <div className="flex items-center justify-between">
               <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/15 text-primary">
                 <capability.icon className="h-4 w-4" />

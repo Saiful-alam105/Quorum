@@ -52,7 +52,7 @@ export function HowItWorksSection() {
                 className="hidden h-6 w-6 shrink-0 self-center text-muted-foreground lg:block"
               />
             ) : null}
-            <li className="flex-1 rounded-lg border border-border bg-card p-5">
+            <li className="card-lift flex-1 rounded-lg border border-border bg-card p-5">
               <span className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card font-mono text-xs font-semibold text-primary">
                 {String(index + 1).padStart(2, "0")}
               </span>

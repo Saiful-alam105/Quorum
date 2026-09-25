@@ -11,7 +11,7 @@ export function ReviewExperienceSection() {
       eyebrow="The review experience"
       title="One screen, everything about the Pull Request"
     >
-      <div className="mx-auto max-w-3xl">
+      <div className="card-lift mx-auto max-w-3xl">
         <div className="rounded-xl border border-border bg-card p-6 shadow-lg">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
             <div className="flex items-center gap-3">

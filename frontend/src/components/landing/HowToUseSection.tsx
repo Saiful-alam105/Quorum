@@ -74,7 +74,7 @@ export function HowToUseSection() {
     >
       <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {steps.map((step, index) => (
-          <li key={step.title} className="rounded-lg border border-border bg-card p-5">
+          <li key={step.title} className="card-lift rounded-lg border border-border bg-card p-5">
             <div className="flex items-center justify-between">
               <span className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card font-mono text-xs font-semibold text-primary">
                 {String(index + 1).padStart(2, "0")}

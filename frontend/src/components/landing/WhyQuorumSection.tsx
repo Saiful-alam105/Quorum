@@ -44,7 +44,7 @@ export function WhyQuorumSection() {
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {points.map((point) => (
-          <div key={point.title} className="rounded-lg border border-border bg-card p-5">
+          <div key={point.title} className="card-lift rounded-lg border border-border bg-card p-5">
             <div className="flex items-start gap-3">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
               <div>
