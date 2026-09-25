@@ -66,16 +66,16 @@ export default function ReviewsPage() {
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Reviews</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Review History</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Quorum analysis runs and Merge Readiness Scores.
+          Every analysis run Quorum has produced across your Pull Requests.
         </p>
       </div>
 
       {reviews.length === 0 ? (
         <EmptyState
           icon={ClipboardCheck}
-          title="No reviews yet"
+          title="No review history yet"
           description="Completed Quorum analyses will appear here with their Merge Readiness Scores."
         />
       ) : (
