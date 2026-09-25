@@ -1,5 +1,6 @@
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom"
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react"
 
 import { AuthStatus } from "@/components/AuthStatus"
 import { BackendStatus } from "@/components/BackendStatus"
@@ -9,6 +10,7 @@ import { cn } from "@/lib/utils"
 
 export function AppLayout({ children }: { children?: ReactNode }) {
   const { pathname } = useLocation()
+  const [collapsed, setCollapsed] = useState(false)
   const current =
     navItems.find((item) =>
       item.to === "/" ? pathname === "/" : pathname.startsWith(item.to),
@@ -22,14 +24,27 @@ export function AppLayout({ children }: { children?: ReactNode }) {
       >
         Skip to content
       </a>
-      <aside className="flex w-16 shrink-0 flex-col border-r bg-card/40 lg:w-60">
+      <aside
+        className={cn(
+          "flex shrink-0 flex-col border-r bg-card/40 transition-[width] duration-200 ease-out",
+          collapsed ? "w-16" : "w-16 lg:w-60",
+        )}
+      >
         <Link
           to="/"
           aria-label="Quorum home"
-          className="flex h-14 items-center justify-center gap-2 border-b px-3 transition-colors hover:bg-accent lg:justify-start lg:px-4"
+          className={cn(
+            "flex h-14 items-center gap-2 border-b px-3 transition-colors hover:bg-accent",
+            collapsed ? "justify-center" : "justify-center lg:justify-start lg:px-4",
+          )}
         >
           <QuorumMark />
-          <span className="hidden text-[15px] font-semibold tracking-tight lg:block">
+          <span
+            className={cn(
+              "hidden text-[15px] font-semibold tracking-tight",
+              !collapsed && "lg:block",
+            )}
+          >
             Quorum
           </span>
         </Link>
@@ -44,6 +59,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
               className={({ isActive }) =>
                 cn(
                   "flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors lg:px-3",
+                  collapsed && "justify-center",
                   isActive
                     ? "bg-primary/15 text-primary"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -51,12 +67,21 @@ export function AppLayout({ children }: { children?: ReactNode }) {
               }
             >
               <item.icon className="h-4 w-4 shrink-0" />
-              <span className="hidden lg:block">{item.label}</span>
+              <span
+                className={cn("hidden", !collapsed && "lg:block")}
+              >
+                {item.label}
+              </span>
             </NavLink>
           ))}
         </nav>
 
-        <div className="hidden border-t p-4 text-xs text-muted-foreground lg:block">
+        <div
+          className={cn(
+            "hidden border-t p-4 text-xs text-muted-foreground",
+            !collapsed && "lg:block",
+          )}
+        >
           AI-powered Pull Request review
         </div>
       </aside>
@@ -64,6 +89,19 @@ export function AppLayout({ children }: { children?: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b bg-background/80 px-4 backdrop-blur lg:px-6">
           <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCollapsed((value) => !value)}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-expanded={!collapsed}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border transition-colors hover:bg-accent"
+            >
+              {collapsed ? (
+                <PanelLeftOpen className="h-4 w-4" />
+              ) : (
+                <PanelLeftClose className="h-4 w-4" />
+              )}
+            </button>
             <Link
               to="/"
               aria-label="Quorum home"
