@@ -100,3 +100,25 @@ class TestRunSemgrep:
         command = call.args[0]
         assert command[4] == "p/custom"
         assert call.kwargs["timeout"] == 30
+
+    def test_multiple_configs_become_separate_flags(self) -> None:
+        with patch(
+            "quorum.analysis.semgrep.subprocess.run",
+            return_value=_completed(),
+        ) as mock_run:
+            run_semgrep(
+                "C:/tmp/scan",
+                ruleset="p/security-audit p/owasp-top-ten",
+                timeout_seconds=60,
+            )
+        command = mock_run.call_args.args[0]
+        assert command == [
+            "semgrep",
+            "scan",
+            "--json",
+            "--config",
+            "p/security-audit",
+            "--config",
+            "p/owasp-top-ten",
+            "C:/tmp/scan",
+        ]

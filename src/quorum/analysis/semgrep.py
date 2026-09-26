@@ -145,14 +145,11 @@ def run_semgrep(
     resolved_timeout = (
         settings.semgrep_timeout_seconds if timeout_seconds is None else timeout_seconds
     )
-    command = [
-        "semgrep",
-        "scan",
-        "--json",
-        "--config",
-        resolved_ruleset,
-        str(scan_dir),
-    ]
+    command = ["semgrep", "scan", "--json"]
+    for config in resolved_ruleset.split():
+        if config:
+            command += ["--config", config]
+    command.append(str(scan_dir))
     try:
         result = subprocess.run(
             command,
