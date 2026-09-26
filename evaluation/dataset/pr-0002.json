@@ -1,0 +1,19 @@
+{
+  "id": "pr-0002",
+  "repository": "quorum-dev/eval-demo",
+  "pr_number": 2,
+  "title": "Evaluate untrusted data with eval",
+  "files": {
+    "evaluate.py": "def evaluate(data):\n    return eval(data)\n"
+  },
+  "labeled_findings": [
+    {
+      "file": "evaluate.py",
+      "line": 2,
+      "severity": "medium",
+      "title": "eval on dynamic data"
+    }
+  ],
+  "labeled_tests": {"passed": 0, "total": 1},
+  "expected_coverage_delta": -2.0
+}

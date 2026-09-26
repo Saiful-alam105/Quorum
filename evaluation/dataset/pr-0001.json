@@ -1,0 +1,19 @@
+{
+  "id": "pr-0001",
+  "repository": "quorum-dev/eval-demo",
+  "pr_number": 1,
+  "title": "Add subprocess call with shell=True",
+  "files": {
+    "run_cmd.py": "import subprocess\n\n\ndef run(cmd):\n    subprocess.call(cmd, shell=True)\n"
+  },
+  "labeled_findings": [
+    {
+      "file": "run_cmd.py",
+      "line": 5,
+      "severity": "high",
+      "title": "subprocess call with shell=True"
+    }
+  ],
+  "labeled_tests": {"passed": 1, "total": 1},
+  "expected_coverage_delta": 5.0
+}
