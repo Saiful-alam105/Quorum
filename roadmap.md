@@ -315,10 +315,10 @@ This section reflects the actual repository state (verified against the source, 
 | Phase 13 — Result Synthesis + Merge Readiness | Implemented (deterministic documented 0-100 score from security/test/coverage evidence, recommendation bands, persistence on analysis_run, orchestrator stage; no LLM involvement) |
 | Phase 14 — GitHub Review Comment | Implemented (review comment markdown builder, comment service via installation token, orchestrator stage posting the summary to the PR) |
 | Phase 15 — Dashboard Backend API | ✅ Completed — user-scoped read API for repositories, Pull Requests, per-PR analysis/security/tests/coverage, reviews, review detail, and findings |
-| Phase 16 — Quorum Web Dashboard | ✅ Completed except Ask Quorum — the authenticated dashboard (Dashboard, Repositories, Pull Requests, Review History, Findings, Profile, Settings) and the public landing page are implemented; Ask Quorum is a placeholder page (see execution-order note in §16) |
-| Phase 17 — Ask Quorum | ⏳ Planned — the grounded chat backend is not yet implemented; the dashboard shows an Ask Quorum placeholder page |
-| Phase 18 — Evaluation Harness | ⏳ Planned |
-| Phase 19 — Hardening + Final Demo | ⏳ Planned |
+| Phase 16 — Quorum Web Dashboard | ✅ Completed — the public landing page, the authenticated dashboard (Dashboard, Repositories, Pull Requests, Review History, Findings, Profile, Settings), and the Ask Quorum assistant (grounded chat backend, floating chat, full `/ask-quorum` page, structured Markdown responses) are implemented |
+| Phase 17 — Ask Quorum | ✅ Completed — implemented as part of the Phase 16 web experience (grounded `GET`/`POST /api/reviews/{id}/chat`, bounded review context, prompt-injection defense, persistence) |
+| Phase 18 — Evaluation Harness | ✅ Completed — `evaluation/` with deterministic security precision/recall/F1, test-pass-rate, and coverage metrics, a labeled PR dataset, and an offline runner |
+| Phase 19 — Hardening + Final Demo | ✅ Completed — hardening tests (webhook signature, auth isolation, chat prompt-injection defense, oversized-context truncation) and a live demo runbook; the backup demo video is a manual presentation step |
 
 **Execution order:** Phase 16 (Web Dashboard) was implemented **early**, in parallel with the remaining backend work, after PostgreSQL (Phase 4), on the `feature/web-dashboard` branch, and merged into `main`. It remains conceptually Phase 16. The public landing page is part of the Phase 16 web experience. See the note in §16.
 
@@ -1302,7 +1302,7 @@ Frontend responsibilities:
 
 # 18. Phase 17 — Ask Quorum Implementation (Days 59–63)
 
-> **Status:** ⏳ Planned. The dashboard is complete and shows an Ask Quorum placeholder page. The grounded chat backend (`GET`/`POST /api/reviews/{review_id}/chat`) is not yet implemented.
+> **Status:** ✅ Completed. Implemented as part of the Phase 16 web experience: `GET`/`POST /api/reviews/{review_id}/chat`, bounded review-scoped context, prompt-injection defense, persistence to `chat_messages`, a floating chat, and a full `/ask-quorum` page with structured Markdown responses.
 
 If the core dashboard works, implement the chatbot.
 
@@ -1559,7 +1559,7 @@ backup demo video
 | M12 | 67 | Evaluation |
 | M13 | 70 | Hardening + Final Demo |
 
-> **Progress note:** M1–M9 are complete (FastAPI skeleton through the frontend read API). M10 (Quorum Web Dashboard) is complete — the authenticated dashboard and the public landing page are implemented. M11 (Ask Quorum) is pending — the grounded chatbot backend is not yet implemented. M12 (Evaluation) and M13 (Hardening + Final Demo) are planned.
+> **Progress note:** M1–M13 are complete. M10 (Quorum Web Dashboard) and M11 (Ask Quorum) are implemented as part of the Phase 16 web experience; M12 (Evaluation) is delivered via `evaluation/`; M13 (Hardening + Final Demo) is delivered via hardening tests and the demo runbook (backup demo video is a manual presentation step).
 
 ---
 

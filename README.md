@@ -220,10 +220,10 @@ npm run build
 ## Current Status
 
 - **Phase 0–14 — complete:** FastAPI skeleton, GitHub App + OAuth, GitHub API layer, PostgreSQL, orchestrator, diff/AST, context management, Semgrep, LLM layer, Security Agent, Docker sandbox, Test Writer, Merge Readiness synthesis, GitHub review comment.
-- **Phase 15 (dashboard backend API) — complete:** user-scoped read APIs for repositories, Pull Requests, analysis/security/tests/coverage, reviews, and findings.
-- **Phase 16 (web dashboard) — complete except Ask Quorum:** the authenticated dashboard and public landing page are implemented; the Ask Quorum UI is a placeholder page.
-- **Ask Quorum (roadmap Phase 17) — planned:** the grounded chat backend is not implemented yet.
-- **Phase 18 (evaluation harness) and Phase 19 (hardening/demo) — planned.**
+- **Phase 15 (dashboard backend API) — complete:** user-scoped read APIs for repositories, Pull Requests, analysis/security/tests/coverage, reviews, findings, and grounded chat.
+- **Phase 16 (web dashboard + Ask Quorum) — complete:** the public landing page, the authenticated dashboard (Dashboard, Repositories, Pull Requests, Findings, Review History, Profile, Settings), and the Ask Quorum assistant (grounded chat backend, floating chat, and full `/ask-quorum` page with structured Markdown responses) are all implemented.
+- **Phase 18 (evaluation harness) — complete:** `evaluation/` provides deterministic security precision/recall/F1, test-pass-rate, and coverage metrics over a labeled PR dataset, plus an offline runner.
+- **Phase 19 (hardening + demo) — complete:** hardening tests (webhook signature, auth isolation, chat prompt-injection defense, oversized-context truncation) and a live demo runbook.
 
 ## Documentation
 
