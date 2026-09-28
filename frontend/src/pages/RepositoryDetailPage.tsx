@@ -205,11 +205,22 @@ export default function RepositoryDetailPage() {
 
       <h2 className="mb-3 mt-8 text-lg font-semibold">Pull Requests</h2>
       {pullRequests.length === 0 ? (
-        <EmptyState
-          icon={GitPullRequest}
-          title="No Pull Requests yet"
-          description="Create your first Pull Request from this repository to start Quorum analysis."
-        />
+        <div className="space-y-3">
+          <EmptyState
+            icon={GitPullRequest}
+            title="No Pull Requests yet"
+            description="Create your first Pull Request from this repository to start Quorum analysis."
+          />
+          <div className="text-center">
+            <Link
+              to={`/repositories/${repository.id}/create-pr`}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <GitPullRequest className="h-4 w-4" />
+              Create Pull Request
+            </Link>
+          </div>
+        </div>
       ) : (
         <ul className="space-y-3">
           {pullRequests.map((pullRequest) => (
