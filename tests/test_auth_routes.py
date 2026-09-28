@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from quorum.auth.sessions import clear_all_sessions
+from quorum.auth.sessions import clear_all_sessions, create_session
 from quorum.database.base import Base, get_db
 from quorum.database.models import Repository, User
 from quorum.main import app
@@ -205,6 +205,60 @@ def test_logout_without_session() -> None:
     response = client.post("/auth/logout")
     assert response.status_code == 200
     assert response.json()["status"] == "logged_out"
+
+
+def test_install_callback_requires_login() -> None:
+    response = client.get(
+        "/auth/install-callback?installation_id=555", follow_redirects=False
+    )
+    assert response.status_code == 302
+    assert "login" in response.headers["location"]
+
+
+def test_install_callback_invalid_session_redirects_to_login() -> None:
+    response = client.get(
+        "/auth/install-callback?installation_id=555",
+        cookies={"session": "invalid"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "login" in response.headers["location"]
+
+
+def test_install_callback_saves_installation(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    db_session.add(User(github_id=12345, username="testuser"))
+    db_session.commit()
+    token = create_session({"github_id": 12345, "username": "testuser"})
+
+    response = client.get(
+        "/auth/install-callback?installation_id=555",
+        cookies={"session": token},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "/repositories?connected=1" in response.headers["location"]
+
+    user = db_session.scalar(select(User).where(User.github_id == 12345))
+    assert user is not None
+    assert user.github_installation_id == 555
+
+
+def test_install_callback_without_installation_returns_failed(
+    db_session: Session,
+) -> None:
+    db_session.add(User(github_id=12345, username="testuser"))
+    db_session.commit()
+    token = create_session({"github_id": 12345, "username": "testuser"})
+
+    response = client.get(
+        "/auth/install-callback",
+        cookies={"session": token},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "connected=0" in response.headers["location"]
 
 
 def test_callback_persists_user(

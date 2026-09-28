@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
-import { CheckCircle2, FolderGit2, Lock, Search, Unplug } from "lucide-react"
+import { Link, useSearchParams } from "react-router-dom"
+import {
+  CheckCircle2,
+  FolderGit2,
+  Link2,
+  Lock,
+  Search,
+  X,
+} from "lucide-react"
 
 import { EmptyState } from "@/components/EmptyState"
 import { ErrorState } from "@/components/ErrorState"
 import { SignInRequired } from "@/components/SignInRequired"
 import { Skeleton } from "@/components/ui/Skeleton"
 import {
+  getConnectUrl,
   getDiscoveredRepositories,
   isUnauthorized,
   type DiscoveredRepository,
@@ -29,60 +37,82 @@ const filters: { value: Filter; label: string }[] = [
 
 function RepositoryCard({
   repository,
+  onConnect,
 }: {
   repository: DiscoveredRepository
+  onConnect: () => void
 }) {
-  const content = (
-    <div className="flex items-center justify-between gap-4">
-      <div className="min-w-0 space-y-1.5">
-        <div className="flex items-center gap-2">
-          <FolderGit2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span className="truncate font-medium">{repository.full_name}</span>
-          {repository.is_private ? (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-              <Lock className="h-3 w-3" />
-              Private
-            </span>
-          ) : null}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {repository.language ?? "Unknown language"}
-          {repository.default_branch
-            ? ` · default branch: ${repository.default_branch}`
-            : ""}
-        </p>
-      </div>
-      <div className="flex shrink-0 items-center gap-3">
-        {repository.connected ? (
-          <>
+  const title = (
+    <div className="flex items-center gap-2">
+      <FolderGit2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+      <span className="truncate font-medium">{repository.full_name}</span>
+      {repository.is_private ? (
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+          <Lock className="h-3 w-3" />
+          Private
+        </span>
+      ) : null}
+    </div>
+  )
+
+  const meta = (
+    <p className="text-xs text-muted-foreground">
+      {repository.language ?? "Unknown language"}
+      {repository.default_branch
+        ? ` · default branch: ${repository.default_branch}`
+        : ""}
+    </p>
+  )
+
+  const status = repository.connected ? (
+    <span className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
+      <CheckCircle2 className="h-3 w-3" />
+      Connected
+    </span>
+  ) : (
+    <button
+      type="button"
+      onClick={onConnect}
+      className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+    >
+      <Link2 className="h-3 w-3" />
+      Connect Repository
+    </button>
+  )
+
+  const className =
+    "flex items-center justify-between gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-accent/40"
+
+  if (repository.connected && repository.id != null) {
+    return (
+      <li>
+        <Link to={`/repositories/${repository.id}`} className={className}>
+          <div className="min-w-0 space-y-1.5">
+            {title}
+            {meta}
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
             <span className="text-xs text-muted-foreground">
               {repository.pull_request_count}{" "}
               {repository.pull_request_count === 1 ? "PR" : "PRs"}
             </span>
-            <span className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
-              <CheckCircle2 className="h-3 w-3" />
-              Connected
-            </span>
-          </>
-        ) : (
-          <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground">
-            <Unplug className="h-3 w-3" />
-            Needs connection
-          </span>
-        )}
+            {status}
+          </div>
+        </Link>
+      </li>
+    )
+  }
+
+  return (
+    <li>
+      <div className={className}>
+        <div className="min-w-0 space-y-1.5">
+          {title}
+          {meta}
+        </div>
+        <div className="shrink-0">{status}</div>
       </div>
-    </div>
-  )
-
-  const className =
-    "block rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-accent/40"
-
-  return repository.connected && repository.id != null ? (
-    <Link to={`/repositories/${repository.id}`} className={className}>
-      {content}
-    </Link>
-  ) : (
-    <div className={className}>{content}</div>
+    </li>
   )
 }
 
@@ -90,6 +120,10 @@ export default function RepositoriesPage() {
   const [state, setState] = useState<RepositoriesState>({ status: "loading" })
   const [query, setQuery] = useState("")
   const [filter, setFilter] = useState<Filter>("all")
+  const [connecting, setConnecting] = useState(false)
+  const [connectError, setConnectError] = useState<string | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const connectedResult = searchParams.get("connected")
 
   const load = useCallback(() => {
     setState({ status: "loading" })
@@ -129,6 +163,27 @@ export default function RepositoriesPage() {
     })
   }, [state, query, filter])
 
+  const handleConnect = useCallback(() => {
+    setConnecting(true)
+    setConnectError(null)
+    getConnectUrl()
+      .then(({ install_url }) => {
+        window.location.href = install_url
+      })
+      .catch((error: unknown) => {
+        setConnecting(false)
+        setConnectError(
+          error instanceof Error ? error.message : "Failed to start connection",
+        )
+      })
+  }, [])
+
+  const dismissResult = () => {
+    const next = new URLSearchParams(searchParams)
+    next.delete("connected")
+    setSearchParams(next, { replace: true })
+  }
+
   if (state.status === "loading") {
     return (
       <div className="space-y-6">
@@ -160,6 +215,48 @@ export default function RepositoriesPage() {
           Choose a GitHub repository to open its Quorum workspace.
         </p>
       </div>
+
+      {connectedResult === "1" ? (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-success/40 bg-success/10 px-4 py-3 text-sm text-success">
+          <span>Repositories connected successfully.</span>
+          <button
+            type="button"
+            onClick={dismissResult}
+            aria-label="Dismiss"
+            className="inline-flex h-6 w-6 items-center justify-center rounded transition-colors hover:bg-accent"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
+
+      {connectedResult === "0" ? (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-severity-critical/40 bg-severity-critical/10 px-4 py-3 text-sm text-severity-critical">
+          <span>Could not connect the repository. Please try again.</span>
+          <button
+            type="button"
+            onClick={dismissResult}
+            aria-label="Dismiss"
+            className="inline-flex h-6 w-6 items-center justify-center rounded transition-colors hover:bg-accent"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
+
+      {connectError ? (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-severity-critical/40 bg-severity-critical/10 px-4 py-3 text-sm text-severity-critical">
+          <span>{connectError}</span>
+          <button
+            type="button"
+            onClick={() => setConnectError(null)}
+            aria-label="Dismiss"
+            className="inline-flex h-6 w-6 items-center justify-center rounded transition-colors hover:bg-accent"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative max-w-sm flex-1">
@@ -206,12 +303,20 @@ export default function RepositoriesPage() {
       ) : (
         <ul className="space-y-3">
           {visible.map((repository) => (
-            <li key={repository.github_id}>
-              <RepositoryCard repository={repository} />
-            </li>
+            <RepositoryCard
+              key={repository.github_id}
+              repository={repository}
+              onConnect={handleConnect}
+            />
           ))}
         </ul>
       )}
+
+      {connecting ? (
+        <p className="mt-3 text-sm text-muted-foreground">
+          Opening GitHub to connect your repositories…
+        </p>
+      ) : null}
     </>
   )
 }

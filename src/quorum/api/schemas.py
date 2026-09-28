@@ -36,6 +36,10 @@ class DiscoveredRepositoryOut(BaseModel):
     pull_request_count: int = 0
 
 
+class ConnectUrlOut(BaseModel):
+    install_url: str
+
+
 class PullRequestOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

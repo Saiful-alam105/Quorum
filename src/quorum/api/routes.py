@@ -6,6 +6,7 @@ from quorum.api.schemas import (
     ChatMessageOut,
     ChatPostRequest,
     ChatPostResponse,
+    ConnectUrlOut,
     CoverageResultOut,
     DiscoveredRepositoryOut,
     FindingOut,
@@ -20,6 +21,7 @@ from quorum.api.schemas import (
 from quorum.auth.sessions import get_session
 from quorum.agents.synthesis import recommendation_for
 from quorum.chat.service import answer_question
+from quorum.config import settings
 from quorum.database.base import get_db
 from quorum.database.models import (
     AnalysisRun,
@@ -243,6 +245,24 @@ async def discover_repositories(
         )
         for repo in sorted(github_repos, key=lambda r: r.get("full_name", ""))
     ]
+
+
+@router.get("/repositories/connect-url", response_model=ConnectUrlOut)
+def repository_connect_url(
+    session: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),
+) -> ConnectUrlOut:
+    """Return the GitHub App installation URL to connect repositories."""
+    _current_user_id(db, session)
+    if not settings.github_app_slug:
+        raise HTTPException(
+            status_code=500, detail="GitHub App slug not configured"
+        )
+    return ConnectUrlOut(
+        install_url=(
+            f"https://github.com/apps/{settings.github_app_slug}/installations/new"
+        )
+    )
 
 
 @router.get("/repositories/{repository_id}", response_model=RepositoryOut)

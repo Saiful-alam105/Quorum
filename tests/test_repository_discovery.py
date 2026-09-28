@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 import quorum.api.routes as routes_module
+import quorum.config as config_module
 from quorum.auth.sessions import create_session
 from quorum.database.base import Base, get_db
 from quorum.database.models import PullRequest, Repository, User
@@ -183,3 +184,31 @@ def test_discover_github_error_returns_502(
         "/api/repositories/discover", **_auth(session_token)
     )
     assert response.status_code == 502
+
+
+def test_connect_url_requires_auth(client: TestClient) -> None:
+    assert client.get("/api/repositories/connect-url").status_code == 401
+
+
+def test_connect_url_returns_install_url(
+    client: TestClient, session_token: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(config_module.settings, "github_app_slug", "quorum-app")
+    response = client.get(
+        "/api/repositories/connect-url", **_auth(session_token)
+    )
+    assert response.status_code == 200
+    assert (
+        response.json()["install_url"]
+        == "https://github.com/apps/quorum-app/installations/new"
+    )
+
+
+def test_connect_url_requires_slug(
+    client: TestClient, session_token: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(config_module.settings, "github_app_slug", "")
+    response = client.get(
+        "/api/repositories/connect-url", **_auth(session_token)
+    )
+    assert response.status_code == 500

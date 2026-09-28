@@ -78,6 +78,14 @@ export function getDiscoveredRepositories(): Promise<DiscoveredRepository[]> {
   return request<DiscoveredRepository[]>("/api/repositories/discover")
 }
 
+export type ConnectUrl = {
+  install_url: string
+}
+
+export function getConnectUrl(): Promise<ConnectUrl> {
+  return request<ConnectUrl>("/api/repositories/connect-url")
+}
+
 export type PullRequestSummary = {
   id: number
   github_id: number

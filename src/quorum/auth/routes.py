@@ -155,3 +155,45 @@ async def logout(
 
     response.delete_cookie("session")
     return {"status": "logged_out"}
+
+
+@router.get("/install-callback")
+async def install_callback(
+    installation_id: int | None = Query(default=None),
+    session: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Return point after the user installs/authorizes the GitHub App.
+
+    Persists the installation, syncs the authorized repositories, and
+    redirects back to the Quorum frontend with a connection result.
+    """
+    frontend = (settings.frontend_url or "http://localhost:5173").rstrip("/")
+
+    if not session:
+        return RedirectResponse(url=f"{frontend}/login", status_code=302)
+    session_data = get_session(session)
+    if not session_data:
+        return RedirectResponse(url=f"{frontend}/login", status_code=302)
+
+    user = get_user_by_github_id(db, session_data.get("github_id"))
+    if user is None:
+        return RedirectResponse(url=f"{frontend}/login", status_code=302)
+
+    if installation_id is not None:
+        try:
+            user.github_installation_id = installation_id
+            db.commit()
+            if settings.github_app_id and settings.github_app_private_key_path:
+                await sync_user_repositories(db, user)
+            return RedirectResponse(
+                url=f"{frontend}/repositories?connected=1", status_code=302
+            )
+        except Exception:
+            return RedirectResponse(
+                url=f"{frontend}/repositories?connected=0", status_code=302
+            )
+
+    return RedirectResponse(
+        url=f"{frontend}/repositories?connected=0", status_code=302
+    )
