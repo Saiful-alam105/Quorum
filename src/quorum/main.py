@@ -98,7 +98,9 @@ async def github_webhook(
             user = get_user_by_installation(db, installation_id)
             if user is not None:
                 try:
-                    await sync_user_repositories(db, user, clear_exclusions=False)
+                    await sync_user_repositories(
+                        db, user, clear_exclusions=True
+                    )
                 except Exception:
                     pass
         return JSONResponse(

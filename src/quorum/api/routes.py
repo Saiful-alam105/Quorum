@@ -421,7 +421,9 @@ async def discover_repositories(
     user = db.get(User, user_id)
     if user is not None:
         try:
-            await maybe_sync_user_repositories(db, user, force=force)
+            await maybe_sync_user_repositories(
+                db, user, force=force, authoritative=force
+            )
         except Exception:
             pass
 

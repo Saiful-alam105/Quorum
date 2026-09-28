@@ -22,6 +22,7 @@ async def maybe_sync_user_repositories(
     user: User,
     max_age_seconds: int = 60,
     force: bool = False,
+    authoritative: bool = False,
 ) -> bool:
     """Sync only when the last sync is older than ``max_age_seconds``.
 
@@ -30,6 +31,10 @@ async def maybe_sync_user_repositories(
     the staleness window. ``force`` bypasses the window (used when the user
     explicitly views the repositories page), except when a sync just ran a
     moment ago (e.g. right after the install-callback already synced).
+
+    ``authoritative`` treats the GitHub installation as the source of truth:
+    intentional Quorum disconnects are forgotten so a repository granted on
+    GitHub always connects.
     """
     last = user.repos_synced_at
     if last is not None:
@@ -38,7 +43,9 @@ async def maybe_sync_user_repositories(
             return True
         if not force and age < max_age_seconds:
             return True
-    return await sync_user_repositories(db, user)
+    return await sync_user_repositories(
+        db, user, clear_exclusions=authoritative
+    )
 
 
 async def sync_user_repositories(
