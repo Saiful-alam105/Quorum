@@ -23,6 +23,19 @@ class RepositoryOut(BaseModel):
     latest_analysis_status: str | None = None
 
 
+class DiscoveredRepositoryOut(BaseModel):
+    id: int | None = None
+    github_id: int
+    owner: str
+    name: str
+    full_name: str
+    is_private: bool
+    language: str | None = None
+    default_branch: str | None = None
+    connected: bool = False
+    pull_request_count: int = 0
+
+
 class PullRequestOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

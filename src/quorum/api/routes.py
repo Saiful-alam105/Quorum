@@ -7,6 +7,7 @@ from quorum.api.schemas import (
     ChatPostRequest,
     ChatPostResponse,
     CoverageResultOut,
+    DiscoveredRepositoryOut,
     FindingOut,
     PullRequestSummaryOut,
     RepositoryOut,
@@ -44,6 +45,7 @@ from quorum.database.repository import (
     list_security_findings_for_run,
     list_test_runs_for_run,
 )
+from quorum.github.api import get_repositories
 from quorum.github.repo_sync import sync_user_repositories
 from quorum.llm.base import LLMError
 
@@ -188,6 +190,59 @@ def read_pull_request(
     if pull_request is None:
         raise HTTPException(status_code=404, detail="Pull request not found")
     return _pull_request_summary(pull_request)
+
+
+@router.get("/repositories/discover", response_model=list[DiscoveredRepositoryOut])
+async def discover_repositories(
+    session: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),
+) -> list[DiscoveredRepositoryOut]:
+    """List all GitHub repositories the authenticated user can access.
+
+    Uses the GitHub OAuth access token stored in the session (server-side only)
+    and marks each repository as ``connected`` when it is already linked to the
+    user through the GitHub App installation.
+    """
+    user_id = _current_user_id(db, session)
+    session_data = get_session(session)
+    access_token = session_data.get("access_token") if session_data else None
+    if not access_token:
+        raise HTTPException(
+            status_code=401,
+            detail="GitHub access token not available; please sign in again",
+        )
+
+    try:
+        github_repos = await get_repositories(access_token)
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Could not fetch repositories from GitHub",
+        )
+
+    connected = {
+        repository.github_id: repository
+        for repository in list_repositories_for_user(db, user_id)
+    }
+    return [
+        DiscoveredRepositoryOut(
+            id=connected[repo.get("id")].id if repo.get("id") in connected else None,
+            github_id=repo.get("id"),
+            owner=(repo.get("owner") or {}).get("login", ""),
+            name=repo.get("name", ""),
+            full_name=repo.get("full_name", ""),
+            is_private=bool(repo.get("private", False)),
+            language=repo.get("language"),
+            default_branch=repo.get("default_branch"),
+            connected=repo.get("id") in connected,
+            pull_request_count=(
+                len(connected[repo.get("id")].pull_requests)
+                if repo.get("id") in connected
+                else 0
+            ),
+        )
+        for repo in sorted(github_repos, key=lambda r: r.get("full_name", ""))
+    ]
 
 
 @router.get("/repositories/{repository_id}", response_model=RepositoryOut)

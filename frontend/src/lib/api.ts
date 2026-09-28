@@ -61,6 +61,23 @@ export function getRepositoryPullRequests(
   return request<PullRequestSummary[]>(`/api/repositories/${id}/pull-requests`)
 }
 
+export type DiscoveredRepository = {
+  id: number | null
+  github_id: number
+  owner: string
+  name: string
+  full_name: string
+  is_private: boolean
+  language: string | null
+  default_branch: string | null
+  connected: boolean
+  pull_request_count: number
+}
+
+export function getDiscoveredRepositories(): Promise<DiscoveredRepository[]> {
+  return request<DiscoveredRepository[]>("/api/repositories/discover")
+}
+
 export type PullRequestSummary = {
   id: number
   github_id: number
