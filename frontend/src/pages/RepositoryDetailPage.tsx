@@ -3,34 +3,26 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import {
   ArrowLeft,
   CheckCircle2,
-  ClipboardCheck,
   ExternalLink,
   FolderGit2,
   GitPullRequest,
   Lock,
-  ShieldCheck,
   Unplug,
 } from "lucide-react"
 
 import { EmptyState } from "@/components/EmptyState"
 import { ErrorState } from "@/components/ErrorState"
-import { FindingCard } from "@/components/FindingCard"
 import { MetricCard } from "@/components/MetricCard"
 import { PullRequestReviewCard } from "@/components/PullRequestReviewCard"
-import { ReviewCard } from "@/components/ReviewCard"
 import { SignInRequired } from "@/components/SignInRequired"
 import { Skeleton } from "@/components/ui/Skeleton"
 import {
-  getFindings,
   getRepository,
   getRepositoryPullRequests,
-  getReviews,
   isUnauthorized,
   unconnectRepository,
-  type Finding,
   type PullRequestSummary,
   type Repository,
-  type ReviewSummary,
 } from "@/lib/api"
 
 type PageState =
@@ -41,8 +33,6 @@ type PageState =
       status: "ready"
       repository: Repository
       pullRequests: PullRequestSummary[]
-      reviews: ReviewSummary[]
-      findings: Finding[]
     }
 
 export default function RepositoryDetailPage() {
@@ -60,19 +50,12 @@ export default function RepositoryDetailPage() {
     }
 
     setState({ status: "loading" })
-    Promise.all([
-      getRepository(id),
-      getRepositoryPullRequests(id),
-      getReviews(),
-      getFindings(10),
-    ])
-      .then(([repository, pullRequests, reviews, findings]) =>
+    Promise.all([getRepository(id), getRepositoryPullRequests(id)])
+      .then(([repository, pullRequests]) =>
         setState({
           status: "ready",
           repository,
           pullRequests,
-          reviews: reviews.filter((review) => review.repository_id === id),
-          findings: findings.filter((finding) => finding.repository_id === id),
         }),
       )
       .catch((error: unknown) => {
@@ -137,16 +120,7 @@ export default function RepositoryDetailPage() {
     return <SignInRequired />
   }
 
-  const { repository, pullRequests, reviews, findings } = state
-
-  const openFindings = pullRequests.reduce(
-    (sum, pullRequest) => sum + pullRequest.finding_count,
-    0,
-  )
-  const criticalFindings = pullRequests.reduce(
-    (sum, pullRequest) => sum + pullRequest.critical_count,
-    0,
-  )
+  const { repository, pullRequests } = state
 
   return (
     <>
@@ -210,7 +184,7 @@ export default function RepositoryDetailPage() {
         ) : null}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <MetricCard
           label="Pull Requests"
           value={pullRequests.length}
@@ -221,18 +195,6 @@ export default function RepositoryDetailPage() {
           value={repository.open_pull_request_count}
           icon={GitPullRequest}
           accent="success"
-        />
-        <MetricCard
-          label="Open Findings"
-          value={openFindings}
-          icon={ShieldCheck}
-          accent={openFindings > 0 ? "warning" : "default"}
-        />
-        <MetricCard
-          label="Reviews"
-          value={reviews.length}
-          icon={ClipboardCheck}
-          accent={criticalFindings > 0 ? "critical" : "default"}
         />
       </div>
 
@@ -261,28 +223,6 @@ export default function RepositoryDetailPage() {
           ))}
         </ul>
       )}
-
-      {findings.length > 0 ? (
-        <>
-          <h2 className="mb-3 mt-8 text-lg font-semibold">Recent Findings</h2>
-          <ul className="space-y-3">
-            {findings.map((finding) => (
-              <FindingCard key={finding.id} finding={finding} />
-            ))}
-          </ul>
-        </>
-      ) : null}
-
-      {reviews.length > 0 ? (
-        <>
-          <h2 className="mb-3 mt-8 text-lg font-semibold">Analysis Activity</h2>
-          <ul className="space-y-3">
-            {reviews.map((review) => (
-              <ReviewCard key={review.id} review={review} />
-            ))}
-          </ul>
-        </>
-      ) : null}
     </>
   )
 }
