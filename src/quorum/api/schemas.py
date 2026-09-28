@@ -81,6 +81,17 @@ class CreatePullRequestRequest(BaseModel):
     body: str | None = None
 
 
+class PullRequestActionRequest(BaseModel):
+    comment: str | None = None
+
+
+class PullRequestActionOut(BaseModel):
+    status: str
+    message: str | None = None
+    comment_posted: bool = False
+    pull_request: PullRequestSummaryOut
+
+
 class FindingOut(BaseModel):
     id: int
     analysis_run_id: int

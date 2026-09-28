@@ -101,6 +101,30 @@ export function createPullRequest(
   )
 }
 
+export type PullRequestActionResult = {
+  status: string
+  message: string | null
+  comment_posted: boolean
+  pull_request: PullRequestSummary
+}
+
+export function mergePullRequest(
+  id: number,
+  comment?: string,
+): Promise<PullRequestActionResult> {
+  return request<PullRequestActionResult>(`/api/pull-requests/${id}/merge`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ comment }),
+  })
+}
+
+export function closePullRequest(id: number): Promise<PullRequestActionResult> {
+  return request<PullRequestActionResult>(`/api/pull-requests/${id}/close`, {
+    method: "POST",
+  })
+}
+
 export type DiscoveredRepository = {
   id: number | null
   github_id: number

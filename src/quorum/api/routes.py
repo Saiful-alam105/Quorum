@@ -1,4 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, HTTPException, Query
+import httpx
 from sqlalchemy.orm import Session
 
 from quorum.api.schemas import (
@@ -11,6 +12,8 @@ from quorum.api.schemas import (
     CreatePullRequestRequest,
     DiscoveredRepositoryOut,
     FindingOut,
+    PullRequestActionOut,
+    PullRequestActionRequest,
     PullRequestSummaryOut,
     RepositoryOut,
     ReviewDetailOut,
@@ -51,9 +54,12 @@ from quorum.database.repository import (
     upsert_pull_request,
 )
 from quorum.github.api import (
+    close_pull_request,
+    create_pr_comment,
     create_pull_request,
     get_repositories,
     list_branches,
+    merge_pull_request,
 )
 from quorum.github.app_auth import get_installation_token
 from quorum.github.repo_sync import sync_user_repositories
@@ -203,6 +209,144 @@ def read_pull_request(
     if pull_request is None:
         raise HTTPException(status_code=404, detail="Pull request not found")
     return _pull_request_summary(pull_request)
+
+
+async def _pull_request_installation_token(
+    db: Session, pull_request: PullRequest, user_id: int
+) -> str:
+    user = db.get(User, user_id)
+    installation_id = user.github_installation_id if user is not None else None
+    if not installation_id:
+        raise HTTPException(
+            status_code=400,
+            detail="GitHub App is not installed for this repository",
+        )
+    try:
+        auth = await get_installation_token(
+            settings.github_app_id,
+            settings.github_app_private_key_path,
+            installation_id,
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Could not authenticate with GitHub",
+        )
+    token = auth.get("token")
+    if not token:
+        raise HTTPException(
+            status_code=502,
+            detail="Could not authenticate with GitHub",
+        )
+    return token
+
+
+@router.post(
+    "/pull-requests/{pull_request_id}/merge",
+    response_model=PullRequestActionOut,
+)
+async def merge_pull_request_endpoint(
+    pull_request_id: int,
+    body: PullRequestActionRequest,
+    session: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),
+) -> PullRequestActionOut:
+    user_id = _current_user_id(db, session)
+    pull_request = get_pull_request_for_user(db, pull_request_id, user_id)
+    if pull_request is None:
+        raise HTTPException(status_code=404, detail="Pull request not found")
+    repository = pull_request.repository
+    token = await _pull_request_installation_token(db, pull_request, user_id)
+
+    try:
+        result = await merge_pull_request(
+            token,
+            repository.owner,
+            repository.name,
+            pull_request.number,
+            commit_title=pull_request.title,
+            commit_message=body.comment.strip() if body.comment else None,
+            merge_method="merge",
+        )
+    except httpx.HTTPStatusError as exc:
+        detail = exc.response.text
+        try:
+            detail = exc.response.json().get("message", detail)
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=409,
+            detail=f"Could not merge the pull request: {detail}",
+        )
+
+    merged = bool(result.get("merged"))
+    pull_request.state = "merged" if merged else pull_request.state
+    db.commit()
+
+    comment_posted = False
+    if body.comment and body.comment.strip() and merged:
+        try:
+            await create_pr_comment(
+                token,
+                repository.owner,
+                repository.name,
+                pull_request.number,
+                body.comment.strip(),
+            )
+            comment_posted = True
+        except Exception:
+            comment_posted = False
+
+    return PullRequestActionOut(
+        status=pull_request.state,
+        message=result.get("message"),
+        comment_posted=comment_posted,
+        pull_request=_pull_request_summary(pull_request),
+    )
+
+
+@router.post(
+    "/pull-requests/{pull_request_id}/close",
+    response_model=PullRequestActionOut,
+)
+async def close_pull_request_endpoint(
+    pull_request_id: int,
+    session: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),
+) -> PullRequestActionOut:
+    user_id = _current_user_id(db, session)
+    pull_request = get_pull_request_for_user(db, pull_request_id, user_id)
+    if pull_request is None:
+        raise HTTPException(status_code=404, detail="Pull request not found")
+    repository = pull_request.repository
+    token = await _pull_request_installation_token(db, pull_request, user_id)
+
+    try:
+        await close_pull_request(
+            token,
+            repository.owner,
+            repository.name,
+            pull_request.number,
+        )
+    except httpx.HTTPStatusError as exc:
+        detail = exc.response.text
+        try:
+            detail = exc.response.json().get("message", detail)
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=409,
+            detail=f"Could not close the pull request: {detail}",
+        )
+
+    pull_request.state = "closed"
+    db.commit()
+    return PullRequestActionOut(
+        status=pull_request.state,
+        message=None,
+        comment_posted=False,
+        pull_request=_pull_request_summary(pull_request),
+    )
 
 
 @router.get("/repositories/discover", response_model=list[DiscoveredRepositoryOut])

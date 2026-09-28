@@ -1,3 +1,4 @@
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -621,3 +622,172 @@ def test_discovery_marks_only_own_repos_connected(
         "octocat/alpha": False,
         "octocat/beta": False,
     }
+
+
+# --- pull request actions (merge / close) ---
+
+
+def _connected_pr(
+    db_session: Session, user: User, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Repository, int]:
+    _install(user, db_session)
+    _mock_install_token(monkeypatch)
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha", pr_count=1)
+    return repo, repo.pull_requests[0].id
+
+
+def test_merge_requires_auth(client: TestClient) -> None:
+    assert (
+        client.post("/api/pull-requests/1/merge", json={}).status_code == 401
+    )
+
+
+def test_merge_not_owned_returns_404(
+    client: TestClient, session_token: str
+) -> None:
+    response = client.post(
+        "/api/pull-requests/999999/merge", json={}, **_auth(session_token)
+    )
+    assert response.status_code == 404
+
+
+def test_merge_requires_installation(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha", pr_count=1)
+    response = client.post(
+        f"/api/pull-requests/{repo.pull_requests[0].id}/merge",
+        json={},
+        **_auth(session_token),
+    )
+    assert response.status_code == 400
+
+
+def test_merge_pull_request_marks_merged(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, pr_id = _connected_pr(db_session, user, monkeypatch)
+
+    async def mock_merge(token, owner, name, pr_number, commit_title, commit_message, merge_method="merge"):
+        return {"merged": True, "message": "Pull Request successfully merged"}
+
+    monkeypatch.setattr(routes_module, "merge_pull_request", mock_merge)
+
+    response = client.post(
+        f"/api/pull-requests/{pr_id}/merge", json={}, **_auth(session_token)
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "merged"
+    assert data["pull_request"]["state"] == "merged"
+
+
+def test_merge_posts_comment_message(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, pr_id = _connected_pr(db_session, user, monkeypatch)
+    posted: list[tuple] = []
+
+    async def mock_merge(token, owner, name, pr_number, commit_title, commit_message, merge_method="merge"):
+        return {"merged": True, "message": "ok"}
+
+    async def mock_comment(token, owner, name, pr_number, body):
+        posted.append((owner, name, pr_number, body))
+        return {"id": 1}
+
+    monkeypatch.setattr(routes_module, "merge_pull_request", mock_merge)
+    monkeypatch.setattr(routes_module, "create_pr_comment", mock_comment)
+
+    response = client.post(
+        f"/api/pull-requests/{pr_id}/merge",
+        json={"comment": "  LGTM from Quorum  "},
+        **_auth(session_token),
+    )
+    assert response.status_code == 200
+    assert response.json()["comment_posted"] is True
+    assert posted == [("octocat", "alpha", 1, "LGTM from Quorum")]
+
+
+def test_merge_conflict_returns_409(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, pr_id = _connected_pr(db_session, user, monkeypatch)
+
+    def _raise(*args, **kwargs):
+        raise httpx.HTTPStatusError(
+            "conflict",
+            request=httpx.Request("PUT", "https://api.github.com/repos/o/r/pulls/1/merge"),
+            response=httpx.Response(409, json={"message": "Not mergeable"}),
+        )
+
+    monkeypatch.setattr(routes_module, "merge_pull_request", _raise)
+
+    response = client.post(
+        f"/api/pull-requests/{pr_id}/merge", json={}, **_auth(session_token)
+    )
+    assert response.status_code == 409
+    assert "Not mergeable" in response.json()["detail"]
+
+
+def test_close_pull_request_marks_closed(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, pr_id = _connected_pr(db_session, user, monkeypatch)
+
+    async def mock_close(token, owner, name, pr_number):
+        return {"state": "closed"}
+
+    monkeypatch.setattr(routes_module, "close_pull_request", mock_close)
+
+    response = client.post(
+        f"/api/pull-requests/{pr_id}/close", **_auth(session_token)
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "closed"
+    assert data["pull_request"]["state"] == "closed"
+
+
+def test_close_conflict_returns_409(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, pr_id = _connected_pr(db_session, user, monkeypatch)
+
+    def _raise(*args, **kwargs):
+        raise httpx.HTTPStatusError(
+            "boom",
+            request=httpx.Request("PATCH", "https://api.github.com/repos/o/r/pulls/1"),
+            response=httpx.Response(409, json={"message": "Cannot close"}),
+        )
+
+    monkeypatch.setattr(routes_module, "close_pull_request", _raise)
+
+    response = client.post(
+        f"/api/pull-requests/{pr_id}/close", **_auth(session_token)
+    )
+    assert response.status_code == 409
+    assert "Cannot close" in response.json()["detail"]

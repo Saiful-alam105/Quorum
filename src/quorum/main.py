@@ -35,7 +35,7 @@ SUPPORTED_EVENTS = {
     "installation",
     "installation_repositories",
 }
-SUPPORTED_ACTIONS = {"opened", "reopened", "synchronize"}
+SUPPORTED_ACTIONS = {"opened", "reopened", "synchronize", "closed"}
 
 
 @app.get("/")
@@ -131,7 +131,7 @@ async def github_webhook(
             pull_request = upsert_pull_request(
                 db, payload.get("pull_request") or {}, repository
             )
-            if pull_request is not None:
+            if pull_request is not None and action != "closed":
                 background_tasks.add_task(
                     run_analysis_for_pull_request, pull_request.id
                 )

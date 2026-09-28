@@ -84,7 +84,7 @@ def test_webhook_ignored_event() -> None:
 
 
 def test_webhook_ignored_pull_request_action() -> None:
-    body = json.dumps({"action": "closed"}).encode()
+    body = json.dumps({"action": "labeled"}).encode()
     response = client.post(
         "/webhooks/github",
         headers={"X-GitHub-Event": "pull_request", "X-Hub-Signature-256": sign_body(body)},

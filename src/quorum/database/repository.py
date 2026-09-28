@@ -115,7 +115,7 @@ def upsert_pull_request(
     pull_request.number = data.get("number", 0)
     pull_request.title = data.get("title", "")
     pull_request.author = author.get("login", "")
-    pull_request.state = data.get("state", "")
+    pull_request.state = "merged" if data.get("merged") else data.get("state", "")
     pull_request.head_ref = head.get("ref")
     pull_request.base_ref = base.get("ref")
     pull_request.updated_at = utcnow()

@@ -2,11 +2,17 @@ import { useCallback, useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import {
   ArrowLeft,
+  CheckCircle2,
   ExternalLink,
   FolderGit2,
+  GitMerge,
   GitPullRequest,
+  GitPullRequestArrow,
+  Loader2,
+  MessageSquarePlus,
   ShieldCheck,
   TestTube2,
+  X,
 } from "lucide-react"
 
 import { CoverageBlock } from "@/components/CoverageBlock"
@@ -19,12 +25,14 @@ import { AnalysisStatusBadge, PrStateBadge } from "@/components/status"
 import { TestRunItem } from "@/components/TestRunItem"
 import { Skeleton } from "@/components/ui/Skeleton"
 import {
+  closePullRequest,
   getPullRequest,
   getPullRequestAnalysis,
   getPullRequestCoverage,
   getPullRequestSecurity,
   getPullRequestTests,
   isUnauthorized,
+  mergePullRequest,
   type AnalysisRun,
   type CoverageResult,
   type PullRequestSummary,
@@ -50,6 +58,11 @@ export default function PullRequestDetailPage() {
   const { pullRequestId } = useParams<{ pullRequestId: string }>()
   const id = Number(pullRequestId)
   const [state, setState] = useState<PageState>({ status: "loading" })
+  const [action, setAction] = useState<"merge" | "close" | null>(null)
+  const [comment, setComment] = useState("")
+  const [acting, setActing] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [actionMessage, setActionMessage] = useState<string | null>(null)
 
   const load = useCallback(() => {
     if (!pullRequestId || Number.isNaN(id)) {
@@ -93,6 +106,43 @@ export default function PullRequestDetailPage() {
   useEffect(() => {
     load()
   }, [load])
+
+  const runMerge = useCallback(() => {
+    setActing(true)
+    setActionError(null)
+    setActionMessage(null)
+    mergePullRequest(id, comment.trim() || undefined)
+      .then(() => {
+        setAction(null)
+        setComment("")
+        setActionMessage("Pull request merged on GitHub.")
+        load()
+      })
+      .catch((error: unknown) => {
+        setActing(false)
+        setActionError(
+          error instanceof Error ? error.message : "Failed to merge the pull request",
+        )
+      })
+  }, [id, comment, load])
+
+  const runClose = useCallback(() => {
+    setActing(true)
+    setActionError(null)
+    setActionMessage(null)
+    closePullRequest(id)
+      .then(() => {
+        setAction(null)
+        setActionMessage("Pull request closed on GitHub.")
+        load()
+      })
+      .catch((error: unknown) => {
+        setActing(false)
+        setActionError(
+          error instanceof Error ? error.message : "Failed to close the pull request",
+        )
+      })
+  }, [id, load])
 
   if (state.status === "loading") {
     return (
@@ -188,6 +238,152 @@ export default function PullRequestDetailPage() {
             {pullRequest.base_ref}
           </p>
         ) : null}
+      </div>
+
+      <div className="mb-8 rounded-lg border border-border bg-card p-4">
+        <p className="mb-3 text-sm font-medium">Pull Request Actions</p>
+        {actionMessage ? (
+          <div className="mb-3 flex items-center gap-2 rounded-lg border border-success/40 bg-success/10 px-4 py-2 text-sm text-success">
+            <CheckCircle2 className="h-4 w-4" />
+            {actionMessage}
+          </div>
+        ) : null}
+        {actionError ? (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-severity-critical/40 bg-severity-critical/10 px-4 py-2 text-sm text-severity-critical">
+            <span>{actionError}</span>
+            <button
+              type="button"
+              onClick={() => setActionError(null)}
+              aria-label="Dismiss"
+              className="inline-flex h-6 w-6 items-center justify-center rounded transition-colors hover:bg-accent"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : null}
+
+        {pullRequest.state === "open" ? (
+          <>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setAction("merge")
+                  setActionError(null)
+                }}
+                className="inline-flex items-center gap-1.5 rounded-md bg-success px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-success/90"
+              >
+                <GitMerge className="h-4 w-4" />
+                Merge Pull Request
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAction("close")
+                  setActionError(null)
+                }}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:border-severity-critical/40 hover:bg-severity-critical/10 hover:text-severity-critical"
+              >
+                <GitPullRequestArrow className="h-4 w-4" />
+                Close Pull Request
+              </button>
+            </div>
+
+            {action === "merge" ? (
+              <div className="mt-4 space-y-3 rounded-lg border border-border p-4">
+                <div>
+                  <label
+                    htmlFor="pr-merge-comment"
+                    className="mb-1 block text-sm font-medium"
+                  >
+                    Merge message (optional)
+                  </label>
+                  <textarea
+                    id="pr-merge-comment"
+                    value={comment}
+                    onChange={(event) => setComment(event.target.value)}
+                    placeholder="This message is recorded on GitHub as the merge commit message."
+                    rows={3}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Merges using a merge commit. Your message becomes the merge
+                    commit message on GitHub.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={runMerge}
+                    disabled={acting}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-success px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-success/90 disabled:opacity-50"
+                  >
+                    {acting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <GitMerge className="h-4 w-4" />
+                    )}
+                    {acting ? "Merging…" : "Confirm Merge"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAction(null)
+                      setActionError(null)
+                    }}
+                    disabled={acting}
+                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {action === "close" ? (
+              <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-border p-4">
+                <p className="text-sm text-muted-foreground">
+                  Close this pull request on GitHub without merging it?
+                </p>
+                <div className="flex shrink-0 items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={runClose}
+                    disabled={acting}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-severity-critical/40 bg-severity-critical/10 px-4 py-2 text-sm font-medium text-severity-critical transition-colors hover:bg-severity-critical/20 disabled:opacity-50"
+                  >
+                    {acting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <GitPullRequestArrow className="h-4 w-4" />
+                    )}
+                    {acting ? "Closing…" : "Confirm Close"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAction(null)
+                      setActionError(null)
+                    }}
+                    disabled={acting}
+                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <MessageSquarePlus className="h-4 w-4" />
+            This pull request is{" "}
+            <span className="font-medium text-foreground">
+              {pullRequest.state}
+            </span>
+            . No further actions are available.
+          </p>
+        )}
       </div>
 
       <div className="mb-8 grid gap-4 lg:grid-cols-3">

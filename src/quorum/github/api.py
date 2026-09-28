@@ -201,3 +201,48 @@ async def create_pr_comment(
         )
         response.raise_for_status()
         return response.json()
+
+
+async def merge_pull_request(
+    token: str,
+    owner: str,
+    repo: str,
+    pr_number: int,
+    commit_title: str,
+    commit_message: str | None = None,
+    merge_method: str = "merge",
+) -> dict:
+    """Merge a pull request on GitHub and return the merge result."""
+    payload: dict = {"merge_method": merge_method}
+    if commit_title:
+        payload["commit_title"] = commit_title
+    if commit_message:
+        payload["commit_message"] = commit_message
+    async with httpx.AsyncClient() as client:
+        response = await client.put(
+            f"{GITHUB_API_BASE}/repos/{owner}/{repo}/pulls/{pr_number}/merge",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+            },
+            json=payload,
+        )
+        response.raise_for_status()
+        return response.json()
+
+
+async def close_pull_request(
+    token: str, owner: str, repo: str, pr_number: int
+) -> dict:
+    """Close a pull request on GitHub (without merging)."""
+    async with httpx.AsyncClient() as client:
+        response = await client.patch(
+            f"{GITHUB_API_BASE}/repos/{owner}/{repo}/pulls/{pr_number}",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+            },
+            json={"state": "closed"},
+        )
+        response.raise_for_status()
+        return response.json()
