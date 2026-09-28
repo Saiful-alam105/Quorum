@@ -1,3 +1,4 @@
+import httpx
 from sqlalchemy.orm import Session
 
 from quorum.config import settings
@@ -10,7 +11,16 @@ from quorum.github.api import get_installation_repositories
 from quorum.github.app_auth import get_installation_token
 
 
-async def sync_user_repositories(db: Session, user: User) -> bool:
+async def sync_user_repositories(
+    db: Session, user: User, clear_exclusions: bool = False
+) -> bool:
+    """Reconcile a user's repositories with the GitHub App installation.
+
+    Attaches repositories the installation authorizes (unless the user has
+    explicitly disconnected them) and detaches everything else. When
+    ``clear_exclusions`` is set (e.g. after the user goes through the GitHub
+    App install flow) all intentional disconnects are forgotten first.
+    """
     if (
         user.github_installation_id is None
         or not settings.github_app_id
@@ -24,18 +34,37 @@ async def sync_user_repositories(db: Session, user: User) -> bool:
             settings.github_app_private_key_path,
             user.github_installation_id,
         )
-        install_token = install_auth.get("token")
-        if not install_token:
-            return False
-
-        authorized = await get_installation_repositories(install_token)
-        for repo_data in authorized:
-            upsert_repository(db, repo_data, user_id=user.id)
-        detach_repositories_not_in(
-            db,
-            user.id,
-            {r.get("full_name") for r in authorized},
-        )
-        return True
+    except httpx.HTTPStatusError as exc:
+        # The installation no longer exists (app uninstalled): detach all
+        # repositories and forget the installation so we stop trying.
+        if exc.response.status_code in (401, 403, 404):
+            detach_repositories_not_in(db, user.id, set())
+            user.github_installation_id = None
+            user.excluded_repositories = []
+            db.commit()
+        return False
     except Exception:
         return False
+
+    install_token = install_auth.get("token")
+    if not install_token:
+        return False
+
+    if clear_exclusions:
+        user.excluded_repositories = []
+
+    try:
+        authorized = await get_installation_repositories(install_token)
+    except Exception:
+        return False
+
+    excluded = set(user.excluded_repositories or [])
+    attachable = [r for r in authorized if r.get("full_name") not in excluded]
+    for repo_data in attachable:
+        upsert_repository(db, repo_data, user_id=user.id)
+    detach_repositories_not_in(
+        db,
+        user.id,
+        {r.get("full_name") for r in attachable},
+    )
+    return True

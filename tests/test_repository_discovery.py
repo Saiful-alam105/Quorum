@@ -6,9 +6,12 @@ from sqlalchemy.pool import StaticPool
 
 import quorum.api.routes as routes_module
 import quorum.config as config_module
+import quorum.github.repo_sync as repo_sync_module
 from quorum.auth.sessions import create_session
 from quorum.database.base import Base, get_db
 from quorum.database.models import PullRequest, Repository, User
+from quorum.database.repository import get_repository_by_full_name
+from quorum.github.repo_sync import sync_user_repositories
 from quorum.main import app
 
 
@@ -463,6 +466,91 @@ def test_unconnect_detaches_repository(
         "/api/repositories/discover", **_auth(session_token)
     ).json()
     assert discovered[0]["connected"] is False
+
+
+def test_unconnect_is_remembered_as_exclusion(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha")
+    client.post(f"/api/repositories/{repo.id}/unconnect", **_auth(session_token))
+    db_session.refresh(user)
+    assert user.excluded_repositories == ["octocat/alpha"]
+
+
+def test_auto_sync_does_not_reattach_disconnected_repo(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user.github_installation_id = 555
+    user.excluded_repositories = ["quorum-dev/kept-repo"]
+    kept = _add_connected_repo(db_session, user, 1001, "quorum-dev/kept-repo")
+    other = _add_connected_repo(db_session, user, 1002, "quorum-dev/other-repo")
+    db_session.commit()
+
+    monkeypatch.setattr(config_module.settings, "github_app_id", "test-app-id")
+    monkeypatch.setattr(
+        config_module.settings, "github_app_private_key_path", "test-key.pem"
+    )
+
+    async def mock_installation_token(app_id: str, key_path: str, installation_id: int) -> dict:
+        return {"token": "install-token"}
+
+    async def mock_installation_repos(token: str) -> list:
+        return [
+            _github_repo(1001, "quorum-dev/kept-repo"),
+            _github_repo(1002, "quorum-dev/other-repo"),
+        ]
+
+    monkeypatch.setattr(repo_sync_module, "get_installation_token", mock_installation_token)
+    monkeypatch.setattr(
+        repo_sync_module, "get_installation_repositories", mock_installation_repos
+    )
+
+    response = client.get("/api/repositories", **_auth(session_token))
+    assert response.status_code == 200
+    data = response.json()
+    assert [item["full_name"] for item in data] == ["quorum-dev/other-repo"]
+    db_session.refresh(kept)
+    assert kept.user_id is None
+    db_session.refresh(other)
+    assert other.user_id == user.id
+
+
+def test_sync_clears_exclusions_on_explicit_connect(
+    db_session: Session,
+    user: User,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user.github_installation_id = 555
+    user.excluded_repositories = ["quorum-dev/kept-repo"]
+    _add_connected_repo(db_session, user, 1001, "quorum-dev/kept-repo")
+    db_session.commit()
+
+    monkeypatch.setattr(config_module.settings, "github_app_id", "test-app-id")
+    monkeypatch.setattr(
+        config_module.settings, "github_app_private_key_path", "test-key.pem"
+    )
+
+    async def mock_installation_token(app_id: str, key_path: str, installation_id: int) -> dict:
+        return {"token": "install-token"}
+
+    async def mock_installation_repos(token: str) -> list:
+        return [_github_repo(1001, "quorum-dev/kept-repo")]
+
+    monkeypatch.setattr(repo_sync_module, "get_installation_token", mock_installation_token)
+    monkeypatch.setattr(
+        repo_sync_module, "get_installation_repositories", mock_installation_repos
+    )
+
+    import asyncio
+
+    asyncio.run(sync_user_repositories(db_session, user, clear_exclusions=True))
+
+    assert user.excluded_repositories == []
+    assert get_repository_by_full_name(db_session, "quorum-dev/kept-repo").user_id == user.id
 
 
 # --- cross-user authorization hardening ---

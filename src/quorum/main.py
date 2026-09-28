@@ -10,11 +10,13 @@ from quorum.auth.routes import router as auth_router
 from quorum.config import settings
 from quorum.database.base import get_db
 from quorum.database.repository import (
+    detach_repositories_by_full_name,
     get_user_by_installation,
     revoke_installation,
     upsert_pull_request,
     upsert_repository,
 )
+from quorum.github.repo_sync import sync_user_repositories
 from quorum.github.webhook import verify_signature
 from quorum.orchestrator.runner import run_analysis_for_pull_request
 
@@ -70,16 +72,35 @@ async def github_webhook(
 
     if event in ("installation", "installation_repositories"):
         payload = json.loads(raw_body)
-        if event == "installation":
-            action = payload.get("action") if isinstance(payload, dict) else None
-            if action == "deleted":
-                installation = payload.get("installation") or {}
-                account = installation.get("account") or {}
-                revoke_installation(
-                    db,
-                    installation_id=installation.get("id"),
-                    account_id=account.get("id"),
-                )
+        if not isinstance(payload, dict):
+            return JSONResponse(status_code=200, content={"status": "ok", "event": event})
+        action = payload.get("action")
+        installation = payload.get("installation") or {}
+        installation_id = installation.get("id") if isinstance(installation, dict) else None
+
+        if event == "installation" and action == "deleted":
+            account = installation.get("account") or {}
+            revoke_installation(
+                db,
+                installation_id=installation_id,
+                account_id=account.get("id"),
+            )
+        elif event == "installation_repositories" and action == "removed":
+            user = get_user_by_installation(db, installation_id)
+            if user is not None:
+                removed = {
+                    (repo or {}).get("full_name")
+                    for repo in payload.get("repositories_removed", [])
+                    if (repo or {}).get("full_name")
+                }
+                detach_repositories_by_full_name(db, user.id, removed)
+        elif event == "installation_repositories" and action == "added":
+            user = get_user_by_installation(db, installation_id)
+            if user is not None:
+                try:
+                    await sync_user_repositories(db, user, clear_exclusions=False)
+                except Exception:
+                    pass
         return JSONResponse(
             status_code=200,
             content={"status": "ok", "event": event},
@@ -98,10 +119,13 @@ async def github_webhook(
         owner = get_user_by_installation(
             db, installation.get("id") if isinstance(installation, dict) else None
         )
+        repository_data = payload.get("repository") or {}
+        full_name = repository_data.get("full_name")
+        excluded = owner is not None and full_name in (owner.excluded_repositories or [])
         repository = upsert_repository(
             db,
-            payload.get("repository") or {},
-            user_id=owner.id if owner is not None else None,
+            repository_data,
+            user_id=owner.id if (owner is not None and not excluded) else None,
         )
         if repository is not None:
             pull_request = upsert_pull_request(

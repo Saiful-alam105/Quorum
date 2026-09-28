@@ -226,7 +226,9 @@ def test_install_callback_invalid_session_redirects_to_login() -> None:
 
 
 def test_install_callback_saves_installation(
-    db_session: Session, monkeypatch: pytest.MonkeyPatch
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    mock_github_config: None,
 ) -> None:
     db_session.add(User(github_id=12345, username="testuser"))
     db_session.commit()

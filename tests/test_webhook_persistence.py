@@ -252,6 +252,97 @@ class TestInstallationRevocation:
         assert user is not None
         assert user.github_installation_id == 777
 
+    def test_pr_webhook_does_not_reattach_excluded_repository(
+        self, client: TestClient, db_session: Session
+    ) -> None:
+        user = User(
+            github_id=777,
+            username="octocat",
+            github_installation_id=555,
+            excluded_repositories=["octocat/hello-world"],
+        )
+        db_session.add(user)
+        db_session.commit()
+
+        body = json.dumps(
+            {
+                "action": "opened",
+                "installation": {"id": 555},
+                "repository": {
+                    "id": 401,
+                    "name": "hello-world",
+                    "full_name": "octocat/hello-world",
+                    "private": False,
+                    "owner": {"login": "octocat"},
+                },
+                "pull_request": {
+                    "id": 502,
+                    "number": 11,
+                    "title": "Add authentication",
+                    "state": "open",
+                    "user": {"login": "octocat"},
+                },
+            }
+        ).encode()
+        response = client.post(
+            "/webhooks/github", headers=_webhook_headers(body), content=body
+        )
+        assert response.status_code == 202
+
+        repo = db_session.scalar(
+            select(Repository).where(Repository.github_id == 401)
+        )
+        assert repo is not None
+        assert repo.user_id is None
+
+    def test_installation_repositories_removed_detaches(
+        self, client: TestClient, db_session: Session
+    ) -> None:
+        user = User(github_id=777, username="octocat", github_installation_id=555)
+        db_session.add(user)
+        repo = Repository(
+            github_id=401,
+            owner="octocat",
+            name="hello-world",
+            full_name="octocat/hello-world",
+            is_private=False,
+            user_id=user.id,
+        )
+        db_session.add(repo)
+        db_session.commit()
+
+        body = json.dumps(
+            {
+                "action": "removed",
+                "installation": {"id": 555},
+                "repositories_added": [],
+                "repositories_removed": [
+                    {
+                        "id": 401,
+                        "name": "hello-world",
+                        "full_name": "octocat/hello-world",
+                    }
+                ],
+            }
+        ).encode()
+        response = client.post(
+            "/webhooks/github",
+            headers={
+                "X-GitHub-Event": "installation_repositories",
+                "X-Hub-Signature-256": sign_body(body),
+            },
+            content=body,
+        )
+        assert response.status_code == 200
+
+        repo = db_session.scalar(
+            select(Repository).where(Repository.github_id == 401)
+        )
+        assert repo.user_id is None
+        # A GitHub-side removal must NOT be remembered as an intentional
+        # disconnect, so a later re-add can reconnect automatically.
+        assert user.excluded_repositories == []
+
     def test_installation_deleted_invalid_signature_does_not_revoke(
         self, client: TestClient, db_session: Session
     ) -> None:

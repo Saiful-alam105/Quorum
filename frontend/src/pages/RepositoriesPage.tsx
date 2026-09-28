@@ -148,6 +148,29 @@ export default function RepositoriesPage() {
     load()
   }, [load])
 
+  const silentRefresh = useCallback(() => {
+    if (state.status !== "ready") {
+      return
+    }
+    getDiscoveredRepositories()
+      .then((repositories) => setState({ status: "ready", repositories }))
+      .catch(() => {})
+  }, [state.status])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        silentRefresh()
+      }
+    }, 30000)
+    const onFocus = () => silentRefresh()
+    window.addEventListener("focus", onFocus)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener("focus", onFocus)
+    }
+  }, [silentRefresh])
+
   useEffect(() => {
     if (connectedResult === "1") {
       const timer = setTimeout(load, 800)

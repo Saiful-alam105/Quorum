@@ -33,6 +33,7 @@ from quorum.database.models import (
 )
 from quorum.database.repository import (
     create_chat_message,
+    exclude_repository,
     get_coverage_result_for_run,
     get_pull_request_for_user,
     get_repository_for_user,
@@ -224,6 +225,13 @@ async def discover_repositories(
             detail="GitHub access token not available; please sign in again",
         )
 
+    user = db.get(User, user_id)
+    if user is not None:
+        try:
+            await sync_user_repositories(db, user)
+        except Exception:
+            pass
+
     try:
         github_repos = await get_repositories(access_token)
     except Exception:
@@ -345,11 +353,18 @@ def unconnect_repository(
     session: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ) -> RepositoryOut:
-    """Disconnect a repository from the current user (keeps the DB row)."""
+    """Disconnect a repository from the current user (keeps the DB row).
+
+    The disconnect is remembered so automatic re-syncs with GitHub do not
+    re-attach the repository until the user explicitly connects it again.
+    """
     user_id = _current_user_id(db, session)
     repository = get_repository_for_user(db, repository_id, user_id)
     if repository is None:
         raise HTTPException(status_code=404, detail="Repository not found")
+    user = db.get(User, user_id)
+    if user is not None:
+        exclude_repository(db, user, repository.full_name)
     repository.user_id = None
     db.commit()
     return _repository_out(repository)

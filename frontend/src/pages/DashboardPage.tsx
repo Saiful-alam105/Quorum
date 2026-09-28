@@ -105,6 +105,45 @@ export default function DashboardPage() {
     load()
   }, [load])
 
+  const silentRefresh = useCallback(() => {
+    if (state.status !== "ready") {
+      return
+    }
+    Promise.all([
+      getMe(),
+      getRepositories(),
+      getPullRequests(),
+      getReviews(),
+      getFindings(RECENT_LIMIT),
+    ])
+      .then(([user, repositories, pullRequests, reviews, findings]) =>
+        setState({
+          status: "ready",
+          user,
+          repositoryCount: repositories.length,
+          pullRequests,
+          reviews,
+          findings,
+          repositories,
+        }),
+      )
+      .catch(() => {})
+  }, [state.status])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        silentRefresh()
+      }
+    }, 30000)
+    const onFocus = () => silentRefresh()
+    window.addEventListener("focus", onFocus)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener("focus", onFocus)
+    }
+  }, [silentRefresh])
+
   if (state.status === "loading") {
     return <DashboardSkeleton />
   }

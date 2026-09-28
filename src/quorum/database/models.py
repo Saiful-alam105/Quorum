@@ -7,6 +7,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    JSON,
     String,
     Text,
 )
@@ -28,6 +29,9 @@ class User(Base):
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     github_installation_id: Mapped[int | None] = mapped_column(
         BigInteger, nullable=True
+    )
+    excluded_repositories: Mapped[list[str]] = mapped_column(
+        JSON, default=list
     )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 

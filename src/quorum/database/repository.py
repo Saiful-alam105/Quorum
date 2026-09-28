@@ -55,11 +55,15 @@ def revoke_installation(
             select(User).where(User.github_installation_id == installation_id)
         ):
             user.github_installation_id = None
+            user.excluded_repositories = []
+            detach_repositories_not_in(db, user.id, set())
             revoked += 1
     if account_id is not None:
         for user in db.scalars(select(User).where(User.github_id == account_id)):
             if user.github_installation_id is not None:
                 user.github_installation_id = None
+                user.excluded_repositories = []
+                detach_repositories_not_in(db, user.id, set())
                 revoked += 1
     db.commit()
     return revoked
@@ -200,6 +204,37 @@ def detach_repositories_not_in(
             detached += 1
     db.commit()
     return detached
+
+
+def detach_repositories_by_full_name(
+    db: Session, user_id: int, full_names: set[str]
+) -> int:
+    if not full_names:
+        return 0
+    detached = 0
+    for repository in db.scalars(
+        select(Repository).where(Repository.user_id == user_id)
+    ):
+        if repository.full_name in full_names:
+            repository.user_id = None
+            detached += 1
+    db.commit()
+    return detached
+
+
+def exclude_repository(db: Session, user: User, full_name: str) -> None:
+    excluded = list(user.excluded_repositories or [])
+    if full_name not in excluded:
+        user.excluded_repositories = excluded + [full_name]
+        db.commit()
+
+
+def clear_repository_exclusions(db: Session, user: User) -> int:
+    cleared = len(user.excluded_repositories or [])
+    if cleared:
+        user.excluded_repositories = []
+        db.commit()
+    return cleared
 
 
 def get_repository_for_user(

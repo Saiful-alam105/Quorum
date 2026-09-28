@@ -185,7 +185,7 @@ async def install_callback(
             user.github_installation_id = installation_id
             db.commit()
             if settings.github_app_id and settings.github_app_private_key_path:
-                await sync_user_repositories(db, user)
+                await sync_user_repositories(db, user, clear_exclusions=True)
             return RedirectResponse(
                 url=f"{frontend}/repositories?connected=1", status_code=302
             )
