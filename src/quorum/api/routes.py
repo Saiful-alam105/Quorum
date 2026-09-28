@@ -336,6 +336,25 @@ async def _repository_installation_token(
     return token
 
 
+@router.post(
+    "/repositories/{repository_id}/unconnect",
+    response_model=RepositoryOut,
+)
+def unconnect_repository(
+    repository_id: int,
+    session: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),
+) -> RepositoryOut:
+    """Disconnect a repository from the current user (keeps the DB row)."""
+    user_id = _current_user_id(db, session)
+    repository = get_repository_for_user(db, repository_id, user_id)
+    if repository is None:
+        raise HTTPException(status_code=404, detail="Repository not found")
+    repository.user_id = None
+    db.commit()
+    return _repository_out(repository)
+
+
 @router.get("/repositories/{repository_id}/branches", response_model=list[str])
 async def read_repository_branches(
     repository_id: int,

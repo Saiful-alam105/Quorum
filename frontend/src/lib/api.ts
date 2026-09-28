@@ -64,6 +64,12 @@ export function getRepository(id: number): Promise<Repository> {
   return request<Repository>(`/api/repositories/${id}`)
 }
 
+export function unconnectRepository(id: number): Promise<Repository> {
+  return request<Repository>(`/api/repositories/${id}/unconnect`, {
+    method: "POST",
+  })
+}
+
 export function getRepositoryPullRequests(
   id: number,
 ): Promise<PullRequestSummary[]> {

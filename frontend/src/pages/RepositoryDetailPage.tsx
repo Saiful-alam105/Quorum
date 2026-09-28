@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import {
   ArrowLeft,
   CheckCircle2,
@@ -9,6 +9,7 @@ import {
   GitPullRequest,
   Lock,
   ShieldCheck,
+  Unplug,
 } from "lucide-react"
 
 import { EmptyState } from "@/components/EmptyState"
@@ -25,6 +26,7 @@ import {
   getRepositoryPullRequests,
   getReviews,
   isUnauthorized,
+  unconnectRepository,
   type Finding,
   type PullRequestSummary,
   type Repository,
@@ -46,7 +48,10 @@ type PageState =
 export default function RepositoryDetailPage() {
   const { repositoryId } = useParams<{ repositoryId: string }>()
   const id = Number(repositoryId)
+  const navigate = useNavigate()
   const [state, setState] = useState<PageState>({ status: "loading" })
+  const [disconnecting, setDisconnecting] = useState(false)
+  const [disconnectError, setDisconnectError] = useState<string | null>(null)
 
   const load = useCallback(() => {
     if (!repositoryId || Number.isNaN(id)) {
@@ -88,6 +93,22 @@ export default function RepositoryDetailPage() {
   useEffect(() => {
     load()
   }, [load])
+
+  const handleDisconnect = useCallback(() => {
+    if (!window.confirm("Disconnect this repository from Quorum?")) {
+      return
+    }
+    setDisconnecting(true)
+    setDisconnectError(null)
+    unconnectRepository(id)
+      .then(() => navigate("/repositories"))
+      .catch((error: unknown) => {
+        setDisconnecting(false)
+        setDisconnectError(
+          error instanceof Error ? error.message : "Failed to disconnect",
+        )
+      })
+  }, [id, navigate])
 
   if (state.status === "loading") {
     return (
@@ -174,7 +195,19 @@ export default function RepositoryDetailPage() {
             <GitPullRequest className="h-4 w-4" />
             Create Pull Request
           </Link>
+          <button
+            type="button"
+            onClick={handleDisconnect}
+            disabled={disconnecting}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:border-severity-critical/40 hover:bg-severity-critical/10 hover:text-severity-critical disabled:opacity-50"
+          >
+            <Unplug className="h-4 w-4" />
+            {disconnecting ? "Disconnecting…" : "Disconnect"}
+          </button>
         </div>
+        {disconnectError ? (
+          <p className="text-sm text-severity-critical">{disconnectError}</p>
+        ) : null}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

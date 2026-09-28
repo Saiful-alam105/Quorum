@@ -148,6 +148,13 @@ export default function RepositoriesPage() {
     load()
   }, [load])
 
+  useEffect(() => {
+    if (connectedResult === "1") {
+      const timer = setTimeout(load, 800)
+      return () => clearTimeout(timer)
+    }
+  }, [connectedResult, load])
+
   const visible = useMemo(() => {
     if (state.status !== "ready") {
       return []

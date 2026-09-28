@@ -417,6 +417,54 @@ def test_create_pr_github_error_returns_502(
     assert response.status_code == 502
 
 
+# --- unconnect ---
+
+
+def test_unconnect_requires_auth(
+    client: TestClient, db_session: Session, user: User
+) -> None:
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha")
+    response = client.post(f"/api/repositories/{repo.id}/unconnect")
+    assert response.status_code == 401
+
+
+def test_unconnect_not_owned_returns_404(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha")
+    _, other_token = _other_user(user, db_session)
+    response = client.post(
+        f"/api/repositories/{repo.id}/unconnect", **_auth(other_token)
+    )
+    assert response.status_code == 404
+
+
+def test_unconnect_detaches_repository(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha")
+
+    response = client.post(
+        f"/api/repositories/{repo.id}/unconnect", **_auth(session_token)
+    )
+    assert response.status_code == 200
+    db_session.refresh(repo)
+    assert repo.user_id is None
+
+    async def mock_get_repositories(token: str) -> list:
+        return [_github_repo(201, "octocat/alpha")]
+
+    monkeypatch.setattr(routes_module, "get_repositories", mock_get_repositories)
+    discovered = client.get(
+        "/api/repositories/discover", **_auth(session_token)
+    ).json()
+    assert discovered[0]["connected"] is False
+
+
 # --- cross-user authorization hardening ---
 
 
