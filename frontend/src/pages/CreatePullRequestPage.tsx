@@ -138,28 +138,6 @@ export default function CreatePullRequestPage() {
           className="mx-auto max-w-2xl space-y-4 rounded-lg border border-border bg-card p-6"
         >
           <div>
-            <label htmlFor="pr-source" className="mb-1 block text-sm font-medium">
-              Compare
-            </label>
-            <select
-              id="pr-source"
-              value={head}
-              onChange={(event) => setHead(event.target.value)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-            >
-              <option value="">Select a compare branch…</option>
-              {branches.map((branch) => (
-                <option key={branch} value={branch}>
-                  {branch}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-muted-foreground">
-              The branch containing your changes.
-            </p>
-          </div>
-
-          <div>
             <label htmlFor="pr-target" className="mb-1 block text-sm font-medium">
               Base
             </label>
@@ -178,6 +156,28 @@ export default function CreatePullRequestPage() {
             </select>
             <p className="mt-1 text-xs text-muted-foreground">
               The branch the changes will merge into.
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="pr-source" className="mb-1 block text-sm font-medium">
+              Compare
+            </label>
+            <select
+              id="pr-source"
+              value={head}
+              onChange={(event) => setHead(event.target.value)}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            >
+              <option value="">Select a compare branch…</option>
+              {branches.map((branch) => (
+                <option key={branch} value={branch}>
+                  {branch}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The branch containing your changes.
             </p>
           </div>
 
