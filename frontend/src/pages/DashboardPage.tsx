@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import {
   ClipboardCheck,
   FolderGit2,
   GitPullRequest,
   ShieldAlert,
   ShieldCheck,
+  TriangleAlert,
 } from "lucide-react"
 
 import { EmptyState } from "@/components/EmptyState"
@@ -25,6 +27,7 @@ import {
   type CurrentUser,
   type Finding,
   type PullRequestSummary,
+  type Repository,
   type ReviewSummary,
 } from "@/lib/api"
 
@@ -39,6 +42,7 @@ type DashboardState =
       pullRequests: PullRequestSummary[]
       reviews: ReviewSummary[]
       findings: Finding[]
+      repositories: Repository[]
     }
 
 const RECENT_LIMIT = 4
@@ -81,6 +85,7 @@ export default function DashboardPage() {
           pullRequests,
           reviews,
           findings,
+          repositories,
         }),
       )
       .catch((error: unknown) => {
@@ -118,6 +123,7 @@ export default function DashboardPage() {
     pullRequests,
     reviews,
     findings,
+    repositories,
   } = state
 
   const reviewsCompleted = reviews.filter(
@@ -130,6 +136,12 @@ export default function DashboardPage() {
   const criticalFindings = pullRequests.reduce(
     (sum, pullRequest) => sum + pullRequest.critical_count,
     0,
+  )
+  const needsAttention = pullRequests.filter(
+    (pullRequest) =>
+      pullRequest.critical_count > 0 ||
+      pullRequest.high_count > 0 ||
+      pullRequest.latest_analysis_status === "failed",
   )
 
   return (
@@ -180,6 +192,46 @@ export default function DashboardPage() {
         />
       </div>
 
+      <div className="mb-3 mt-8 flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">Your Repositories</h2>
+        <Link
+          to="/repositories"
+          className="text-sm text-primary transition-colors hover:underline"
+        >
+          Connect repository
+        </Link>
+      </div>
+      {repositories.length === 0 ? (
+        <EmptyState
+          icon={FolderGit2}
+          title="No repositories connected"
+          description="Connect a GitHub repository to start reviewing Pull Requests with Quorum."
+        />
+      ) : (
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {repositories.map((repository) => (
+            <li key={repository.id}>
+              <Link
+                to={`/repositories/${repository.id}`}
+                className="block space-y-1 rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-accent/40"
+              >
+                <span className="flex items-center gap-2">
+                  <FolderGit2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate font-medium">
+                    {repository.full_name}
+                  </span>
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  {repository.pull_request_count}{" "}
+                  {repository.pull_request_count === 1 ? "PR" : "PRs"} ·{" "}
+                  {repository.open_pull_request_count} open
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
       <h2 className="mb-3 mt-8 text-lg font-semibold">Recent Pull Requests</h2>
       {pullRequests.length === 0 ? (
         <EmptyState
@@ -194,6 +246,42 @@ export default function DashboardPage() {
           ))}
         </ul>
       )}
+
+      {needsAttention.length > 0 ? (
+        <>
+          <h2 className="mb-3 mt-8 text-lg font-semibold">Needs attention</h2>
+          <ul className="space-y-2">
+            {needsAttention.slice(0, RECENT_LIMIT).map((pullRequest) => (
+              <li key={pullRequest.id}>
+                <Link
+                  to={`/pull-requests/${pullRequest.id}`}
+                  className="flex items-center justify-between gap-4 rounded-lg border border-border bg-card px-4 py-3 transition-colors hover:border-primary/40 hover:bg-accent/40"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {pullRequest.repository_full_name ?? "unknown/repo"}{" "}
+                      <span className="text-muted-foreground">
+                        #{pullRequest.number}
+                      </span>{" "}
+                      {pullRequest.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {pullRequest.latest_analysis_status === "failed"
+                        ? "Analysis failed"
+                        : `${pullRequest.critical_count + pullRequest.high_count} high/critical finding${
+                            pullRequest.critical_count + pullRequest.high_count === 1
+                              ? ""
+                              : "s"
+                          }`}
+                    </p>
+                  </div>
+                  <TriangleAlert className="h-4 w-4 shrink-0 text-severity-critical" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
 
       <h2 className="mb-3 mt-8 text-lg font-semibold">Recent Findings</h2>
       {findings.length === 0 ? (
