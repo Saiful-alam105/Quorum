@@ -212,6 +212,21 @@ def test_build_review_context_includes_evidence(
     assert "coverage: 72.0% -> 81.0%" in context
 
 
+def test_build_review_context_explains_score(
+    db_session: Session, user: User
+) -> None:
+    repo = _add_repository(db_session, user)
+    pull_request = _add_pull_request(db_session, repo)
+    run = _add_run(db_session, pull_request, score=80)
+
+    context = build_review_context(run)
+    assert "80/100 (Approve with minor concerns)" in context
+    assert (
+        "Score breakdown: 100 - 0 (security findings) - 10 (tests) - 10 (coverage) = 80"
+        in context
+    )
+
+
 def test_build_chat_prompt_is_grounded(
     db_session: Session, user: User
 ) -> None:

@@ -5,6 +5,12 @@ Request, findings, tests, and coverage). It is capped so prompts stay within a
 fixed budget, matching the project's context-window rules.
 """
 
+from quorum.agents.synthesis import (
+    _coverage_deduction,
+    _security_deduction,
+    _test_deduction,
+    recommendation_for,
+)
 from quorum.database.models import (
     AnalysisRun,
     CoverageResult,
@@ -53,6 +59,32 @@ def _coverage_text(coverage: CoverageResult | None) -> str:
     return text
 
 
+def _score_text(review: AnalysisRun) -> str:
+    """Explain a review's Merge Readiness score using the stored evidence.
+
+    The score is deterministic (see ``quorum.agents.synthesis``): 100 minus
+    the security, test, and coverage deductions. Recomputing the breakdown
+    from the stored findings/tests/coverage lets the assistant explain why a
+    score is what it is instead of guessing.
+    """
+    score = review.merge_readiness_score
+    if score is None:
+        return "Merge Readiness: not scored"
+    security = _security_deduction(review.security_findings)
+    tests = _test_deduction(review.test_runs)
+    coverage_after = (
+        review.coverage_results[0].coverage_after
+        if review.coverage_results
+        else None
+    )
+    coverage = _coverage_deduction(coverage_after)
+    breakdown = f"{100} - {security} (security findings) - {tests} (tests) - {coverage} (coverage)"
+    return (
+        f"Merge Readiness: {score}/100 ({recommendation_for(score)}). "
+        f"Score breakdown: {breakdown} = {score}."
+    )
+
+
 def build_review_context(review: AnalysisRun) -> str:
     """Return a bounded plain-text summary of a review's stored evidence."""
     pull_request = review.pull_request
@@ -67,11 +99,8 @@ def build_review_context(review: AnalysisRun) -> str:
         f"Review: {repo} #{pr_number} — {pr_title}",
         f"Author: {pr_author}; state: {pr_state}",
         f"Analysis status: {review.status}",
+        _score_text(review),
     ]
-    if review.merge_readiness_score is not None:
-        lines.append(f"Merge Readiness: {review.merge_readiness_score}/100")
-    else:
-        lines.append("Merge Readiness: not scored")
 
     if review.security_findings:
         lines.append("Security findings:")
