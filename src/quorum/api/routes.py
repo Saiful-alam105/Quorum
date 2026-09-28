@@ -398,6 +398,7 @@ async def close_pull_request_endpoint(
 
 @router.get("/repositories/discover", response_model=list[DiscoveredRepositoryOut])
 async def discover_repositories(
+    force: bool = Query(default=False),
     session: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ) -> list[DiscoveredRepositoryOut]:
@@ -405,7 +406,8 @@ async def discover_repositories(
 
     Uses the GitHub OAuth access token stored in the session (server-side only)
     and marks each repository as ``connected`` when it is already linked to the
-    user through the GitHub App installation.
+    user through the GitHub App installation. Pass ``?force=1`` to always
+    re-sync with the installation (used when the user opens this page).
     """
     user_id = _current_user_id(db, session)
     session_data = get_session(session)
@@ -419,7 +421,7 @@ async def discover_repositories(
     user = db.get(User, user_id)
     if user is not None:
         try:
-            await maybe_sync_user_repositories(db, user)
+            await maybe_sync_user_repositories(db, user, force=force)
         except Exception:
             pass
 

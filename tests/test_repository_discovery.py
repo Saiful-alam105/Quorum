@@ -913,3 +913,86 @@ def test_read_pull_request_skips_reconcile_when_fresh(
     assert response.status_code == 200
     assert response.json()["state"] == "open"
     assert called is False
+
+
+# --- force sync on discover ---
+
+
+def test_discover_without_force_skips_recent_sync(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user.github_installation_id = 555
+    user.repos_synced_at = datetime.now(timezone.utc) - timedelta(seconds=20)
+    _add_connected_repo(db_session, user, 201, "octocat/alpha")
+    db_session.commit()
+
+    calls: list[bool] = []
+
+    async def recording_sync(db, usr, clear_exclusions=False):
+        calls.append(True)
+        return True
+
+    monkeypatch.setattr(repo_sync_module, "sync_user_repositories", recording_sync)
+
+    async def mock_get_repositories(token: str) -> list:
+        return [_github_repo(201, "octocat/alpha")]
+
+    monkeypatch.setattr(routes_module, "get_repositories", mock_get_repositories)
+
+    response = client.get("/api/repositories/discover", **_auth(session_token))
+    assert response.status_code == 200
+    assert calls == []
+
+
+def test_discover_force_runs_sync_even_when_recent(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user.github_installation_id = 555
+    user.repos_synced_at = datetime.now(timezone.utc) - timedelta(seconds=20)
+    _add_connected_repo(db_session, user, 1001, "octocat/old-repo")
+    db_session.commit()
+
+    monkeypatch.setattr(config_module.settings, "github_app_id", "test-app-id")
+    monkeypatch.setattr(
+        config_module.settings, "github_app_private_key_path", "test-key.pem"
+    )
+
+    async def mock_token(app_id, key_path, installation_id):
+        return {"token": "install-token"}
+
+    async def mock_install_repos(token: str) -> list:
+        return [
+            _github_repo(1001, "octocat/old-repo"),
+            _github_repo(1002, "octocat/new-repo"),
+        ]
+
+    monkeypatch.setattr(repo_sync_module, "get_installation_token", mock_token)
+    monkeypatch.setattr(
+        repo_sync_module, "get_installation_repositories", mock_install_repos
+    )
+
+    async def mock_get_repositories(token: str) -> list:
+        return [
+            _github_repo(1001, "octocat/old-repo"),
+            _github_repo(1002, "octocat/new-repo"),
+        ]
+
+    monkeypatch.setattr(routes_module, "get_repositories", mock_get_repositories)
+
+    response = client.get(
+        "/api/repositories/discover?force=1", **_auth(session_token)
+    )
+    assert response.status_code == 200
+    connected = {item["full_name"]: item["connected"] for item in response.json()}
+    assert connected == {
+        "octocat/old-repo": True,
+        "octocat/new-repo": True,
+    }

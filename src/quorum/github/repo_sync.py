@@ -18,17 +18,26 @@ def _age_seconds(last) -> float:
 
 
 async def maybe_sync_user_repositories(
-    db: Session, user: User, max_age_seconds: int = 60
+    db: Session,
+    user: User,
+    max_age_seconds: int = 60,
+    force: bool = False,
 ) -> bool:
     """Sync only when the last sync is older than ``max_age_seconds``.
 
     Keeps cheap page loads fast: the GitHub App installation round-trip is
     avoided on every request, while GitHub-side changes still show up within
-    the staleness window.
+    the staleness window. ``force`` bypasses the window (used when the user
+    explicitly views the repositories page), except when a sync just ran a
+    moment ago (e.g. right after the install-callback already synced).
     """
     last = user.repos_synced_at
-    if last is not None and _age_seconds(last) < max_age_seconds:
-        return True
+    if last is not None:
+        age = _age_seconds(last)
+        if force and age < 10:
+            return True
+        if not force and age < max_age_seconds:
+            return True
     return await sync_user_repositories(db, user)
 
 

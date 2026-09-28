@@ -124,7 +124,7 @@ export default function RepositoriesPage() {
 
   const load = useCallback(() => {
     setState({ status: "loading" })
-    getDiscoveredRepositories()
+    getDiscoveredRepositories(true)
       .then((repositories) => setState({ status: "ready", repositories }))
       .catch((error: unknown) => {
         if (isUnauthorized(error)) {
@@ -149,7 +149,7 @@ export default function RepositoriesPage() {
     if (state.status !== "ready") {
       return
     }
-    getDiscoveredRepositories()
+    getDiscoveredRepositories(false)
       .then((repositories) => setState({ status: "ready", repositories }))
       .catch(() => {})
   }, [state.status])

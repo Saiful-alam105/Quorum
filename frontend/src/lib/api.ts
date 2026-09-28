@@ -142,8 +142,12 @@ export type DiscoveredRepository = {
   pull_request_count: number
 }
 
-export function getDiscoveredRepositories(): Promise<DiscoveredRepository[]> {
-  return request<DiscoveredRepository[]>("/api/repositories/discover")
+export function getDiscoveredRepositories(
+  forceSync = false,
+): Promise<DiscoveredRepository[]> {
+  return request<DiscoveredRepository[]>(
+    `/api/repositories/discover${forceSync ? "?force=1" : ""}`,
+  )
 }
 
 export type ConnectUrl = {
