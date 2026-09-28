@@ -92,6 +92,37 @@ describe("CreatePullRequestPage", () => {
     expect(options).toEqual(["Select a base branch…", "main", "feature/auth", "dev"])
   })
 
+  it("suggests a title from the compare branch", async () => {
+    vi.stubGlobal("fetch", mockFetch())
+    renderPage()
+    await screen.findByLabelText("Compare")
+
+    const title = screen.getByLabelText("Title") as HTMLInputElement
+    expect(title.value).toBe("")
+
+    fireEvent.change(screen.getByLabelText("Compare"), {
+      target: { value: "feature/auth" },
+    })
+    expect(title.value).toBe("Auth")
+  })
+
+  it("does not overwrite a manually typed title", async () => {
+    vi.stubGlobal("fetch", mockFetch())
+    renderPage()
+    await screen.findByLabelText("Compare")
+
+    fireEvent.change(screen.getByLabelText("Title"), {
+      target: { value: "My custom title" },
+    })
+    fireEvent.change(screen.getByLabelText("Compare"), {
+      target: { value: "fix/login-bug" },
+    })
+
+    expect((screen.getByLabelText("Title") as HTMLInputElement).value).toBe(
+      "My custom title",
+    )
+  })
+
   it("creates a PR and navigates to its detail page", async () => {
     vi.stubGlobal("fetch", mockFetch())
     renderPage()

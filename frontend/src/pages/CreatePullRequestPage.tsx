@@ -19,6 +19,21 @@ type PageState =
   | { status: "error"; message: string }
   | { status: "ready"; repository: Repository; branches: string[] }
 
+const BRANCH_PREFIXES =
+  /^(feat(?:ure)?|feature|fix|hotfix|bugfix|bug|chore|docs|doc|refactor|refactoring|test(?:s)?|style|perf|performance|build|ci|release|enhancement|improvement|experiment|wip|dependabot(?:\/[^/]+)*)\//i
+
+function suggestTitleFromBranch(branch: string): string {
+  const cleaned = branch
+    .replace(BRANCH_PREFIXES, "")
+    .replace(/^\d+[_-]/, "")
+  const words = cleaned
+    .split(/[/_\-.]/)
+    .map((word) => word.trim())
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+  return words.join(" ") || branch
+}
+
 export default function CreatePullRequestPage() {
   const { repositoryId } = useParams<{ repositoryId: string }>()
   const id = Number(repositoryId)
@@ -27,6 +42,7 @@ export default function CreatePullRequestPage() {
   const [head, setHead] = useState("")
   const [base, setBase] = useState("")
   const [title, setTitle] = useState("")
+  const [titleEdited, setTitleEdited] = useState(false)
   const [body, setBody] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -59,6 +75,18 @@ export default function CreatePullRequestPage() {
   useEffect(() => {
     load()
   }, [load])
+
+  const handleHeadChange = (value: string) => {
+    setHead(value)
+    if (value && !titleEdited) {
+      setTitle(suggestTitleFromBranch(value))
+    }
+  }
+
+  const handleTitleChange = (value: string) => {
+    setTitleEdited(true)
+    setTitle(value)
+  }
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -166,7 +194,7 @@ export default function CreatePullRequestPage() {
             <select
               id="pr-source"
               value={head}
-              onChange={(event) => setHead(event.target.value)}
+              onChange={(event) => handleHeadChange(event.target.value)}
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
             >
               <option value="">Select a compare branch…</option>
@@ -188,10 +216,19 @@ export default function CreatePullRequestPage() {
             <input
               id="pr-title"
               value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Add authentication"
+              onChange={(event) => handleTitleChange(event.target.value)}
+              placeholder={
+                head
+                  ? suggestTitleFromBranch(head)
+                  : "Add authentication"
+              }
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
             />
+            <p className="mt-1 text-xs text-muted-foreground">
+              {head && !titleEdited
+                ? `Suggested from your compare branch: ${suggestTitleFromBranch(head)}`
+                : "Give this Pull Request a clear, short title."}
+            </p>
           </div>
 
           <div>
