@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import {
   ArrowLeft,
+  CheckCircle2,
   ClipboardCheck,
   ExternalLink,
   FolderGit2,
@@ -137,7 +138,7 @@ export default function RepositoryDetailPage() {
       </Link>
 
       <div className="mb-6 space-y-1.5">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <FolderGit2 className="h-5 w-5 shrink-0 text-muted-foreground" />
           <h1 className="truncate text-2xl font-semibold tracking-tight">
             {repository.full_name}
@@ -148,19 +149,32 @@ export default function RepositoryDetailPage() {
               Private
             </span>
           ) : null}
+          <span className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
+            <CheckCircle2 className="h-3 w-3" />
+            Connected
+          </span>
         </div>
         <p className="text-sm text-muted-foreground">
           Owner: {repository.owner}
         </p>
-        <a
-          href={`https://github.com/${repository.full_name}`}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          GitHub
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
+        <div className="flex flex-wrap items-center gap-3">
+          <a
+            href={`https://github.com/${repository.full_name}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            GitHub
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+          <Link
+            to={`/repositories/${repository.id}/create-pr`}
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            <GitPullRequest className="h-4 w-4" />
+            Create Pull Request
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -194,7 +208,7 @@ export default function RepositoryDetailPage() {
         <EmptyState
           icon={GitPullRequest}
           title="No Pull Requests yet"
-          description="Pull Requests for this repository appear here after Quorum receives a webhook event."
+          description="Create your first Pull Request from this repository to start Quorum analysis."
         />
       ) : (
         <ul className="space-y-3">

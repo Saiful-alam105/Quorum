@@ -212,3 +212,206 @@ def test_connect_url_requires_slug(
         "/api/repositories/connect-url", **_auth(session_token)
     )
     assert response.status_code == 500
+
+
+# --- branches ---
+
+
+def _install(user: User, db_session: Session) -> None:
+    user.github_installation_id = 555
+    db_session.commit()
+
+
+def _mock_install_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def mock_token(app_id, key_path, installation_id):
+        return {"token": "install-token"}
+
+    monkeypatch.setattr(routes_module, "get_installation_token", mock_token)
+
+
+def test_branches_requires_auth(client: TestClient) -> None:
+    assert client.get("/api/repositories/1/branches").status_code == 401
+
+
+def test_branches_not_owned(client: TestClient, session_token: str) -> None:
+    response = client.get("/api/repositories/999999/branches", **_auth(session_token))
+    assert response.status_code == 404
+
+
+def test_branches_requires_installation(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha")
+    response = client.get(
+        f"/api/repositories/{repo.id}/branches", **_auth(session_token)
+    )
+    assert response.status_code == 400
+
+
+def test_branches_returns_sorted(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install(user, db_session)
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha")
+    _mock_install_token(monkeypatch)
+
+    async def mock_list_branches(token, owner, name):
+        return ["main", "feature/auth", "dev"]
+
+    monkeypatch.setattr(routes_module, "list_branches", mock_list_branches)
+
+    response = client.get(
+        f"/api/repositories/{repo.id}/branches", **_auth(session_token)
+    )
+    assert response.status_code == 200
+    assert response.json() == ["dev", "feature/auth", "main"]
+
+
+def test_branches_github_error_returns_502(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install(user, db_session)
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha")
+    _mock_install_token(monkeypatch)
+
+    async def mock_list_branches(token, owner, name):
+        raise RuntimeError("GitHub down")
+
+    monkeypatch.setattr(routes_module, "list_branches", mock_list_branches)
+
+    response = client.get(
+        f"/api/repositories/{repo.id}/branches", **_auth(session_token)
+    )
+    assert response.status_code == 502
+
+
+# --- create pull request ---
+
+
+def _github_pr(number: int = 42) -> dict:
+    return {
+        "id": 900042,
+        "number": number,
+        "title": "Add authentication",
+        "state": "open",
+        "head": {"ref": "feature/auth"},
+        "base": {"ref": "main"},
+        "user": {"login": "octocat"},
+    }
+
+
+def test_create_pr_requires_auth(client: TestClient) -> None:
+    response = client.post(
+        "/api/repositories/1/pull-requests",
+        json={"title": "t", "head": "h", "base": "b"},
+    )
+    assert response.status_code == 401
+
+
+def test_create_pr_not_owned(
+    client: TestClient, session_token: str
+) -> None:
+    response = client.post(
+        "/api/repositories/999999/pull-requests",
+        json={"title": "t", "head": "h", "base": "b"},
+        **_auth(session_token),
+    )
+    assert response.status_code == 404
+
+
+def test_create_pr_requires_fields(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha")
+    response = client.post(
+        f"/api/repositories/{repo.id}/pull-requests",
+        json={"title": "  ", "head": "feature/auth", "base": "main"},
+        **_auth(session_token),
+    )
+    assert response.status_code == 400
+
+
+def test_create_pr_requires_installation(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha")
+    response = client.post(
+        f"/api/repositories/{repo.id}/pull-requests",
+        json={"title": "t", "head": "feature/auth", "base": "main"},
+        **_auth(session_token),
+    )
+    assert response.status_code == 400
+
+
+def test_create_pr_success_persists_and_triggers_analysis(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install(user, db_session)
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha")
+    _mock_install_token(monkeypatch)
+
+    async def mock_create_pr(token, owner, name, title, head, base, body=None):
+        return _github_pr()
+
+    monkeypatch.setattr(routes_module, "create_pull_request", mock_create_pr)
+    called = []
+
+    async def mock_run(pull_request_id):
+        called.append(pull_request_id)
+
+    monkeypatch.setattr(routes_module, "run_analysis_for_pull_request", mock_run)
+
+    response = client.post(
+        f"/api/repositories/{repo.id}/pull-requests",
+        json={"title": "Add authentication", "head": "feature/auth", "base": "main"},
+        **_auth(session_token),
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["number"] == 42
+    assert data["head_ref"] == "feature/auth"
+    assert data["base_ref"] == "main"
+
+    from quorum.database.models import PullRequest
+
+    pr = db_session.query(PullRequest).filter_by(github_id=900042).first()
+    assert pr is not None
+    assert pr.head_ref == "feature/auth"
+    assert pr.base_ref == "main"
+    assert called == [pr.id]
+
+
+def test_create_pr_github_error_returns_502(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install(user, db_session)
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha")
+    _mock_install_token(monkeypatch)
+
+    async def mock_create_pr(token, owner, name, title, head, base, body=None):
+        raise RuntimeError("GitHub rejected the PR")
+
+    monkeypatch.setattr(routes_module, "create_pull_request", mock_create_pr)
+
+    response = client.post(
+        f"/api/repositories/{repo.id}/pull-requests",
+        json={"title": "t", "head": "feature/auth", "base": "main"},
+        **_auth(session_token),
+    )
+    assert response.status_code == 502

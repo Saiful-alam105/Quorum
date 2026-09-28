@@ -180,6 +180,14 @@ export default function PullRequestDetailPage() {
             </a>
           ) : null}
         </div>
+
+        {pullRequest.head_ref && pullRequest.base_ref ? (
+          <p className="truncate font-mono text-sm text-muted-foreground">
+            {pullRequest.head_ref}
+            <span className="mx-1.5 text-foreground">→</span>
+            {pullRequest.base_ref}
+          </p>
+        ) : null}
       </div>
 
       <div className="mb-8 grid gap-4 lg:grid-cols-3">

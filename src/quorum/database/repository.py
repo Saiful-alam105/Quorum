@@ -105,11 +105,15 @@ def upsert_pull_request(
         db.add(pull_request)
 
     author = data.get("user") or {}
+    head = data.get("head") or {}
+    base = data.get("base") or {}
     pull_request.repository_id = repository.id
     pull_request.number = data.get("number", 0)
     pull_request.title = data.get("title", "")
     pull_request.author = author.get("login", "")
     pull_request.state = data.get("state", "")
+    pull_request.head_ref = head.get("ref")
+    pull_request.base_ref = base.get("ref")
     pull_request.updated_at = utcnow()
     db.commit()
     return pull_request

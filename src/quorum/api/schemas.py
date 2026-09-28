@@ -58,6 +58,8 @@ class PullRequestSummaryOut(BaseModel):
     title: str
     author: str
     state: str
+    head_ref: str | None = None
+    base_ref: str | None = None
     repository_id: int | None
     repository_full_name: str | None
     updated_at: datetime | None = None
@@ -70,6 +72,13 @@ class PullRequestSummaryOut(BaseModel):
     low_count: int = 0
     info_count: int = 0
     test_count: int = 0
+
+
+class CreatePullRequestRequest(BaseModel):
+    title: str
+    head: str
+    base: str
+    body: str | None = None
 
 
 class FindingOut(BaseModel):

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from quorum.api.schemas import (
@@ -8,6 +8,7 @@ from quorum.api.schemas import (
     ChatPostResponse,
     ConnectUrlOut,
     CoverageResultOut,
+    CreatePullRequestRequest,
     DiscoveredRepositoryOut,
     FindingOut,
     PullRequestSummaryOut,
@@ -46,10 +47,17 @@ from quorum.database.repository import (
     list_reviews_for_user,
     list_security_findings_for_run,
     list_test_runs_for_run,
+    upsert_pull_request,
 )
-from quorum.github.api import get_repositories
+from quorum.github.api import (
+    create_pull_request,
+    get_repositories,
+    list_branches,
+)
+from quorum.github.app_auth import get_installation_token
 from quorum.github.repo_sync import sync_user_repositories
 from quorum.llm.base import LLMError
+from quorum.orchestrator.runner import run_analysis_for_pull_request
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -145,6 +153,8 @@ def _pull_request_summary(pull_request: PullRequest) -> PullRequestSummaryOut:
         title=pull_request.title,
         author=pull_request.author,
         state=pull_request.state,
+        head_ref=pull_request.head_ref,
+        base_ref=pull_request.base_ref,
         repository_id=pull_request.repository_id,
         repository_full_name=(
             pull_request.repository.full_name
@@ -294,6 +304,113 @@ def read_repository_pull_requests(
         _pull_request_summary(pr)
         for pr in list_repository_pull_requests_for_user(db, repository_id, user_id)
     ]
+
+
+async def _repository_installation_token(
+    db: Session, repository: Repository, user_id: int
+) -> str:
+    user = db.get(User, user_id)
+    installation_id = user.github_installation_id if user is not None else None
+    if not installation_id:
+        raise HTTPException(
+            status_code=400,
+            detail="GitHub App is not installed for this repository",
+        )
+    try:
+        auth = await get_installation_token(
+            settings.github_app_id,
+            settings.github_app_private_key_path,
+            installation_id,
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Could not authenticate with the GitHub App",
+        )
+    token = auth.get("token")
+    if not token:
+        raise HTTPException(
+            status_code=502,
+            detail="Could not authenticate with the GitHub App",
+        )
+    return token
+
+
+@router.get("/repositories/{repository_id}/branches", response_model=list[str])
+async def read_repository_branches(
+    repository_id: int,
+    session: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),
+) -> list[str]:
+    """List the branches of a connected repository from GitHub."""
+    user_id = _current_user_id(db, session)
+    repository = get_repository_for_user(db, repository_id, user_id)
+    if repository is None:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
+    token = await _repository_installation_token(db, repository, user_id)
+    try:
+        branches = await list_branches(token, repository.owner, repository.name)
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Could not fetch branches from GitHub",
+        )
+    return sorted(branches)
+
+
+@router.post(
+    "/repositories/{repository_id}/pull-requests",
+    response_model=PullRequestSummaryOut,
+    status_code=201,
+)
+async def create_repository_pull_request(
+    repository_id: int,
+    body: CreatePullRequestRequest,
+    background_tasks: BackgroundTasks,
+    session: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),
+) -> PullRequestSummaryOut:
+    """Create a real pull request on GitHub and start Quorum analysis."""
+    user_id = _current_user_id(db, session)
+    repository = get_repository_for_user(db, repository_id, user_id)
+    if repository is None:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
+    title = body.title.strip()
+    head = body.head.strip()
+    base = body.base.strip()
+    if not title or not head or not base:
+        raise HTTPException(
+            status_code=400,
+            detail="title, head, and base are required",
+        )
+
+    token = await _repository_installation_token(db, repository, user_id)
+    try:
+        created = await create_pull_request(
+            token,
+            repository.owner,
+            repository.name,
+            title,
+            head,
+            base,
+            body.body,
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Could not create the pull request on GitHub",
+        )
+
+    pull_request = upsert_pull_request(db, created, repository)
+    if pull_request is None:
+        raise HTTPException(
+            status_code=502,
+            detail="GitHub did not return a valid pull request",
+        )
+    background_tasks.add_task(run_analysis_for_pull_request, pull_request.id)
+    return _pull_request_summary(pull_request)
 
 
 def _review_summary(run: AnalysisRun) -> ReviewSummaryOut:

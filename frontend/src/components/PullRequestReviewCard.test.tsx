@@ -12,6 +12,8 @@ const base: PullRequestSummary = {
   title: "Add authentication to the API",
   author: "octocat",
   state: "open",
+  head_ref: "feature/auth",
+  base_ref: "main",
   repository_id: 1,
   repository_full_name: "octocat/hello-world",
   updated_at: null,

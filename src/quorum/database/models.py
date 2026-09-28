@@ -63,6 +63,8 @@ class PullRequest(Base):
     title: Mapped[str] = mapped_column(String(500))
     author: Mapped[str] = mapped_column(String(255))
     state: Mapped[str] = mapped_column(String(20))
+    head_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    base_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 

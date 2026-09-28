@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom"
 
 import { AppLayout } from "@/components/AppLayout"
 import AskQuorumPage from "@/pages/AskQuorumPage"
+import CreatePullRequestPage from "@/pages/CreatePullRequestPage"
 import FindingsPage from "@/pages/FindingsPage"
 import HomePage from "@/pages/HomePage"
 import LoginPage from "@/pages/LoginPage"
@@ -28,6 +29,10 @@ export default function App() {
           <Route
             path="repositories/:repositoryId"
             element={<RepositoryDetailPage />}
+          />
+          <Route
+            path="repositories/:repositoryId/create-pr"
+            element={<CreatePullRequestPage />}
           />
           <Route path="pull-requests" element={<PullRequestsPage />} />
           <Route

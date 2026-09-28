@@ -116,6 +116,47 @@ async def get_pr_comments(token: str, owner: str, repo: str, pr_number: int) -> 
         return response.json()
 
 
+async def list_branches(token: str, owner: str, repo: str) -> list[str]:
+    """List branch names for a repository."""
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"{GITHUB_API_BASE}/repos/{owner}/{repo}/branches",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+            },
+            params={"per_page": 100},
+        )
+        response.raise_for_status()
+        return [branch.get("name", "") for branch in response.json()]
+
+
+async def create_pull_request(
+    token: str,
+    owner: str,
+    repo: str,
+    title: str,
+    head: str,
+    base: str,
+    body: str | None = None,
+) -> dict:
+    """Create a pull request on GitHub and return the created PR object."""
+    payload: dict = {"title": title, "head": head, "base": base}
+    if body:
+        payload["body"] = body
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{GITHUB_API_BASE}/repos/{owner}/{repo}/pulls",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+            },
+            json=payload,
+        )
+        response.raise_for_status()
+        return response.json()
+
+
 async def get_user_installations(token: str) -> list[dict]:
     async with httpx.AsyncClient() as client:
         response = await client.get(

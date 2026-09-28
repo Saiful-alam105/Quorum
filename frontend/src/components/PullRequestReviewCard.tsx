@@ -49,6 +49,13 @@ export function PullRequestReviewCard({
             <p className="truncate text-xs text-muted-foreground">
               {pullRequest.title}
             </p>
+            {pullRequest.head_ref && pullRequest.base_ref ? (
+              <p className="truncate font-mono text-xs text-muted-foreground">
+                {pullRequest.head_ref}
+                <span className="mx-1 text-foreground">→</span>
+                {pullRequest.base_ref}
+              </p>
+            ) : null}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">

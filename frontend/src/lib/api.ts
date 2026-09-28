@@ -21,7 +21,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   })
 
   if (!response.ok) {
-    throw new ApiError(response.status, `Request failed with status ${response.status}`)
+    let message = `Request failed with status ${response.status}`
+    try {
+      const data = (await response.json()) as { detail?: unknown }
+      if (typeof data.detail === "string" && data.detail) {
+        message = data.detail
+      }
+    } catch {
+      // ignore non-JSON error bodies
+    }
+    throw new ApiError(response.status, message)
   }
 
   return (await response.json()) as T
@@ -61,6 +70,31 @@ export function getRepositoryPullRequests(
   return request<PullRequestSummary[]>(`/api/repositories/${id}/pull-requests`)
 }
 
+export function getRepositoryBranches(id: number): Promise<string[]> {
+  return request<string[]>(`/api/repositories/${id}/branches`)
+}
+
+export type CreatePullRequestInput = {
+  title: string
+  head: string
+  base: string
+  body?: string
+}
+
+export function createPullRequest(
+  id: number,
+  input: CreatePullRequestInput,
+): Promise<PullRequestSummary> {
+  return request<PullRequestSummary>(
+    `/api/repositories/${id}/pull-requests`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  )
+}
+
 export type DiscoveredRepository = {
   id: number | null
   github_id: number
@@ -93,6 +127,8 @@ export type PullRequestSummary = {
   title: string
   author: string
   state: string
+  head_ref: string | null
+  base_ref: string | null
   repository_id: number | null
   repository_full_name: string | null
   updated_at: string | null
