@@ -1,7 +1,25 @@
-const POPUP_FEATURES = "width=720,height=800,resizable=yes,scrollbars=yes"
-
 const POLL_MS = 500
 const MAX_MS = 3 * 60 * 1000
+
+function popupFeatures(): string {
+  const width = Math.max(400, Math.round(window.screen.availWidth * 0.92))
+  const height = Math.max(400, Math.round(window.screen.availHeight * 0.92))
+  const left = Math.round(
+    (window.screenX ?? 0) + (window.screen.availWidth - width) / 2,
+  )
+  const top = Math.round(
+    (window.screenY ?? 0) + (window.screen.availHeight - height) / 2,
+  )
+  return [
+    `width=${width}`,
+    `height=${height}`,
+    `left=${left}`,
+    `top=${top}`,
+    "resizable=yes",
+    "scrollbars=yes",
+    "menubar=yes",
+  ].join(",")
+}
 
 /**
  * Open the GitHub App flow (install/update) in a new window, like Google's
@@ -12,7 +30,7 @@ const MAX_MS = 3 * 60 * 1000
  * Falls back to same-tab navigation when popups are blocked.
  */
 export function openGithubFlow(url: string): void {
-  const popup = window.open(url, "quorum-github-flow", POPUP_FEATURES)
+  const popup = window.open(url, "quorum-github-flow", popupFeatures())
   if (!popup) {
     window.location.href = url
     return
