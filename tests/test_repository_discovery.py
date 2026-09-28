@@ -415,3 +415,73 @@ def test_create_pr_github_error_returns_502(
         **_auth(session_token),
     )
     assert response.status_code == 502
+
+
+# --- cross-user authorization hardening ---
+
+
+def _other_user(client_ctx: User, db_session: Session) -> tuple[User, str]:
+    other = User(github_id=2, username="other")
+    db_session.add(other)
+    db_session.commit()
+    token = create_session(
+        {"github_id": 2, "username": "other", "access_token": "other-token"}
+    )
+    return other, token
+
+
+def test_user_cannot_access_another_users_repository_data(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha")
+    _, other_token = _other_user(user, db_session)
+
+    for path in (
+        f"/api/repositories/{repo.id}/branches",
+        f"/api/repositories/{repo.id}",
+    ):
+        response = client.get(path, **_auth(other_token))
+        assert response.status_code == 404
+
+
+def test_user_cannot_create_pr_on_another_users_repository(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha")
+    _, other_token = _other_user(user, db_session)
+
+    response = client.post(
+        f"/api/repositories/{repo.id}/pull-requests",
+        json={"title": "t", "head": "feature/auth", "base": "main"},
+        **_auth(other_token),
+    )
+    assert response.status_code == 404
+
+
+def test_discovery_marks_only_own_repos_connected(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _add_connected_repo(db_session, user, 201, "octocat/alpha")
+    _, other_token = _other_user(user, db_session)
+
+    async def mock_get_repositories(token: str) -> list:
+        # Both users share the same GitHub repos; only `user` has them connected.
+        return [
+            _github_repo(201, "octocat/alpha"),
+            _github_repo(202, "octocat/beta"),
+        ]
+
+    monkeypatch.setattr(routes_module, "get_repositories", mock_get_repositories)
+
+    response = client.get(
+        "/api/repositories/discover", **_auth(other_token)
+    )
+    data = response.json()
+    assert {item["full_name"]: item["connected"] for item in data} == {
+        "octocat/alpha": False,
+        "octocat/beta": False,
+    }
