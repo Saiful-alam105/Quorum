@@ -84,23 +84,23 @@ describe("CreatePullRequestPage", () => {
   it("loads branches into the source and target dropdowns", async () => {
     vi.stubGlobal("fetch", mockFetch())
     renderPage()
-    const source = await screen.findByLabelText("Source branch")
+    const source = await screen.findByLabelText("Compare")
     expect(source).toHaveValue("")
     const options = Array.from(
-      screen.getByLabelText("Target branch").querySelectorAll("option"),
+      screen.getByLabelText("Base").querySelectorAll("option"),
     ).map((option) => option.textContent)
-    expect(options).toEqual(["Select a branch…", "main", "feature/auth", "dev"])
+    expect(options).toEqual(["Select a base branch…", "main", "feature/auth", "dev"])
   })
 
   it("creates a PR and navigates to its detail page", async () => {
     vi.stubGlobal("fetch", mockFetch())
     renderPage()
-    await screen.findByLabelText("Source branch")
+    await screen.findByLabelText("Compare")
 
-    fireEvent.change(screen.getByLabelText("Source branch"), {
+    fireEvent.change(screen.getByLabelText("Compare"), {
       target: { value: "feature/auth" },
     })
-    fireEvent.change(screen.getByLabelText("Target branch"), {
+    fireEvent.change(screen.getByLabelText("Base"), {
       target: { value: "main" },
     })
     fireEvent.change(screen.getByLabelText("Title"), {
@@ -118,12 +118,12 @@ describe("CreatePullRequestPage", () => {
   it("shows an error when GitHub rejects the PR", async () => {
     vi.stubGlobal("fetch", mockFetch({ createFails: true }))
     renderPage()
-    await screen.findByLabelText("Source branch")
+    await screen.findByLabelText("Compare")
 
-    fireEvent.change(screen.getByLabelText("Source branch"), {
+    fireEvent.change(screen.getByLabelText("Compare"), {
       target: { value: "feature/auth" },
     })
-    fireEvent.change(screen.getByLabelText("Target branch"), {
+    fireEvent.change(screen.getByLabelText("Base"), {
       target: { value: "main" },
     })
     fireEvent.change(screen.getByLabelText("Title"), {

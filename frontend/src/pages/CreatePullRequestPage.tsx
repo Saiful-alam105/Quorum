@@ -139,7 +139,7 @@ export default function CreatePullRequestPage() {
         >
           <div>
             <label htmlFor="pr-source" className="mb-1 block text-sm font-medium">
-              Source branch
+              Compare
             </label>
             <select
               id="pr-source"
@@ -147,18 +147,21 @@ export default function CreatePullRequestPage() {
               onChange={(event) => setHead(event.target.value)}
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
             >
-              <option value="">Select a branch…</option>
+              <option value="">Select a compare branch…</option>
               {branches.map((branch) => (
                 <option key={branch} value={branch}>
                   {branch}
                 </option>
               ))}
             </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The branch containing your changes.
+            </p>
           </div>
 
           <div>
             <label htmlFor="pr-target" className="mb-1 block text-sm font-medium">
-              Target branch
+              Base
             </label>
             <select
               id="pr-target"
@@ -166,13 +169,16 @@ export default function CreatePullRequestPage() {
               onChange={(event) => setBase(event.target.value)}
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
             >
-              <option value="">Select a branch…</option>
+              <option value="">Select a base branch…</option>
               {branches.map((branch) => (
                 <option key={branch} value={branch}>
                   {branch}
                 </option>
               ))}
             </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The branch the changes will merge into.
+            </p>
           </div>
 
           <div>
