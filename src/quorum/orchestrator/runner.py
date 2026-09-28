@@ -26,6 +26,7 @@ from quorum.database.repository import (
     complete_analysis_run,
     create_analysis_run,
     fail_analysis_run,
+    get_active_analysis_run,
     mark_analysis_run_in_progress,
 )
 
@@ -94,6 +95,12 @@ async def run_analysis_for_pull_request(
         pull_request = session.get(PullRequest, pull_request_id)
         if pull_request is None:
             return None
+
+        # Avoid duplicate runs when both the create-PR endpoint and the
+        # GitHub "opened" webhook schedule analysis for the same PR.
+        active = get_active_analysis_run(session, pull_request_id)
+        if active is not None:
+            return active.id
 
         analysis_run = create_analysis_run(session, pull_request_id)
         mark_analysis_run_in_progress(session, analysis_run.id)

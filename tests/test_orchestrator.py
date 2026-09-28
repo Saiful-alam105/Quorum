@@ -15,7 +15,9 @@ from quorum.database.repository import (
     STATUS_COMPLETED,
     STATUS_FAILED,
     STATUS_IN_PROGRESS,
+    create_analysis_run,
     get_analysis_run,
+    mark_analysis_run_in_progress,
 )
 from quorum.orchestrator.runner import AnalysisContext, run_analysis_for_pull_request
 
@@ -140,6 +142,37 @@ class TestStageExecution:
             pr.id, db=db_session, stages=[stage_one, stage_two]
         )
         assert order == ["one", "two"]
+
+
+class TestDeduplication:
+    @pytest.mark.asyncio
+    async def test_skips_run_when_one_is_already_active(
+        self, db_session: Session
+    ) -> None:
+        _, _, pr = _create_pr_with_user(db_session)
+        active = create_analysis_run(db_session, pr.id)
+        mark_analysis_run_in_progress(db_session, active.id)
+
+        seen: list[int] = []
+
+        async def record_stage(session: Session, context: AnalysisContext) -> None:
+            seen.append(context.analysis_run_id or 0)
+
+        second = await run_analysis_for_pull_request(
+            pr.id, db=db_session, stages=[record_stage]
+        )
+        assert second == active.id
+        assert seen == []
+        assert db_session.query(AnalysisRun).count() == 1
+
+    @pytest.mark.asyncio
+    async def test_runs_again_after_completed(self, db_session: Session) -> None:
+        _, _, pr = _create_pr_with_user(db_session)
+        first = await run_analysis_for_pull_request(pr.id, db=db_session, stages=[])
+        second = await run_analysis_for_pull_request(pr.id, db=db_session, stages=[])
+        assert second is not None
+        assert second != first
+        assert db_session.query(AnalysisRun).count() == 2
 
 
 class TestFailure:

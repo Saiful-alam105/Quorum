@@ -40,6 +40,29 @@ export default function PullRequestsPage() {
     load()
   }, [load])
 
+  const silentRefresh = useCallback(() => {
+    if (state.status !== "ready") {
+      return
+    }
+    getPullRequests()
+      .then((pullRequests) => setState({ status: "ready", pullRequests }))
+      .catch(() => {})
+  }, [state.status])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        silentRefresh()
+      }
+    }, 30000)
+    const onFocus = () => silentRefresh()
+    window.addEventListener("focus", onFocus)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener("focus", onFocus)
+    }
+  }, [silentRefresh])
+
   if (state.status === "loading") {
     return (
       <div className="space-y-6">

@@ -107,6 +107,43 @@ export default function PullRequestDetailPage() {
     load()
   }, [load])
 
+  const silentRefresh = useCallback(() => {
+    if (state.status !== "ready") {
+      return
+    }
+    Promise.all([
+      getPullRequest(id),
+      getPullRequestAnalysis(id),
+      getPullRequestSecurity(id),
+      getPullRequestTests(id),
+      getPullRequestCoverage(id),
+    ])
+      .then(([pullRequest, runs, findings, tests, coverage]) =>
+        setState({ status: "ready", pullRequest, runs, findings, tests, coverage }),
+      )
+      .catch(() => {})
+  }, [id, state.status])
+
+  const activeStatus =
+    state.status === "ready" ? (state.runs[0]?.status ?? "") : ""
+  const isAnalyzing =
+    activeStatus === "pending" || activeStatus === "in_progress"
+
+  useEffect(() => {
+    const pollMs = isAnalyzing ? 8000 : 30000
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        silentRefresh()
+      }
+    }, pollMs)
+    const onFocus = () => silentRefresh()
+    window.addEventListener("focus", onFocus)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener("focus", onFocus)
+    }
+  }, [silentRefresh, isAnalyzing])
+
   const runMerge = useCallback(() => {
     setActing(true)
     setActionError(null)

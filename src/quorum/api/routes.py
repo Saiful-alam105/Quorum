@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, HTTPException, Query
 import httpx
 from sqlalchemy.orm import Session
@@ -33,6 +35,7 @@ from quorum.database.models import (
     Repository,
     SecurityFinding,
     User,
+    utcnow,
 )
 from quorum.database.repository import (
     create_chat_message,
@@ -57,6 +60,7 @@ from quorum.github.api import (
     close_pull_request,
     create_pr_comment,
     create_pull_request,
+    get_pull_request as github_get_pull_request,
     get_repositories,
     list_branches,
     merge_pull_request,
@@ -201,8 +205,45 @@ def read_pull_requests(
     return [_pull_request_summary(pr) for pr in list_pull_requests_for_user(db, user_id)]
 
 
+PR_STATE_STALE_AFTER_SECONDS = 300
+
+
+def _as_aware(dt) -> datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=utcnow().tzinfo)
+    return dt
+
+
+async def _reconcile_pull_request_state(
+    db: Session, pull_request: PullRequest, user_id: int
+) -> None:
+    """Refresh a PR's state from GitHub when the local copy is stale.
+
+    Webhooks can be missed (tunnel restarts, backend downtime), so the detail
+    view reconciles itself when the local record is old. This makes PRs that
+    were closed or merged on GitHub appear correctly without a manual refresh.
+    """
+    if pull_request.updated_at is None:
+        return
+    age = (utcnow() - _as_aware(pull_request.updated_at)).total_seconds()
+    if age < PR_STATE_STALE_AFTER_SECONDS:
+        return
+    repository = pull_request.repository
+    try:
+        token = await _pull_request_installation_token(db, pull_request, user_id)
+    except HTTPException:
+        return
+    try:
+        data = await github_get_pull_request(
+            token, repository.owner, repository.name, pull_request.number
+        )
+        upsert_pull_request(db, data, repository)
+    except Exception:
+        pass
+
+
 @router.get("/pull-requests/{pull_request_id}", response_model=PullRequestSummaryOut)
-def read_pull_request(
+async def read_pull_request(
     pull_request_id: int,
     session: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
@@ -211,6 +252,8 @@ def read_pull_request(
     pull_request = get_pull_request_for_user(db, pull_request_id, user_id)
     if pull_request is None:
         raise HTTPException(status_code=404, detail="Pull request not found")
+    await _reconcile_pull_request_state(db, pull_request, user_id)
+    pull_request = get_pull_request_for_user(db, pull_request_id, user_id) or pull_request
     return _pull_request_summary(pull_request)
 
 

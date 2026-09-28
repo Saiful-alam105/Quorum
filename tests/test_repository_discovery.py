@@ -829,3 +829,70 @@ def test_maybe_sync_runs_when_stale(
     monkeypatch.setattr(repo_sync_module, "sync_user_repositories", recording_sync)
     asyncio.run(maybe_sync_user_repositories(db_session, user))
     assert calls == [True]
+
+
+# --- pull request state reconciliation ---
+
+
+def test_read_pull_request_reconciles_stale_state(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install(user, db_session)
+    _mock_install_token(monkeypatch)
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha", pr_count=1)
+    pr = repo.pull_requests[0]
+    pr.updated_at = datetime.now(timezone.utc) - timedelta(hours=1)
+    db_session.commit()
+
+    async def mock_get_pr(token, owner, name, pr_number):
+        return {
+            "id": pr.github_id,
+            "number": pr.number,
+            "title": pr.title,
+            "state": "closed",
+            "user": {"login": "octocat"},
+            "head": {"ref": "feature/auth"},
+            "base": {"ref": "main"},
+            "merged": False,
+        }
+
+    monkeypatch.setattr(routes_module, "github_get_pull_request", mock_get_pr)
+
+    response = client.get(f"/api/pull-requests/{pr.id}", **_auth(session_token))
+    assert response.status_code == 200
+    assert response.json()["state"] == "closed"
+    db_session.refresh(pr)
+    assert pr.state == "closed"
+
+
+def test_read_pull_request_skips_reconcile_when_fresh(
+    client: TestClient,
+    db_session: Session,
+    user: User,
+    session_token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install(user, db_session)
+    _mock_install_token(monkeypatch)
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha", pr_count=1)
+    pr = repo.pull_requests[0]
+    pr.updated_at = datetime.now(timezone.utc)
+    db_session.commit()
+
+    called = False
+
+    async def mock_get_pr(token, owner, name, pr_number):
+        nonlocal called
+        called = True
+        return {}
+
+    monkeypatch.setattr(routes_module, "github_get_pull_request", mock_get_pr)
+
+    response = client.get(f"/api/pull-requests/{pr.id}", **_auth(session_token))
+    assert response.status_code == 200
+    assert response.json()["state"] == "open"
+    assert called is False

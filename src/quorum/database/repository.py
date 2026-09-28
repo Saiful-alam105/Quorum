@@ -324,6 +324,21 @@ def create_analysis_run(
     return analysis_run
 
 
+def get_active_analysis_run(
+    db: Session, pull_request_id: int
+) -> AnalysisRun | None:
+    """Return an in-flight (pending or running) analysis for a pull request."""
+    return db.scalar(
+        select(AnalysisRun)
+        .where(
+            AnalysisRun.pull_request_id == pull_request_id,
+            AnalysisRun.status.in_([STATUS_PENDING, STATUS_IN_PROGRESS]),
+        )
+        .order_by(AnalysisRun.id.desc())
+        .limit(1)
+    )
+
+
 def get_analysis_run(db: Session, analysis_run_id: int) -> AnalysisRun | None:
     return db.get(AnalysisRun, analysis_run_id)
 
