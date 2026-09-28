@@ -62,7 +62,10 @@ from quorum.github.api import (
     merge_pull_request,
 )
 from quorum.github.app_auth import get_installation_token
-from quorum.github.repo_sync import sync_user_repositories
+from quorum.github.repo_sync import (
+    maybe_sync_user_repositories,
+    sync_user_repositories,
+)
 from quorum.llm.base import LLMError
 from quorum.orchestrator.runner import run_analysis_for_pull_request
 
@@ -116,7 +119,7 @@ async def read_repositories(
     user_id = _current_user_id(db, session)
     user = db.get(User, user_id)
     if user is not None:
-        await sync_user_repositories(db, user)
+        await maybe_sync_user_repositories(db, user)
     return [
         _repository_out(repo)
         for repo in list_repositories_for_user(db, user_id)
@@ -372,7 +375,7 @@ async def discover_repositories(
     user = db.get(User, user_id)
     if user is not None:
         try:
-            await sync_user_repositories(db, user)
+            await maybe_sync_user_repositories(db, user)
         except Exception:
             pass
 

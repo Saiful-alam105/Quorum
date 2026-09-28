@@ -1,3 +1,6 @@
+import asyncio
+from datetime import datetime, timedelta, timezone
+
 import httpx
 import pytest
 from fastapi.testclient import TestClient
@@ -12,7 +15,7 @@ from quorum.auth.sessions import create_session
 from quorum.database.base import Base, get_db
 from quorum.database.models import PullRequest, Repository, User
 from quorum.database.repository import get_repository_by_full_name
-from quorum.github.repo_sync import sync_user_repositories
+from quorum.github.repo_sync import maybe_sync_user_repositories, sync_user_repositories
 from quorum.main import app
 
 
@@ -791,3 +794,38 @@ def test_close_conflict_returns_409(
     )
     assert response.status_code == 409
     assert "Cannot close" in response.json()["detail"]
+
+
+# --- sync throttling ---
+
+
+def test_maybe_sync_skips_fresh_sync(
+    db_session: Session, user: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user.repos_synced_at = datetime.now(timezone.utc)
+    db_session.commit()
+    calls: list[bool] = []
+
+    async def recording_sync(db, usr, clear_exclusions=False):
+        calls.append(True)
+        return True
+
+    monkeypatch.setattr(repo_sync_module, "sync_user_repositories", recording_sync)
+    asyncio.run(maybe_sync_user_repositories(db_session, user))
+    assert calls == []
+
+
+def test_maybe_sync_runs_when_stale(
+    db_session: Session, user: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user.repos_synced_at = datetime.now(timezone.utc) - timedelta(minutes=5)
+    db_session.commit()
+    calls: list[bool] = []
+
+    async def recording_sync(db, usr, clear_exclusions=False):
+        calls.append(True)
+        return True
+
+    monkeypatch.setattr(repo_sync_module, "sync_user_repositories", recording_sync)
+    asyncio.run(maybe_sync_user_repositories(db_session, user))
+    assert calls == [True]

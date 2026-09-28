@@ -33,6 +33,9 @@ class User(Base):
     excluded_repositories: Mapped[list[str]] = mapped_column(
         JSON, default=list
     )
+    repos_synced_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     chat_messages: Mapped[list["ChatMessage"]] = relationship(back_populates="user")
