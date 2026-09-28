@@ -13,12 +13,8 @@ import { EmptyState } from "@/components/EmptyState"
 import { ErrorState } from "@/components/ErrorState"
 import { SignInRequired } from "@/components/SignInRequired"
 import { Skeleton } from "@/components/ui/Skeleton"
-import {
-  getConnectUrl,
-  getDiscoveredRepositories,
-  isUnauthorized,
-  type DiscoveredRepository,
-} from "@/lib/api"
+import { getConnectUrl, getDiscoveredRepositories, isUnauthorized, type DiscoveredRepository } from "@/lib/api"
+import { openGithubFlow } from "@/lib/githubFlow"
 import { cn } from "@/lib/utils"
 
 type Filter = "all" | "connected" | "needs"
@@ -199,7 +195,7 @@ export default function RepositoriesPage() {
     setConnectError(null)
     getConnectUrl()
       .then(({ install_url }) => {
-        window.location.href = install_url
+        openGithubFlow(install_url)
       })
       .catch((error: unknown) => {
         setConnecting(false)
@@ -277,7 +273,7 @@ export default function RepositoriesPage() {
       ) : null}
 
       {disconnectedResult === "1" ? (
-        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-success/40 bg-success/10 px-4 py-3 text-sm text-success">
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-severity-critical/40 bg-severity-critical/10 px-4 py-3 text-sm text-severity-critical">
           <span>Repository disconnected successfully.</span>
           <button
             type="button"

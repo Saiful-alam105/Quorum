@@ -24,6 +24,7 @@ import {
   type PullRequestSummary,
   type Repository,
 } from "@/lib/api"
+import { openGithubFlow } from "@/lib/githubFlow"
 
 type PageState =
   | { status: "loading" }
@@ -86,7 +87,7 @@ export default function RepositoryDetailPage() {
     unconnectRepository(id)
       .then((result) => {
         if (result.install_url) {
-          window.location.href = result.install_url
+          openGithubFlow(result.install_url)
         } else {
           navigate("/repositories")
         }
