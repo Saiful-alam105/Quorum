@@ -64,8 +64,12 @@ export function getRepository(id: number): Promise<Repository> {
   return request<Repository>(`/api/repositories/${id}`)
 }
 
-export function unconnectRepository(id: number): Promise<Repository> {
-  return request<Repository>(`/api/repositories/${id}/unconnect`, {
+export type UnconnectResult = {
+  install_url: string | null
+}
+
+export function unconnectRepository(id: number): Promise<UnconnectResult> {
+  return request<UnconnectResult>(`/api/repositories/${id}/unconnect`, {
     method: "POST",
   })
 }

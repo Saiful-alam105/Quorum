@@ -124,6 +124,7 @@ export default function RepositoriesPage() {
   const [connectError, setConnectError] = useState<string | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const connectedResult = searchParams.get("connected")
+  const disconnectedResult = searchParams.get("disconnected")
 
   const load = useCallback(() => {
     setState({ status: "loading" })
@@ -172,11 +173,11 @@ export default function RepositoriesPage() {
   }, [silentRefresh])
 
   useEffect(() => {
-    if (connectedResult === "1") {
+    if (connectedResult === "1" || disconnectedResult === "1") {
       const timer = setTimeout(load, 800)
       return () => clearTimeout(timer)
     }
-  }, [connectedResult, load])
+  }, [connectedResult, disconnectedResult, load])
 
   const visible = useMemo(() => {
     if (state.status !== "ready") {
@@ -211,6 +212,7 @@ export default function RepositoriesPage() {
   const dismissResult = () => {
     const next = new URLSearchParams(searchParams)
     next.delete("connected")
+    next.delete("disconnected")
     setSearchParams(next, { replace: true })
   }
 
@@ -263,6 +265,34 @@ export default function RepositoriesPage() {
       {connectedResult === "0" ? (
         <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-severity-critical/40 bg-severity-critical/10 px-4 py-3 text-sm text-severity-critical">
           <span>Could not connect the repository. Please try again.</span>
+          <button
+            type="button"
+            onClick={dismissResult}
+            aria-label="Dismiss"
+            className="inline-flex h-6 w-6 items-center justify-center rounded transition-colors hover:bg-accent"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
+
+      {disconnectedResult === "1" ? (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-success/40 bg-success/10 px-4 py-3 text-sm text-success">
+          <span>Repository disconnected successfully.</span>
+          <button
+            type="button"
+            onClick={dismissResult}
+            aria-label="Dismiss"
+            className="inline-flex h-6 w-6 items-center justify-center rounded transition-colors hover:bg-accent"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
+
+      {disconnectedResult === "0" ? (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-severity-critical/40 bg-severity-critical/10 px-4 py-3 text-sm text-severity-critical">
+          <span>Could not disconnect the repository. Please try again.</span>
           <button
             type="button"
             onClick={dismissResult}

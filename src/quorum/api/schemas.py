@@ -40,6 +40,10 @@ class ConnectUrlOut(BaseModel):
     install_url: str
 
 
+class UnconnectOut(BaseModel):
+    install_url: str | None = None
+
+
 class PullRequestOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

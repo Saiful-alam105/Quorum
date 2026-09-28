@@ -185,11 +185,31 @@ async def install_callback(
             user.github_installation_id = installation_id
             db.commit()
             if settings.github_app_id and settings.github_app_private_key_path:
+                if user.expects_disconnect:
+                    # The user is coming back from removing repository access
+                    # on GitHub: keep their intentional disconnects and report
+                    # the outcome as a disconnect.
+                    await sync_user_repositories(
+                        db, user, clear_exclusions=False
+                    )
+                    user.expects_disconnect = False
+                    db.commit()
+                    return RedirectResponse(
+                        url=f"{frontend}/repositories?disconnected=1",
+                        status_code=302,
+                    )
                 await sync_user_repositories(db, user, clear_exclusions=True)
             return RedirectResponse(
                 url=f"{frontend}/repositories?connected=1", status_code=302
             )
         except Exception:
+            if user is not None and user.expects_disconnect:
+                user.expects_disconnect = False
+                db.commit()
+                return RedirectResponse(
+                    url=f"{frontend}/repositories?disconnected=0",
+                    status_code=302,
+                )
             return RedirectResponse(
                 url=f"{frontend}/repositories?connected=0", status_code=302
             )

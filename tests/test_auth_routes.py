@@ -247,6 +247,49 @@ def test_install_callback_saves_installation(
     assert user.github_installation_id == 555
 
 
+def test_install_callback_disconnect_flow_redirects_disconnected(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    mock_github_config: None,
+) -> None:
+    monkeypatch.setattr(config_module.settings, "github_app_id", "test-app-id")
+    monkeypatch.setattr(
+        config_module.settings, "github_app_private_key_path", "test-key.pem"
+    )
+    db_session.add(
+        User(
+            github_id=12345,
+            username="testuser",
+            github_installation_id=555,
+            expects_disconnect=True,
+        )
+    )
+    db_session.commit()
+    token = create_session({"github_id": 12345, "username": "testuser"})
+
+    calls: list[bool] = []
+
+    async def recording_sync(db, usr, clear_exclusions=False):
+        calls.append(clear_exclusions)
+        return True
+
+    monkeypatch.setattr(routes_module, "sync_user_repositories", recording_sync)
+
+    response = client.get(
+        "/auth/install-callback?installation_id=555",
+        cookies={"session": token},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "/repositories?disconnected=1" in response.headers["location"]
+
+    # Disconnect flow must NOT clear intentional disconnects.
+    assert calls == [False]
+    user = db_session.scalar(select(User).where(User.github_id == 12345))
+    assert user is not None
+    assert user.expects_disconnect is False
+
+
 def test_install_callback_without_installation_returns_failed(
     db_session: Session,
 ) -> None:

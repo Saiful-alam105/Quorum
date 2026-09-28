@@ -84,7 +84,13 @@ export default function RepositoryDetailPage() {
     setDisconnecting(true)
     setDisconnectError(null)
     unconnectRepository(id)
-      .then(() => navigate("/repositories"))
+      .then((result) => {
+        if (result.install_url) {
+          window.location.href = result.install_url
+        } else {
+          navigate("/repositories")
+        }
+      })
       .catch((error: unknown) => {
         setDisconnecting(false)
         setDisconnectError(

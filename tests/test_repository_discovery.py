@@ -472,6 +472,23 @@ def test_unconnect_detaches_repository(
     assert discovered[0]["connected"] is False
 
 
+def test_unconnect_returns_github_manage_url_when_installed(
+    client: TestClient, db_session: Session, user: User, session_token: str
+) -> None:
+    _install(user, db_session)
+    repo = _add_connected_repo(db_session, user, 201, "octocat/alpha")
+
+    response = client.post(
+        f"/api/repositories/{repo.id}/unconnect", **_auth(session_token)
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "install_url": "https://github.com/settings/installations/555"
+    }
+    db_session.refresh(user)
+    assert user.expects_disconnect is True
+
+
 def test_unconnect_is_remembered_as_exclusion(
     client: TestClient, db_session: Session, user: User, session_token: str
 ) -> None:

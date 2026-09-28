@@ -22,6 +22,7 @@ from quorum.api.schemas import (
     ReviewSummaryOut,
     SecurityFindingOut,
     TestRunOut,
+    UnconnectOut,
     UserOut,
 )
 from quorum.auth.sessions import get_session
@@ -536,17 +537,19 @@ async def _repository_installation_token(
 
 @router.post(
     "/repositories/{repository_id}/unconnect",
-    response_model=RepositoryOut,
+    response_model=UnconnectOut,
 )
 def unconnect_repository(
     repository_id: int,
     session: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
-) -> RepositoryOut:
-    """Disconnect a repository from the current user (keeps the DB row).
+) -> UnconnectOut:
+    """Disconnect a repository from the current user.
 
-    The disconnect is remembered so automatic re-syncs with GitHub do not
-    re-attach the repository until the user explicitly connects it again.
+    Detaches locally, remembers the disconnect so re-syncs do not re-attach
+    it, and returns the GitHub App installation page so the user can remove
+    repository access there too. When GitHub redirects back, Quorum shows the
+    "disconnected" confirmation.
     """
     user_id = _current_user_id(db, session)
     repository = get_repository_for_user(db, repository_id, user_id)
@@ -557,7 +560,16 @@ def unconnect_repository(
         exclude_repository(db, user, repository.full_name)
     repository.user_id = None
     db.commit()
-    return _repository_out(repository)
+
+    install_url = None
+    if user is not None and user.github_installation_id is not None:
+        user.expects_disconnect = True
+        db.commit()
+        install_url = (
+            f"https://github.com/settings/installations/"
+            f"{user.github_installation_id}"
+        )
+    return UnconnectOut(install_url=install_url)
 
 
 @router.get("/repositories/{repository_id}/branches", response_model=list[str])

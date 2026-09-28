@@ -36,6 +36,7 @@ class User(Base):
     repos_synced_at: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True
     )
+    expects_disconnect: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     chat_messages: Mapped[list["ChatMessage"]] = relationship(back_populates="user")
