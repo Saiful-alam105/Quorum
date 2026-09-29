@@ -434,13 +434,29 @@ async def synthesize_stage(
     coverage_after = (
         context.coverage.coverage_after if context.coverage is not None else None
     )
+    has_python_changes = any(
+        file.status in (STATUS_ADDED, STATUS_MODIFIED, STATUS_RENAMED)
+        and file.path.endswith(".py")
+        for file in context.changed_files
+    )
+    # Docs-only / non-code PRs (no changed Python files) have no tests or
+    # coverage to measure, so those deductions are not applicable.
+    skip_non_code = bool(context.changed_files) and not has_python_changes
     result = compute_merge_readiness_score(
         context.security_findings,
         context.test_results,
         coverage_after,
+        skip_non_code_deductions=skip_non_code,
     )
     context.merge_readiness = result
-    set_merge_readiness_score(session, context.analysis_run_id, result.score)
+    set_merge_readiness_score(
+        session,
+        context.analysis_run_id,
+        result.score,
+        security_deduction=result.security_deduction,
+        test_deduction=result.test_deduction,
+        coverage_deduction=result.coverage_deduction,
+    )
     logger.info(
         "merge readiness for %s/%s#%s: %d (%s)",
         context.owner,

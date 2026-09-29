@@ -460,13 +460,21 @@ def create_coverage_result(
 
 
 def set_merge_readiness_score(
-    db: Session, analysis_run_id: int, score: int
+    db: Session,
+    analysis_run_id: int,
+    score: int,
+    security_deduction: int | None = None,
+    test_deduction: int | None = None,
+    coverage_deduction: int | None = None,
 ) -> AnalysisRun | None:
-    """Store the Merge Readiness Score on an analysis run."""
+    """Store the Merge Readiness Score (and its breakdown) on an analysis run."""
     analysis_run = db.get(AnalysisRun, analysis_run_id)
     if analysis_run is None:
         return None
     analysis_run.merge_readiness_score = score
+    analysis_run.security_deduction = security_deduction
+    analysis_run.test_deduction = test_deduction
+    analysis_run.coverage_deduction = coverage_deduction
     db.commit()
     return analysis_run
 

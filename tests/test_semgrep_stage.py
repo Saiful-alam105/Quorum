@@ -1,4 +1,6 @@
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -6,6 +8,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
+from quorum.analysis import semgrep as semgrep_module
 from quorum.database.base import Base
 from quorum.database.models import (
     AnalysisRun,
@@ -80,6 +83,22 @@ def _create_pr_with_user(db: Session) -> tuple[User, Repository, PullRequest]:
     db.add(pr)
     db.commit()
     return user, repo, pr
+
+
+def test_run_semgrep_falls_back_to_python_dash_m(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        if cmd[0] == "semgrep":
+            raise FileNotFoundError("semgrep not on PATH")
+        return subprocess.CompletedProcess(cmd, 0, stdout='{"results": []}', stderr="")
+
+    monkeypatch.setattr(semgrep_module.subprocess, "run", fake_run)
+    result = semgrep_module.run_semgrep("/tmp/scan")
+    assert result == '{"results": []}'
+    assert len(calls) == 2
+    assert calls[1][:3] == [sys.executable, "-m", "semgrep"]
 
 
 def _build_context(

@@ -79,11 +79,21 @@ def compute_merge_readiness_score(
     security_findings,
     test_outcomes,
     coverage_after: float | None,
+    skip_non_code_deductions: bool = False,
 ) -> MergeReadinessResult:
-    """Compute the deterministic Merge Readiness Score from the evidence."""
+    """Compute the deterministic Merge Readiness Score from the evidence.
+
+    When ``skip_non_code_deductions`` is set (the pull request changed no
+    Python files, e.g. docs-only), the test and coverage deductions are not
+    applicable and are skipped so a clean docs PR is not penalized.
+    """
     security = _security_deduction(security_findings)
-    tests = _test_deduction(test_outcomes)
-    coverage = _coverage_deduction(coverage_after)
+    tests = (
+        0 if skip_non_code_deductions else _test_deduction(test_outcomes)
+    )
+    coverage = (
+        0 if skip_non_code_deductions else _coverage_deduction(coverage_after)
+    )
     score = max(0, min(100, 100 - security - tests - coverage))
     return MergeReadinessResult(
         score=score,

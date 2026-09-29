@@ -6,6 +6,7 @@ from sqlalchemy.pool import StaticPool
 from quorum.agents.security_agent import SecurityAgentFinding
 from quorum.agents.synthesis import SynthesisError
 from quorum.agents.test_runner import STATUS_PASSED, TestOutcome
+from quorum.analysis.diff import STATUS_MODIFIED, ChangedFile
 from quorum.database.base import Base
 from quorum.database.models import CoverageResult, PullRequest, Repository, User
 from quorum.database.repository import create_analysis_run
@@ -93,6 +94,9 @@ class TestSynthesizeStage:
         assert context.merge_readiness.coverage_deduction == 0
         db_session.refresh(run)
         assert run.merge_readiness_score == 80
+        assert run.security_deduction == 20
+        assert run.test_deduction == 0
+        assert run.coverage_deduction == 0
 
     @pytest.mark.asyncio
     async def test_empty_evidence_still_scores(self, db_session: Session) -> None:
@@ -118,6 +122,26 @@ class TestSynthesizeStage:
 
         assert context.merge_readiness is not None
         assert context.merge_readiness.coverage_deduction == 10
+
+    @pytest.mark.asyncio
+    async def test_docs_only_skips_test_and_coverage_deductions(
+        self, db_session: Session
+    ) -> None:
+        pr = _create_pr_with_user(db_session)
+        run = create_analysis_run(db_session, pr.id)
+        context = _context(run.id)
+        context.changed_files = [ChangedFile(path="README.md", status=STATUS_MODIFIED)]
+
+        await synthesize_stage(db_session, context)
+
+        assert context.merge_readiness is not None
+        assert context.merge_readiness.score == 100
+        assert context.merge_readiness.test_deduction == 0
+        assert context.merge_readiness.coverage_deduction == 0
+        db_session.refresh(run)
+        assert run.merge_readiness_score == 100
+        assert run.test_deduction == 0
+        assert run.coverage_deduction == 0
 
     @pytest.mark.asyncio
     async def test_missing_run_id_raises(self, db_session: Session) -> None:

@@ -60,24 +60,32 @@ def _coverage_text(coverage: CoverageResult | None) -> str:
 
 
 def _score_text(review: AnalysisRun) -> str:
-    """Explain a review's Merge Readiness score using the stored evidence.
+    """Explain a review's Merge Readiness score.
 
-    The score is deterministic (see ``quorum.agents.synthesis``): 100 minus
-    the security, test, and coverage deductions. Recomputing the breakdown
-    from the stored findings/tests/coverage lets the assistant explain why a
-    score is what it is instead of guessing.
+    Uses the deduction breakdown stored at synthesis time when available
+    (including docs-only PRs that skipped test/coverage deductions), otherwise
+    recomputes it from the stored evidence.
     """
     score = review.merge_readiness_score
     if score is None:
         return "Merge Readiness: not scored"
-    security = _security_deduction(review.security_findings)
-    tests = _test_deduction(review.test_runs)
-    coverage_after = (
-        review.coverage_results[0].coverage_after
-        if review.coverage_results
-        else None
-    )
-    coverage = _coverage_deduction(coverage_after)
+    if (
+        review.security_deduction is not None
+        and review.test_deduction is not None
+        and review.coverage_deduction is not None
+    ):
+        security = review.security_deduction
+        tests = review.test_deduction
+        coverage = review.coverage_deduction
+    else:
+        security = _security_deduction(review.security_findings)
+        tests = _test_deduction(review.test_runs)
+        coverage_after = (
+            review.coverage_results[0].coverage_after
+            if review.coverage_results
+            else None
+        )
+        coverage = _coverage_deduction(coverage_after)
     breakdown = f"{100} - {security} (security findings) - {tests} (tests) - {coverage} (coverage)"
     return (
         f"Merge Readiness: {score}/100 ({recommendation_for(score)}). "

@@ -227,6 +227,24 @@ def test_build_review_context_explains_score(
     )
 
 
+def test_build_review_context_uses_stored_deductions(
+    db_session: Session, user: User
+) -> None:
+    repo = _add_repository(db_session, user)
+    pull_request = _add_pull_request(db_session, repo)
+    run = _add_run(db_session, pull_request, score=100)
+    run.security_deduction = 0
+    run.test_deduction = 0
+    run.coverage_deduction = 0
+    db_session.commit()
+
+    context = build_review_context(run)
+    assert (
+        "Score breakdown: 100 - 0 (security findings) - 0 (tests) - 0 (coverage) = 100"
+        in context
+    )
+
+
 def test_build_chat_prompt_is_grounded(
     db_session: Session, user: User
 ) -> None:

@@ -11,6 +11,7 @@ back to real Semgrep evidence.
 
 import json
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path, PurePath
 from typing import Awaitable, Callable
@@ -130,6 +131,44 @@ def parse_semgrep_json(raw: str, path_prefix: str = "") -> list[SemgrepFinding]:
     return findings
 
 
+def _semgrep_base_command(ruleset: str) -> list[str]:
+    command = ["semgrep", "scan", "--json"]
+    for config in ruleset.split():
+        if config:
+            command += ["--config", config]
+    return command
+
+
+def _run_with_fallback(command: list[str], timeout_seconds: int) -> subprocess.CompletedProcess:
+    """Run the semgrep command, falling back to ``python -m semgrep``.
+
+    Semgrep is frequently installed only inside the active virtualenv
+    (``pip install semgrep``), which exposes it as ``python -m semgrep`` but
+    not necessarily as a bare ``semgrep`` executable on PATH.
+    """
+    try:
+        return subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=timeout_seconds,
+            check=False,
+        )
+    except FileNotFoundError:
+        if command[0] == "semgrep":
+            fallback = [sys.executable, "-m", "semgrep", *command[1:]]
+            return subprocess.run(
+                fallback,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=timeout_seconds,
+                check=False,
+            )
+        raise
+
+
 def run_semgrep(
     scan_dir: str | Path,
     ruleset: str | None = None,
@@ -139,26 +178,17 @@ def run_semgrep(
 
     Missing binary, timeout, and non-zero exit codes raise
     :class:`SemgrepError`. The ruleset and timeout default to the configured
-    values.
+    values. Falls back to ``python -m semgrep`` when the ``semgrep``
+    executable is not on PATH.
     """
     resolved_ruleset = settings.semgrep_ruleset if ruleset is None else ruleset
     resolved_timeout = (
         settings.semgrep_timeout_seconds if timeout_seconds is None else timeout_seconds
     )
-    command = ["semgrep", "scan", "--json"]
-    for config in resolved_ruleset.split():
-        if config:
-            command += ["--config", config]
+    command = _semgrep_base_command(resolved_ruleset)
     command.append(str(scan_dir))
     try:
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=resolved_timeout,
-            check=False,
-        )
+        result = _run_with_fallback(command, resolved_timeout)
     except FileNotFoundError as exc:
         raise SemgrepError("semgrep executable not found") from exc
     except subprocess.TimeoutExpired as exc:

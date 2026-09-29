@@ -87,6 +87,9 @@ class AnalysisRun(Base):
     pull_request_id: Mapped[int] = mapped_column(ForeignKey("pull_requests.id"), index=True)
     status: Mapped[str] = mapped_column(String(20), default="pending")
     merge_readiness_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    security_deduction: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    test_deduction: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    coverage_deduction: Mapped[int | None] = mapped_column(Integer, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
