@@ -27,10 +27,14 @@ function Find-Cloudflared {
 }
 
 function Read-TunnelUrl {
-    if (-not (Test-Path $log)) { return $null }
-    $match = Get-Content $log -ErrorAction SilentlyContinue |
-        Select-String -Pattern $urlPattern | Select-Object -First 1
-    if ($match) { return $match.Matches[0].Value }
+    $targets = @()
+    if (Test-Path $log) { $targets += $log }
+    if (Test-Path $logErr) { $targets += $logErr }
+    foreach ($file in $targets) {
+        $match = Get-Content $file -ErrorAction SilentlyContinue |
+            Select-String -Pattern $urlPattern | Select-Object -First 1
+        if ($match) { return $match.Matches[0].Value }
+    }
     return $null
 }
 
