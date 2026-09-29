@@ -62,6 +62,12 @@ style: |
     border: 1px solid #2a3040;
     padding: 0.35em 0.7em;
   }
+  section.benchmark table {
+    font-size: 13px;
+    width: auto;
+    margin-left: auto;
+    margin-right: auto;
+  }
   a {
     color: #a594f9;
   }
@@ -138,18 +144,19 @@ style: |
 ---
 
 <!-- Slide 4: Benchmark vs other PR review apps -->
-# Benchmark — vs Other PR Review Apps
+<!-- _class: benchmark -->
+# Quorum vs Other PR Review Apps
 
-| Capability | Quorum | GitHub Copilot | CodeRabbit | Codacy |
-|---|---|---|---|---|
-| AI review comments | ✅ | ✅ | ✅ | ❌ |
-| Security scanning (Semgrep rules) | ✅ | ❌ | ✅ | ✅ |
-| Generates tests | ✅ | ❌ | ❌ | ❌ |
-| Runs tests in a secure sandbox | ✅ | ❌ | ❌ | ❌ |
-| Measures test coverage | ✅ | ❌ | ❌ | ❌ |
-| Deterministic 0–100 Merge Readiness score | ✅ | ❌ | ❌ | ❌ |
-| Merge / close PRs from the app | ✅ | ❌ | ❌ | ❌ |
-| Evidence-grounded review chatbot | ✅ | ❌ | ❌ | ❌ |
+| Capability | Quorum | GitHub Copilot | CodeRabbit | Codacy | Qodo (PR-Agent) |
+|---|---|---|---|---|---|
+| AI review comments | ✅ | ✅ | ✅ | ❌ | ✅ |
+| Security scanning (Semgrep rules) | ✅ | ❌ | ✅ | ✅ | ✅ |
+| Generates tests | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Runs tests in a secure sandbox | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Measures test coverage | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Deterministic 0–100 Merge Readiness score | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Merge / close PRs from the app | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Evidence-grounded review chatbot | ✅ | ❌ | ❌ | ❌ | ❌ |
 
 ---
 
