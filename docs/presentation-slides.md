@@ -26,7 +26,7 @@ style: |
 <!-- Slide 1: Title / Team -->
 # Quorum
 
-![Quorum logo](./frontend/public/favicon.svg)
+![Quorum logo](../frontend/public/favicon.svg)
 
 ### AI-Powered GitHub Pull Request Reviewer
 
