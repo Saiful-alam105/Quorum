@@ -63,10 +63,14 @@ style: |
     padding: 0.35em 0.7em;
   }
   section.benchmark table {
-    font-size: 13px;
+    font-size: 16px;
     width: auto;
     margin-left: auto;
     margin-right: auto;
+  }
+  section.benchmark th,
+  section.benchmark td {
+    padding: 0.45em 0.9em;
   }
   a {
     color: #a594f9;
