@@ -53,15 +53,14 @@ style: |
   th {
     background: #1b1f2a;
     color: #a594f9;
-    border: 1px solid #262b38;
+    border: 1px solid #2a3040;
     padding: 0.35em 0.7em;
   }
   td {
-    border: 1px solid #262b38;
+    background: #12151c;
+    color: #e8ecf3;
+    border: 1px solid #2a3040;
     padding: 0.35em 0.7em;
-  }
-  tr:nth-child(even) td {
-    background: #171a23;
   }
   a {
     color: #a594f9;
