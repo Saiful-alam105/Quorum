@@ -4,26 +4,89 @@ theme: default
 paginate: true
 style: |
   section {
-    font-family: "Segoe UI", Arial, sans-serif;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background:
+      radial-gradient(1100px 500px at 100% 0%, rgba(139, 124, 240, 0.20), transparent 60%),
+      radial-gradient(900px 450px at 0% 100%, rgba(62, 207, 110, 0.10), transparent 55%),
+      linear-gradient(160deg, #0b0d12 0%, #12141c 100%);
+    color: #e8ecf3;
+  }
+  section::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, #8b7cf0 0%, #3ecf6e 100%);
+  }
+  section::after {
+    color: #5b6474;
+    font-size: 14px;
   }
   h1 {
-    color: #0f766e;
+    color: #a594f9;
+    text-shadow: 0 0 28px rgba(139, 124, 240, 0.35);
   }
   h2 {
-    color: #0f766e;
-    border-bottom: 3px solid #0f766e;
-    padding-bottom: 6px;
+    color: #a594f9;
+    border-bottom: 2px solid #262b38;
+    padding-bottom: 0.25em;
   }
-  table {
-    font-size: 20px;
+  strong {
+    color: #ffffff;
+  }
+  em {
+    color: #cfd7e3;
   }
   blockquote {
-    color: #134e4a;
-    font-style: italic;
+    background: #151823;
+    border-left: 4px solid #3ecf6e;
+    border-radius: 6px;
+    padding: 0.6em 1em;
+    color: #cfd7e3;
+  }
+  table {
+    border-collapse: collapse;
+    background: #12151c;
+  }
+  th {
+    background: #1b1f2a;
+    color: #a594f9;
+    border: 1px solid #262b38;
+    padding: 0.35em 0.7em;
+  }
+  td {
+    border: 1px solid #262b38;
+    padding: 0.35em 0.7em;
+  }
+  tr:nth-child(even) td {
+    background: #171a23;
+  }
+  a {
+    color: #a594f9;
+  }
+  code {
+    background: #1b1f2a;
+    color: #7ee2a8;
+    padding: 0 0.25em;
+    border-radius: 4px;
+  }
+  section.lead {
+    justify-content: center;
+    text-align: center;
+  }
+  section.lead h1 {
+    font-size: 2.6em;
+  }
+  section.lead table {
+    margin: 0 auto;
+    text-align: left;
   }
 ---
 
 <!-- Slide 1: Title / Team -->
+<!-- _class: lead -->
 # Quorum
 
 ![Quorum logo](../frontend/public/favicon.svg)
@@ -117,6 +180,7 @@ style: |
 ---
 
 <!-- Slide 7: Thank You -->
+<!-- _class: lead -->
 # Thank You!
 
 **Quorum** — evidence-based Pull Request reviews, from 0 to 100.
