@@ -104,8 +104,8 @@ style: |
 
 ---
 
-<!-- Slide 2: Introduction -->
-# Introduction
+<!-- Slide 2: Problem & Solution -->
+# Problem & Solution
 
 **The problem**
 - Merging code is risky — hidden bugs, security vulnerabilities, broken tests
@@ -137,17 +137,19 @@ style: |
 
 ---
 
-<!-- Slide 4: What's different from other PR review apps -->
-# What's Different from Other PR Review Apps
+<!-- Slide 4: Benchmark vs other PR review apps -->
+# Benchmark — vs Other PR Review Apps
 
-| Other AI reviewers | Quorum |
-|--------------------|--------|
-| Just post an AI comment | **Generates & runs real tests**, measures **coverage** |
-| LLM decides a score | **Deterministic 0–100 score** with exact breakdown |
-| Findings can be hallucinated | Every finding maps to **real Semgrep evidence** |
-| Only comments on GitHub | **Full workflow app** — connect, create, merge, close |
-| Run code on your machine | Runs in a **hardened, sandboxed Docker container** |
-| Generic chatbot | Chatbot grounded **only in that review's evidence** |
+| Capability | Quorum | GitHub Copilot | CodeRabbit | Codacy |
+|---|---|---|---|---|
+| AI review comments | ✅ | ✅ | ✅ | ❌ |
+| Security scanning (Semgrep rules) | ✅ | ❌ | ✅ | ✅ |
+| Generates tests | ✅ | ❌ | ❌ | ❌ |
+| Runs tests in a secure sandbox | ✅ | ❌ | ❌ | ❌ |
+| Measures test coverage | ✅ | ❌ | ❌ | ❌ |
+| Deterministic 0–100 Merge Readiness score | ✅ | ❌ | ❌ | ❌ |
+| Merge / close PRs from the app | ✅ | ❌ | ❌ | ❌ |
+| Evidence-grounded review chatbot | ✅ | ❌ | ❌ | ❌ |
 
 ---
 
