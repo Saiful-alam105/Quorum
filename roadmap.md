@@ -301,9 +301,9 @@ This section reflects the actual repository state (verified against the source, 
 | --- | --- |
 | Phase 0 — Project Setup | Partially implemented (repository, Python environment, FastAPI backend, README/roadmap, `.env.example`, `.gitignore`, `requirements.txt` exist; Docker sandbox image built; CI not yet set up) |
 | Phase 1 — FastAPI Skeleton | Implemented and tested (`GET /`, `GET /health`, `POST /webhooks/github`) |
-| Phase 2 — GitHub App + Authentication | Implemented; OAuth login/callback/me/logout and App private-key/JWT verified manually against GitHub; webhook signature covered by automated tests (live webhook delivery via tunnel not yet exercised) |
+| Phase 2 — GitHub App + Authentication | Implemented; OAuth login/callback/me/logout and App private-key/JWT verified manually against GitHub; webhook signature covered by automated tests and live webhook delivery exercised through a Cloudflare quick tunnel |
 | Phase 3 — GitHub API Layer | Implemented (all 9 functions) with mocked tests; consumed by the analysis pipeline |
-| Phase 4 — PostgreSQL | Implemented and verified against local PostgreSQL (migration `303b9ed314cd` applied; tables/PKs/FKs confirmed) |
+| Phase 4 — PostgreSQL | Implemented and verified against local PostgreSQL (migrations applied through head `f4a5b6c7d8e9`; tables/PKs/FKs confirmed) |
 | Phase 5 — Orchestrator | Implemented (runner, STAGES registry, lifecycle; webhook scheduling) |
 | Phase 6 — Diff + AST Analysis | Implemented (diff parsing, GitHub diff service, Python AST extraction: modified functions/classes with arguments, decorators, source ranges, surrounding source; orchestrator stage). "Relevant existing tests" extraction remains a later-phase item |
 | Phase 7 — Context Window Management | Implemented (representation, sizing, prioritization, truncation, orchestrator stage) |
@@ -321,6 +321,20 @@ This section reflects the actual repository state (verified against the source, 
 | Phase 19 — Hardening + Final Demo | ✅ Completed — hardening tests (webhook signature, auth isolation, chat prompt-injection defense, oversized-context truncation) and a live demo runbook; the backup demo video is a manual presentation step |
 
 **Execution order:** Phase 16 (Web Dashboard) was implemented **early**, in parallel with the remaining backend work, after PostgreSQL (Phase 4), on the `feature/web-dashboard` branch, and merged into `main`. It remains conceptually Phase 16. The public landing page is part of the Phase 16 web experience. See the note in §16.
+
+### Post-Phase 19 — GitHub workflow enhancements
+
+All roadmap phases are complete. The following repository/workflow upgrade was added on top of the finished product:
+
+- **Repository discovery** — `GET /api/repositories/discover` lists the user's GitHub repositories with Connected status (search/filter UI).
+- **Connect / disconnect flow** — one-click Connect opens the GitHub App install page in a centered popup; Disconnect opens the installation manage page; the install-callback returns with a green "connected" (or red "disconnected") banner. Disconnects are remembered in `users.excluded_repositories` so throttled auto-syncs do not re-attach them, while re-granting on GitHub or redoing the connect flow reconnects.
+- **Repository workspace** — per-repository Pull Request list plus a Create-PR entry point.
+- **Create PR from Quorum** — Base/Compare selectors with GitHub-style auto-suggested titles; creates a real PR on GitHub and starts analysis.
+- **Merge / close PRs from Quorum** — `POST /api/pull-requests/{id}/merge` (optional merge message) and `/close`; PR state is reconciled from GitHub on stale reads so manual closes/merges on GitHub appear automatically.
+- **Live sync** — the Repositories page force-syncs from GitHub (`?force=1`) on view; dashboard/background polls use a throttled sync (`users.repos_synced_at`); the PR detail page polls while analysis runs so results appear without a manual refresh.
+- **Duplicate-analysis guard** — the orchestrator skips a new run when one is already pending/in_progress (the create-PR endpoint and GitHub's `opened` webhook both schedule).
+- **Robustness fixes** — Semgrep falls back to `python -m semgrep` when the CLI is not on PATH; docs-only PRs skip test/coverage deductions; the score breakdown is persisted (`analysis_runs` security/test/coverage deductions) and included in the Ask Quorum context so the chatbot can explain scores.
+- **Ops tooling** — `scripts/start-tunnel.ps1` (Cloudflare quick tunnel + webhook auto-sync) and `scripts/sync_github_webhook.py`; the GitHub App **Setup URL** points to `http://localhost:5173/auth/install-callback`.
 
 ## Phase 0 — Project Setup (Day 1)
 
@@ -381,7 +395,7 @@ works and `/health` returns HTTP 200.
 
 # Phase 2 — GitHub App + Authentication (Days 4–8)
 
-> **Status:** Implemented. GitHub OAuth login (`/auth/login`, `/auth/callback`, `/auth/me`, `/auth/logout`), App private-key loading, and JWT generation were manually verified against GitHub. Webhook signature verification is covered by automated tests; live webhook delivery via a tunnel is not yet exercised. Repository authorization is partially implemented — login identifies the user, but the App↔repository access surface is not yet exposed to the dashboard.
+> **Status:** Implemented. GitHub OAuth login (`/auth/login`, `/auth/callback`, `/auth/me`, `/auth/logout`), App private-key loading, and JWT generation were manually verified against GitHub. Webhook signature verification is covered by automated tests, and live webhook delivery was exercised through a Cloudflare quick tunnel. Repository authorization is implemented — login identifies the user and the App↔repository access surface is exposed to the dashboard (discovery, connect/disconnect).
 
 Implement:
 
@@ -445,7 +459,7 @@ The backend can authenticate, read repositories/PRs, and post a test PR comment.
 
 # Phase 4 — PostgreSQL (Days 12–14)
 
-> **Status:** Implemented and verified — SQLAlchemy models for all 8 tables, Alembic migration `303b9ed314cd`, and webhook persistence exist. The migration was applied to a local PostgreSQL instance; tables, primary keys, and foreign keys were confirmed. PostgreSQL runs locally on port 5432.
+> **Status:** Implemented and verified — SQLAlchemy models for all 8 tables, Alembic migrations (head `f4a5b6c7d8e9`), and webhook persistence exist. The migrations were applied to a local PostgreSQL instance; tables, primary keys, and foreign keys were confirmed. PostgreSQL runs locally on port 5432.
 
 Create initial models for:
 
@@ -862,7 +876,7 @@ Rules:
 
 # Phase 16 — Quorum Web Dashboard (Days 53–58)
 
-> **Execution-order note:** Phase 16 was implemented **early**, in parallel with the remaining backend work, after PostgreSQL (Phase 4), on the `feature/web-dashboard` branch (merged into `main`). It remains conceptually Phase 16 — the dashboard is a required MVP feature and the visual control center for the pipeline. The authenticated dashboard (Dashboard, Repositories, Repository detail, Pull Requests, PR review details, Review History, Review detail, Findings, Profile, Settings) and the public landing page are complete. The Ask Quorum UI is a placeholder page; the chatbot backend is deferred to Phase 17.
+> **Execution-order note:** Phase 16 was implemented **early**, in parallel with the remaining backend work, after PostgreSQL (Phase 4), on the `feature/web-dashboard` branch (merged into `main`). It remains conceptually Phase 16 — the dashboard is a required MVP feature and the visual control center for the pipeline. The authenticated dashboard (Dashboard, Repositories, Repository detail, Pull Requests, PR review details, Review History, Review detail, Findings, Profile, Settings) and the public landing page are complete. Ask Quorum is fully implemented (grounded chat backend + floating chat + `/ask-quorum` page).
 
 The dashboard is now a required MVP feature.
 

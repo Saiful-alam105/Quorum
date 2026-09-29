@@ -16,7 +16,9 @@ Quorum reviews Pull Requests with specialized AI agents (static-analysis evidenc
 - Computes a deterministic **Merge Readiness Score** (0–100) from measured evidence.
 - Stores results in **PostgreSQL** and posts a review summary back to GitHub.
 - Provides an authenticated **React web dashboard** with repositories, Pull Requests, findings, Review History, and Settings.
-- **Ask Quorum** (chatbot) is planned: the UI placeholder exists; the grounded chat backend is not yet implemented.
+- Connects/disconnects **GitHub repositories** and creates Pull Requests directly from the dashboard (Base + Compare with auto-suggested titles).
+- **Merges and closes** Pull Requests from the dashboard, with an optional merge message.
+- **Ask Quorum** — an evidence-grounded chatbot for each review (floating chat + full page) that explains findings, tests, coverage, and the Merge Readiness Score breakdown.
 
 ## How Users Use Quorum
 
@@ -129,13 +131,13 @@ The landing page and dashboard share the same dark, GitHub-inspired visual langu
 
 A dark, developer-focused interface centered on repositories and Pull Requests:
 
-- **Dashboard** — overview metrics and recent Pull Requests, findings, and reviews
-- **Repositories** — connected repositories and per-repository Pull Requests
-- **Pull Requests** — PR list and a detailed review page (status, findings, tests, coverage, Merge Readiness Score)
+- **Dashboard** — overview metrics, your repositories, and PRs needing attention
+- **Repositories** — discover, connect, and disconnect GitHub repositories; open a repository workspace
+- **Pull Requests** — PR list and a detailed review page (status, findings, tests, coverage, Merge Readiness Score) with Merge/Close actions
 - **Findings** — security findings across repositories with severity information
 - **Review History** — every analysis run Quorum has produced
 - **Settings** — GitHub account, connected repositories, sign out
-- **Ask Quorum** — placeholder page (chatbot not implemented yet)
+- **Ask Quorum** — evidence-grounded chatbot for any review
 
 ## Getting Started
 
@@ -216,14 +218,6 @@ cd frontend
 npm test
 npm run build
 ```
-
-## Current Status
-
-- **Phase 0–14 — complete:** FastAPI skeleton, GitHub App + OAuth, GitHub API layer, PostgreSQL, orchestrator, diff/AST, context management, Semgrep, LLM layer, Security Agent, Docker sandbox, Test Writer, Merge Readiness synthesis, GitHub review comment.
-- **Phase 15 (dashboard backend API) — complete:** user-scoped read APIs for repositories, Pull Requests, analysis/security/tests/coverage, reviews, findings, and grounded chat.
-- **Phase 16 (web dashboard + Ask Quorum) — complete:** the public landing page, the authenticated dashboard (Dashboard, Repositories, Pull Requests, Findings, Review History, Profile, Settings), and the Ask Quorum assistant (grounded chat backend, floating chat, and full `/ask-quorum` page with structured Markdown responses) are all implemented.
-- **Phase 18 (evaluation harness) — complete:** `evaluation/` provides deterministic security precision/recall/F1, test-pass-rate, and coverage metrics over a labeled PR dataset, plus an offline runner.
-- **Phase 19 (hardening + demo) — complete:** hardening tests (webhook signature, auth isolation, chat prompt-injection defense, oversized-context truncation) and a live demo runbook.
 
 ## Documentation
 
