@@ -154,12 +154,14 @@ style: |
 <!-- Slide 5: Git / Timeline (show live git while presenting) -->
 # Git — Timeline & Contribution
 
-**Project timeline:** Aug 8 → Sep 29, 2026 (~7 weeks) · **196 commits**
+**Project timeline:** Aug 8 → Sep 29, 2026 (~7 weeks) · **203 commits**
 
 | Member | Commits | Main contribution |
 |--------|---------|-------------------|
-| **Saiful Alam** | 165 | Backend architecture, GitHub App/OAuth, AI pipeline (Semgrep, sandbox, scoring), dashboard, webhooks |
+| **Saiful Alam** | 172 | Backend architecture, GitHub App/OAuth, AI pipeline (Semgrep, sandbox, scoring), dashboard, webhooks |
 | **Sabbir Ahmed** | 11 | Documentation, demo checklists, architecture & project-update docs |
+
+**Repo:** [github.com/Saiful-alam105/Quorum](https://github.com/Saiful-alam105/Quorum)
 
 *Live demo: `git log`, GitHub Insights → Contributors*
 
