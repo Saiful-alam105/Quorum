@@ -156,10 +156,8 @@ style: |
 
 **Project timeline:** Aug 8 → Sep 29, 2026 (~7 weeks) · **203 commits**
 
-| Member | Commits | Main contribution |
-|--------|---------|-------------------|
-| **Saiful Alam** | 172 | Backend architecture, GitHub App/OAuth, AI pipeline (Semgrep, sandbox, scoring), dashboard, webhooks |
-| **Sabbir Ahmed** | 11 | Documentation, demo checklists, architecture & project-update docs |
+- **Saiful Alam** — 172 commits: backend architecture, GitHub App/OAuth, AI pipeline (Semgrep, sandbox, scoring), dashboard, webhooks
+- **Sabbir Ahmed** — 11 commits: documentation, demo checklists, architecture & project-update docs
 
 **Repo:** [github.com/Saiful-alam105/Quorum](https://github.com/Saiful-alam105/Quorum)
 
