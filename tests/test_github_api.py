@@ -53,7 +53,7 @@ class TestGetRepositories:
             {"id": 2, "name": "repo2", "full_name": "user/repo2"},
         ]
 
-        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+        with patch("quorum.github.app_auth.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.__aenter__.return_value = mock_client
@@ -69,7 +69,7 @@ class TestGetRepositories:
 
     @pytest.mark.asyncio
     async def test_get_repositories_empty(self, mock_token):
-        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+        with patch("quorum.github.app_auth.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.__aenter__.return_value = mock_client
@@ -88,7 +88,7 @@ class TestGetAuthenticatedUser:
             "login": "octocat",
         }
 
-        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+        with patch("quorum.github.app_auth.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.__aenter__.return_value = mock_client
@@ -113,7 +113,7 @@ class TestGetRepository:
             "private": False,
         }
 
-        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+        with patch("quorum.github.app_auth.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.__aenter__.return_value = mock_client
@@ -139,7 +139,7 @@ class TestGetPullRequest:
             "state": "open",
         }
 
-        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+        with patch("quorum.github.app_auth.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.__aenter__.return_value = mock_client
@@ -170,7 +170,7 @@ class TestGetPrFiles:
             {"filename": "file2.py", "status": "added", "additions": 20, "deletions": 0},
         ]
 
-        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+        with patch("quorum.github.app_auth.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.__aenter__.return_value = mock_client
@@ -202,7 +202,7 @@ index 1234567..abcdefg 100644
  line2
  line3"""
 
-        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+        with patch("quorum.github.app_auth.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.__aenter__.return_value = mock_client
@@ -225,7 +225,7 @@ class TestGetFileContents:
         encoded = base64.b64encode(content.encode("utf-8")).decode("utf-8")
         mock_response = {"content": encoded, "encoding": "base64"}
 
-        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+        with patch("quorum.github.app_auth.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.__aenter__.return_value = mock_client
@@ -251,7 +251,7 @@ class TestGetFileContents:
     ):
         mock_response = {"content": "", "encoding": "base64"}
 
-        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+        with patch("quorum.github.app_auth.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.__aenter__.return_value = mock_client
@@ -271,7 +271,7 @@ class TestGetUserInstallations:
             "installations": [{"id": 555, "account": {"login": "octocat"}}],
         }
 
-        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+        with patch("quorum.github.app_auth.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.__aenter__.return_value = mock_client
@@ -302,7 +302,7 @@ class TestGetInstallationRepositories:
             ],
         }
 
-        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+        with patch("quorum.github.app_auth.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.__aenter__.return_value = mock_client
@@ -343,7 +343,7 @@ class TestGetPrComments:
             },
         ]
 
-        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+        with patch("quorum.github.app_auth.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.__aenter__.return_value = mock_client
@@ -374,7 +374,7 @@ class TestCreatePrComment:
             "user": {"login": "quorum-bot"},
         }
 
-        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+        with patch("quorum.github.app_auth.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.__aenter__.return_value = mock_client
@@ -412,7 +412,7 @@ class TestCreatePrComment:
             "body": comment_body,
         }
 
-        with patch("quorum.github.api.httpx.AsyncClient") as mock_client_class:
+        with patch("quorum.github.app_auth.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.__aenter__.return_value = mock_client

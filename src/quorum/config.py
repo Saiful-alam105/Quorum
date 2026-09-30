@@ -16,6 +16,10 @@ class Settings:
         self.github_redirect_uri: str = os.getenv(
             "GITHUB_REDIRECT_URI", "http://localhost:8000/auth/callback"
         )
+        self.github_timeout_seconds: int = int(
+            os.getenv("GITHUB_TIMEOUT_SECONDS", "30")
+        )
+        self.github_retries: int = int(os.getenv("GITHUB_RETRIES", "3"))
         self.frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
         self.database_url: str = os.getenv(
             "DATABASE_URL", "postgresql+psycopg://postgres:postgres@localhost:5432/quorum"
