@@ -156,3 +156,5 @@ cloned_repos/
 
 # Sandbox temporary files
 sandbox/tmp/
+# reference preview for report diagrams (do not commit)
+report/preview.png
