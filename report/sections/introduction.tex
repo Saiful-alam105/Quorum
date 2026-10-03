@@ -1,0 +1,82 @@
+\subsection{What Quorum Is}
+
+Quorum is an AI-powered GitHub Pull Request review system. It is a web
+application that automatically analyzes pull requests opened in a GitHub
+repository, produces a deterministic Merge Readiness Score, and presents the
+results in a web dashboard with an evidence-grounded question-answering
+assistant called \emph{Ask Quorum}. The system is implemented as a Python /
+FastAPI backend, a React/TypeScript frontend, and a PostgreSQL database, and
+it integrates with GitHub through a GitHub App, OAuth authentication, and
+webhooks.
+
+\subsection{The Problem Addressed}
+
+Reviewing a pull request manually is time-consuming and error-prone. A
+reviewer must inspect the changed code, look for security problems, estimate
+whether the change might break existing behaviour, and form an opinion about
+whether the change is safe to merge. This judgement is often based on
+subjective impressions rather than measured evidence, and it is easy to miss
+a security issue or a failing test. The conventional review process also
+requires the reviewer to either write and run tests manually or trust the
+author's claims.
+
+\subsection{What Quorum Automates}
+
+Quorum automates the evidence-gathering part of code review. When a pull
+request event reaches the backend, the orchestrator runs a review pipeline
+that:
+
+\begin{itemize}
+  \item extracts and parses the pull request diff and the changed Python
+        files (diff and AST analysis);
+  \item runs the \textbf{Semgrep} static analysis tool over the changed files
+        to obtain security evidence;
+  \item passes the Semgrep findings and code context to a \textbf{Security
+        Agent} (an LLM-driven agent) which reasons over the evidence and
+        produces structured, evidence-traceable security findings;
+  \item uses a \textbf{Test Writer Agent} to generate \texttt{pytest} tests
+        for the modified functions;
+  \item executes the generated tests inside an isolated, hardened
+        \textbf{Docker sandbox} and measures code coverage before and after;
+  \item combines the security, test, and coverage results into a
+        deterministic \textbf{Merge Readiness Score} from 0 to 100;
+  \item persists the results in PostgreSQL and posts a concise review summary
+        back to the pull request on GitHub.
+\end{itemize}
+
+\subsection{How the Result Helps Developers}
+
+The Merge Readiness Score is deterministic: the same evidence always produces
+the same score, and the breakdown (security findings, generated tests, and
+coverage) is stored with the analysis. A developer can therefore look at a
+pull request and immediately understand both the score and the reasons behind
+it, rather than relying on an unverifiable subjective opinion. The dashboard
+shows security findings with evidence, generated test outcomes, coverage
+deltas, and the score for each pull request, and the Ask Quorum assistant
+answers questions about a specific review using only that review's stored
+evidence.
+
+\subsection{The Role of the Dashboard}
+
+The React dashboard is the visual control centre for the pipeline. It allows a
+signed-in user to discover and connect GitHub repositories, open a repository
+workspace, create and manage pull requests (including creating, merging, and
+closing them from Quorum), view per-pull-request analysis results, review
+history, security findings, and settings, and ask questions about a review.
+
+\subsection{Project Objective}
+
+The overall objective of the project is to provide an end-to-end,
+evidence-based pull request review tool that helps developers assess whether a
+change is safe to merge. The project demonstrates the combination of static
+security analysis, LLM-driven reasoning, automated test generation, sandboxed
+test execution, coverage measurement, and deterministic result synthesis, all
+presented through a multi-user web application integrated with GitHub.
+
+\subsection{Implementation Status}
+
+All planned roadmap phases (Phase 0 through Phase 19) are implemented. The
+LLM layer is active through the OpenAI provider; a local \texttt{Ollama}
+provider exists in the codebase but is not currently used. Components that are
+planned but not yet implemented (such as an automated CI pipeline and a backup
+demo video) are noted in the project documentation as future work.

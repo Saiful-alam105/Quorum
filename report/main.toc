@@ -1,0 +1,48 @@
+\contentsline {section}{\numberline {1}Project Introduction / Objective}{4}{section.1}%
+\contentsline {subsection}{\numberline {1.1}What Quorum Is}{4}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}The Problem Addressed}{4}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}What Quorum Automates}{4}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}How the Result Helps Developers}{4}{subsection.1.4}%
+\contentsline {subsection}{\numberline {1.5}The Role of the Dashboard}{5}{subsection.1.5}%
+\contentsline {subsection}{\numberline {1.6}Project Objective}{5}{subsection.1.6}%
+\contentsline {subsection}{\numberline {1.7}Implementation Status}{5}{subsection.1.7}%
+\contentsline {section}{\numberline {2}Functional Requirements}{5}{section.2}%
+\contentsline {subsection}{\numberline {2.1}A. Authentication and Authorization}{5}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}B. GitHub Integration}{6}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}C. Repository Management}{6}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}D. Pull Request Processing}{6}{subsection.2.4}%
+\contentsline {subsection}{\numberline {2.5}E. Automated Analysis Pipeline}{6}{subsection.2.5}%
+\contentsline {subsection}{\numberline {2.6}F. Security Analysis}{7}{subsection.2.6}%
+\contentsline {subsection}{\numberline {2.7}G. Test Generation and Execution}{7}{subsection.2.7}%
+\contentsline {subsection}{\numberline {2.8}H. Analysis Results and Scoring}{7}{subsection.2.8}%
+\contentsline {subsection}{\numberline {2.9}I. Dashboard}{7}{subsection.2.9}%
+\contentsline {subsection}{\numberline {2.10}J. Ask Quorum}{8}{subsection.2.10}%
+\contentsline {subsection}{\numberline {2.11}K. Review History}{8}{subsection.2.11}%
+\contentsline {subsection}{\numberline {2.12}L. Settings and Profile}{8}{subsection.2.12}%
+\contentsline {section}{\numberline {3}Scope of the Project}{8}{section.3}%
+\contentsline {subsection}{\numberline {3.1}In Scope}{8}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Out of Scope}{9}{subsection.3.2}%
+\contentsline {section}{\numberline {4}Technology Stack}{10}{section.4}%
+\contentsline {subsection}{\numberline {4.1}LLM Configuration}{10}{subsection.4.1}%
+\contentsline {section}{\numberline {5}Software Architecture}{11}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Overview}{11}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Component Description}{11}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Why the Backend Is the System Boundary}{12}{subsection.5.3}%
+\contentsline {section}{\numberline {6}User Flow}{12}{section.6}%
+\contentsline {subsection}{\numberline {6.1}High-Level User Flow}{12}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Step-by-Step Explanation}{14}{subsection.6.2}%
+\contentsline {section}{\numberline {7}Use Case Definition}{14}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Actors}{14}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Use Case Diagram}{14}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Use Case Definitions}{15}{subsection.7.3}%
+\contentsline {subsubsection}{\numberline {7.3.1}UC-01 --- Authenticate with GitHub}{15}{subsubsection.7.3.1}%
+\contentsline {subsubsection}{\numberline {7.3.2}UC-02 --- Connect / Disconnect Repository}{15}{subsubsection.7.3.2}%
+\contentsline {subsubsection}{\numberline {7.3.3}UC-03 --- View Repositories / Workspace}{16}{subsubsection.7.3.3}%
+\contentsline {subsubsection}{\numberline {7.3.4}UC-04 --- View Pull Requests}{16}{subsubsection.7.3.4}%
+\contentsline {subsubsection}{\numberline {7.3.5}UC-05 --- Create Pull Request}{16}{subsubsection.7.3.5}%
+\contentsline {subsubsection}{\numberline {7.3.6}UC-06 --- Merge / Close Pull Request}{16}{subsubsection.7.3.6}%
+\contentsline {subsubsection}{\numberline {7.3.7}UC-07 --- View Analysis Results}{17}{subsubsection.7.3.7}%
+\contentsline {subsubsection}{\numberline {7.3.8}UC-08 --- View Review History}{17}{subsubsection.7.3.8}%
+\contentsline {subsubsection}{\numberline {7.3.9}UC-09 --- Ask Quorum}{17}{subsubsection.7.3.9}%
+\contentsline {subsubsection}{\numberline {7.3.10}UC-10 --- Settings / Sign Out}{17}{subsubsection.7.3.10}%
+\contentsline {section}{\numberline {8}UI Screenshots}{17}{section.8}%

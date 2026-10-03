@@ -1,0 +1,210 @@
+The functional requirements below describe the behaviour that is currently
+implemented in the Quorum codebase. Each requirement is identified by a code
+(\texttt{FR-NN}) and its implementation status is stated explicitly. Nothing
+is listed here that is not actually implemented.
+
+\subsection{A. Authentication and Authorization}
+
+\begin{longtable}{@{}p{1.4cm}p{11.6cm}p{2.0cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Requirement} & \textbf{Status} \\
+\midrule
+\endhead
+FR-01 & The system shall allow a user to sign in using GitHub OAuth through the
+\emph{Continue with GitHub} flow. & Implemented \\
+FR-02 & The system shall create a server-side session after a successful OAuth
+callback and clear it on logout. & Implemented \\
+FR-03 & The system shall expose the current user's profile through
+\texttt{GET /api/me}. & Implemented \\
+FR-04 & The system shall accept the GitHub App installation callback
+(\texttt{GET /auth/install-callback}) to record the installation and return
+the user to Quorum with a connection result. & Implemented \\
+\bottomrule
+\end{longtable}
+
+\subsection{B. GitHub Integration}
+
+\begin{longtable}{@{}p{1.4cm}p{11.6cm}p{2.0cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Requirement} & \textbf{Status} \\
+\midrule
+\endhead
+FR-05 & The system shall verify every GitHub webhook request using the HMAC
+SHA-256 signature (\texttt{X-Hub-Signature-256}). & Implemented \\
+FR-06 & The system shall handle \texttt{pull\_request} webhook events
+(\texttt{opened}, \texttt{reopened}, \texttt{synchronize}, \texttt{closed}),
+persist the pull request, and schedule analysis in the background. & Implemented \\
+FR-07 & The system shall use the GitHub App installation token for
+installation-scoped GitHub API calls. & Implemented \\
+FR-08 & The system shall post a concise review summary comment back to the pull
+request on GitHub after analysis. & Implemented \\
+FR-09 & The system shall create real pull requests on GitHub from the Quorum
+dashboard (\texttt{POST /api/repositories/\{id\}/pull-requests}). & Implemented \\
+FR-10 & The system shall merge and close pull requests on GitHub from the
+Quorum dashboard, with an optional merge message. & Implemented \\
+\bottomrule
+\end{longtable}
+
+\subsection{C. Repository Management}
+
+\begin{longtable}{@{}p{1.4cm}p{11.6cm}p{2.0cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Requirement} & \textbf{Status} \\
+\midrule
+\endhead
+FR-11 & The system shall list the user's GitHub repositories with their
+connected status (\texttt{GET /api/repositories/discover}). & Implemented \\
+FR-12 & The system shall connect and disconnect repositories through the
+GitHub App installation flow, using a popup and confirmation banners. & Implemented \\
+FR-13 & The system shall remember intentional disconnects so that automatic
+re-syncs do not re-attach a repository. & Implemented \\
+FR-14 & The system shall provide a per-repository workspace page that lists the
+repository's pull requests and offers a create-pull-request entry point. & Implemented \\
+\bottomrule
+\end{longtable}
+
+\subsection{D. Pull Request Processing}
+
+\begin{longtable}{@{}p{1.4cm}p{11.6cm}p{2.0cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Requirement} & \textbf{Status} \\
+\midrule
+\endhead
+FR-15 & The system shall list the branches of a connected repository
+(\texttt{GET /api/repositories/\{id\}/branches}). & Implemented \\
+FR-16 & The create-pull-request form shall let the user choose a Base and a
+Compare branch and shall auto-suggest a title from the compare branch. & Implemented \\
+FR-17 & The system shall reconcile a pull request's state from GitHub when the
+stored copy is stale, so that pull requests closed or merged on GitHub appear
+correctly in Quorum. & Implemented \\
+\bottomrule
+\end{longtable}
+
+\subsection{E. Automated Analysis Pipeline}
+
+\begin{longtable}{@{}p{1.4cm}p{11.6cm}p{2.0cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Requirement} & \textbf{Status} \\
+\midrule
+\endhead
+FR-18 & The system shall run the review pipeline through an orchestrator with
+registered stages and a persistent analysis-run lifecycle. & Implemented \\
+FR-19 & The system shall fetch and parse the unified diff of a pull request. & Implemented \\
+FR-20 & The system shall parse changed Python files with the standard \texttt{ast}
+module to identify modified functions and classes. & Implemented \\
+FR-21 & The system shall build a bounded, prioritized context from the changed
+files (context-window management). & Implemented \\
+\bottomrule
+\end{longtable}
+
+\subsection{F. Security Analysis}
+
+\begin{longtable}{@{}p{1.4cm}p{11.6cm}p{2.0cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Requirement} & \textbf{Status} \\
+\midrule
+\endhead
+FR-22 & The system shall run \texttt{Semgrep} over the changed files and parse
+its JSON findings into a structured evidence model. & Implemented \\
+FR-23 & The system shall run a Security Agent that reasons over the Semgrep
+evidence and the code context, and whose findings must be traceable to that
+evidence. & Implemented \\
+FR-24 & The system shall persist security findings with severity, file, line,
+evidence, and explanation. & Implemented \\
+\bottomrule
+\end{longtable}
+
+\subsection{G. Test Generation and Execution}
+
+\begin{longtable}{@{}p{1.4cm}p{11.6cm}p{2.0cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Requirement} & \textbf{Status} \\
+\midrule
+\endhead
+FR-25 & The system shall generate \texttt{pytest} tests for modified Python
+functions using a Test Writer agent, with syntax validation. & Implemented \\
+FR-26 & The system shall execute generated tests inside a hardened Docker
+sandbox (no network, memory/process limits, hard timeout, cleanup). & Implemented \\
+FR-27 & The system shall measure code coverage before and after the generated
+tests and compute the coverage delta. & Implemented \\
+\bottomrule
+\end{longtable}
+
+\subsection{H. Analysis Results and Scoring}
+
+\begin{longtable}{@{}p{1.4cm}p{11.6cm}p{2.0cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Requirement} & \textbf{Status} \\
+\midrule
+\endhead
+FR-28 & The system shall compute a deterministic Merge Readiness Score from 0
+to 100 from the security, test, and coverage evidence, without LLM
+involvement. & Implemented \\
+FR-29 & The system shall persist the score and its breakdown (security, test,
+and coverage deductions) with the analysis run. & Implemented \\
+FR-30 & For pull requests with no changed Python files (for example
+documentation-only changes), the system shall skip the test and coverage
+deductions because they are not applicable. & Implemented \\
+\bottomrule
+\end{longtable}
+
+\subsection{I. Dashboard}
+
+\begin{longtable}{@{}p{1.4cm}p{11.6cm}p{2.0cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Requirement} & \textbf{Status} \\
+\midrule
+\endhead
+FR-31 & The dashboard shall show overview metrics, the user's repositories,
+and pull requests that need attention. & Implemented \\
+FR-32 & The dashboard shall list pull requests with their latest analysis
+status and score, and link to a detailed review page. & Implemented \\
+FR-33 & The dashboard shall display security findings across repositories and
+the review history. & Implemented \\
+FR-34 & The repositories page shall force a fresh sync with GitHub when opened,
+and background pages shall auto-refresh so that new results appear without a
+manual refresh. & Implemented \\
+\bottomrule
+\end{longtable}
+
+\subsection{J. Ask Quorum}
+
+\begin{longtable}{@{}p{1.4cm}p{11.6cm}p{2.0cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Requirement} & \textbf{Status} \\
+\midrule
+\endhead
+FR-35 & The system shall provide a chat endpoint scoped to a specific review
+(\texttt{GET}/\texttt{POST /api/reviews/\{id\}/chat}). & Implemented \\
+FR-36 & The assistant shall answer only from the selected review's stored
+evidence (findings, tests, coverage, and score breakdown) and treat repository
+content as untrusted input (prompt-injection defense). & Implemented \\
+FR-37 & The system shall persist chat messages and provide a full
+\emph{Ask Quorum} page as well as a floating chat. & Implemented \\
+\bottomrule
+\end{longtable}
+
+\subsection{K. Review History}
+
+\begin{longtable}{@{}p{1.4cm}p{11.6cm}p{2.0cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Requirement} & \textbf{Status} \\
+\midrule
+\endhead
+FR-38 & The system shall list all analysis runs (reviews) with their score,
+status, findings, tests, and coverage, and provide a review detail page. & Implemented \\
+\bottomrule
+\end{longtable}
+
+\subsection{L. Settings and Profile}
+
+\begin{longtable}{@{}p{1.4cm}p{11.6cm}p{2.0cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Requirement} & \textbf{Status} \\
+\midrule
+\endhead
+FR-39 & The system shall show the user's GitHub account, connected
+repositories, and GitHub App authorization status, and allow the user to sign
+out. & Implemented \\
+\bottomrule
+\end{longtable}

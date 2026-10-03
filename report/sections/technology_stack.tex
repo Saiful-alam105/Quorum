@@ -1,0 +1,51 @@
+The table below lists the technologies actually used in the Quorum
+implementation. Each technology was verified against the repository
+(requirements files, configuration, and source code).
+
+\begin{longtable}{@{}p{3.4cm}p{5.4cm}p{6.6cm}@{}}
+\toprule
+\textbf{Layer} & \textbf{Technology} & \textbf{Usage} \\
+\midrule
+\endhead
+Backend language & Python 3.13 & Main backend, analysis, orchestration \\
+Backend framework & FastAPI & REST API and GitHub webhook server \\
+ASGI server & Uvicorn & Runs the FastAPI application \\
+Data validation & Pydantic & Request/response and model validation \\
+Database & PostgreSQL & Persistent application/review/chat data \\
+ORM & SQLAlchemy 2.0 & Database access \\
+Migrations & Alembic & Database schema migrations \\
+GitHub integration & GitHub App, OAuth, Webhooks, REST API & PR events, auth, installation access \\
+HTTP client & httpx & GitHub and LLM communication \\
+JWT & PyJWT & GitHub App authentication \\
+Static analysis & Semgrep (v1.177) & Security evidence over changed files \\
+Code analysis & Python standard \texttt{ast} & Structural analysis of changed Python code \\
+LLM interface & \texttt{LLMProvider} abstraction & Security, test, and chat reasoning \\
+LLM provider (active) & OpenAI (GPT-5.6 Terra / Luna) & Security Agent, Test Writer, Ask Quorum \\
+LLM provider (dormant) & Ollama (Qwen2.5-Coder) & Optional local fallback, not in use \\
+Test execution & Docker sandbox & Isolated execution of generated tests \\
+Sandbox image & \texttt{quorum-sandbox} & pytest + pytest-cov image \\
+Backend tests & pytest, pytest-cov & Automated backend tests \\
+Frontend & React, TypeScript & Web dashboard \\
+Frontend build & Vite & Fast development/build \\
+Styling & Tailwind CSS & UI styling \\
+UI components & shadcn-style design tokens & Reusable accessible UI components \\
+Frontend tests & Vitest, React Testing Library & Component tests \\
+Development webhook tunnel & Cloudflare Quick Tunnel & Expose local FastAPI to GitHub \\
+\bottomrule
+\end{longtable}
+
+\subsection{LLM Configuration}
+
+The LLM is accessed through a common \texttt{LLMProvider} interface so that
+no agent depends on a concrete provider. The active provider is OpenAI, with
+per-role models:
+
+\begin{itemize}
+  \item Security Agent $\rightarrow$ \texttt{gpt-5.6-terra}
+  \item Test Writer $\rightarrow$ \texttt{gpt-5.6-terra}
+  \item Ask Quorum $\rightarrow$ \texttt{gpt-5.6-luna}
+\end{itemize}
+
+A single \texttt{OPENAI\_API\_KEY} authenticates all roles and is stored only
+server-side. The \texttt{OllamaProvider} exists in the codebase as an optional
+local fallback but is not currently used.

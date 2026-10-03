@@ -1,0 +1,175 @@
+\subsection{Actors}
+
+The main actors of the system are:
+
+\begin{description}
+  \item[Developer / User] --- the primary actor. A signed-in GitHub user who
+        connects repositories, opens pull requests, and reviews analysis
+        results.
+  \item[GitHub] --- an external system that authenticates the user, hosts
+        repositories and pull requests, and delivers webhook events.
+  \item[GitHub App] --- the Quorum GitHub App installation that grants
+        repository access; it participates in repository connection.
+\end{description}
+
+Internal components (the orchestrator, the analysis agents, the sandbox, and
+PostgreSQL) are not treated as actors; they are implementation services that
+run inside the Quorum system.
+
+\subsection{Use Case Diagram}
+
+Figure~\ref{fig:usecase} shows the use case model. All use cases are supported
+by the current implementation.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  actor/.style={draw, circle, minimum size=0.9cm, font=\small},
+  ellipse style/.style={draw=quorumviolet!70, ellipse, align=center,
+              fill=quorumviolet!6, text width=3.2cm, inner sep=3pt, font=\scriptsize},
+  arrow/.style={-{Stealth[length=2mm]}, thick},
+]
+  % Actors
+  \node[actor] (dev) at (0,0) {Developer};
+  \node[actor] (gh) at (16,0) {GitHub};
+
+  % System boundary
+  \node[draw=gray, rounded corners, dashed, minimum width=13cm,
+        minimum height=9.2cm] (system) at (8,0) {};
+  \node[font=\bfseries\small] at (8,4.2) {Quorum System};
+
+  % Use cases (ellipses) inside the boundary
+  \node[ellipse style] (uc1) at (3,3.4) {UC-01\\Authenticate with GitHub};
+  \node[ellipse style] (uc2) at (8,3.4) {UC-02\\Connect / disconnect repository};
+  \node[ellipse style] (uc3) at (13,3.4) {UC-03\\View repositories / workspace};
+  \node[ellipse style] (uc4) at (3,0) {UC-04\\View pull requests};
+  \node[ellipse style] (uc5) at (8,0) {UC-05\\Create pull request};
+  \node[ellipse style] (uc6) at (13,0) {UC-06\\Merge / close pull request};
+  \node[ellipse style] (uc7) at (3,-3.4) {UC-07\\View analysis results};
+  \node[ellipse style] (uc8) at (8,-3.4) {UC-08\\View review history};
+  \node[ellipse style] (uc9) at (13,-3.4) {UC-09\\Ask Quorum};
+  \node[ellipse style] (uc10) at (8,-6) {UC-10\\Settings / sign out};
+
+  % Developer to use cases
+  \draw[arrow] (dev) -- (uc1);
+  \draw[arrow] (dev) -- (uc2);
+  \draw[arrow] (dev) -- (uc3);
+  \draw[arrow] (dev) -- (uc4);
+  \draw[arrow] (dev) -- (uc5);
+  \draw[arrow] (dev) -- (uc6);
+  \draw[arrow] (dev) -- (uc7);
+  \draw[arrow] (dev) -- (uc8);
+  \draw[arrow] (dev) -- (uc9);
+  \draw[arrow] (dev) -- (uc10);
+
+  % GitHub to relevant use cases
+  \draw[arrow] (gh) -- (uc1);
+  \draw[arrow] (gh) -- (uc2);
+  \draw[arrow] (gh) -- (uc5);
+  \draw[arrow] (gh) -- (uc6);
+\end{tikzpicture}
+\caption{Quorum use case diagram.}
+\label{fig:usecase}
+\end{figure}
+
+\subsection{Use Case Definitions}
+
+\subsubsection{UC-01 --- Authenticate with GitHub}
+\begin{description}
+  \item[Primary actor] Developer.
+  \item[Supporting system] GitHub (OAuth).
+  \item[Goal] The developer signs in and Quorum creates a session.
+  \item[Preconditions] The developer has a GitHub account.
+  \item[Trigger] The developer clicks \emph{Continue with GitHub}.
+  \item[Main flow] The developer authorizes Quorum on GitHub; Quorum receives
+        the OAuth callback, persists the user, and creates a session.
+  \item[Postconditions] The dashboard shows the signed-in user.
+\end{description}
+
+\subsubsection{UC-02 --- Connect / Disconnect Repository}
+\begin{description}
+  \item[Primary actor] Developer.
+  \item[Supporting system] GitHub App.
+  \item[Goal] Grant (or revoke) Quorum access to a repository.
+  \item[Preconditions] The developer is signed in.
+  \item[Trigger] The developer clicks Connect or Disconnect on the
+        repositories page or workspace.
+  \item[Main flow] The GitHub App install/manage page opens in a popup; the
+        developer selects repositories and saves; GitHub redirects back and
+        Quorum syncs and shows a confirmation banner.
+  \item[Postconditions] The repository is connected (or disconnected and
+        remembered as such).
+\end{description}
+
+\subsubsection{UC-03 --- View Repositories / Workspace}
+\begin{description}
+  \item[Primary actor] Developer.
+  \item[Goal] Browse connected repositories and open a repository workspace.
+  \item[Main flow] The developer opens the Repositories page, sees connected
+        and available repositories, and opens a repository to see its pull
+        requests.
+\end{description}
+
+\subsubsection{UC-04 --- View Pull Requests}
+\begin{description}
+  \item[Primary actor] Developer.
+  \item[Goal] See the pull requests of a repository with their analysis
+        status.
+  \item[Main flow] The developer opens a repository or the Pull Requests page
+        and reviews the list.
+\end{description}
+
+\subsubsection{UC-05 --- Create Pull Request}
+\begin{description}
+  \item[Primary actor] Developer.
+  \item[Supporting system] GitHub.
+  \item[Goal] Create a real pull request on GitHub from Quorum.
+  \item[Main flow] The developer selects Base and Compare branches (a title is
+        suggested), adds a description, and submits; Quorum creates the pull
+        request on GitHub and starts analysis.
+  \item[Alternative] GitHub rejects the pull request; Quorum shows the error.
+\end{description}
+
+\subsubsection{UC-06 --- Merge / Close Pull Request}
+\begin{description}
+  \item[Primary actor] Developer.
+  \item[Supporting system] GitHub.
+  \item[Goal] Merge or close a pull request from Quorum.
+  \item[Main flow] The developer chooses Merge (optionally with a message) or
+        Close; Quorum performs the action on GitHub and the state is updated.
+  \item[Alternative] The merge fails (for example conflict); Quorum shows the
+        GitHub error.
+\end{description}
+
+\subsubsection{UC-07 --- View Analysis Results}
+\begin{description}
+  \item[Primary actor] Developer.
+  \item[Goal] See the Merge Readiness Score, security findings, generated
+        tests, and coverage for a pull request.
+  \item[Main flow] The developer opens the PR review page; the results refresh
+        automatically as analysis progresses.
+\end{description}
+
+\subsubsection{UC-08 --- View Review History}
+\begin{description}
+  \item[Primary actor] Developer.
+  \item[Goal] Review previous analyses.
+  \item[Main flow] The developer opens Review History and a previous review
+        detail.
+\end{description}
+
+\subsubsection{UC-09 --- Ask Quorum}
+\begin{description}
+  \item[Primary actor] Developer.
+  \item[Goal] Ask questions about a specific review.
+  \item[Main flow] The developer asks a question on the review; the assistant
+        answers using only that review's evidence.
+\end{description}
+
+\subsubsection{UC-10 --- Settings / Sign Out}
+\begin{description}
+  \item[Primary actor] Developer.
+  \item[Goal] View account and connection status and sign out.
+  \item[Main flow] The developer opens Settings, reviews GitHub account and
+        connected repositories, and signs out.
+\end{description}

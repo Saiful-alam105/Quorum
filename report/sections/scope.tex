@@ -1,0 +1,62 @@
+\subsection{In Scope}
+
+The current Quorum project delivers the following, all of which are implemented
+in the repository:
+
+\begin{itemize}
+  \item GitHub OAuth authentication and session management for the web
+        application.
+  \item GitHub App installation/authorization for repository access, including
+        the installation callback, repository discovery, and one-click
+        connect/disconnect flows with confirmation banners.
+  \item Repository workspaces and pull request management from the dashboard,
+        including creating pull requests (Base and Compare branches with
+        suggested titles), and merging and closing pull requests with an
+        optional merge message.
+  \item Automated pull request analysis: diff extraction, Python AST
+        analysis, bounded context management, Semgrep static security
+        scanning, an LLM-driven Security Agent, an LLM-driven Test Writer, and
+        sandboxed test execution with coverage measurement.
+  \item A deterministic Merge Readiness Score (0--100) with a persisted
+        breakdown, and an automatic GitHub review comment.
+  \item PostgreSQL persistence of users, repositories, pull requests, analysis
+        runs, security findings, test runs, coverage results, and chat
+        messages, managed through Alembic migrations.
+  \item A FastAPI REST API used by the dashboard for all reads and writes,
+        with user-level access isolation.
+  \item A React/TypeScript dashboard with landing page, dashboard,
+        repositories, repository workspace, pull requests, PR review details,
+        findings, review history, profile, settings, and Ask Quorum.
+  \item An evidence-grounded Ask Quorum assistant scoped to the selected
+        review.
+  \item An evaluation harness (\texttt{evaluation/}) with deterministic
+        metrics over a labeled pull request dataset.
+  \item A local development setup using a Cloudflare quick tunnel to receive
+        GitHub webhooks during development.
+\end{itemize}
+
+\subsection{Out of Scope}
+
+The following are explicitly outside the scope of the current project and are
+not implemented:
+
+\begin{itemize}
+  \item Replacing GitHub itself, or providing a Git hosting platform.
+  \item Replacing human code review; Quorum provides evidence and a score but
+        does not make a final merge decision for the user.
+  \item Unrestricted repository administration, such as managing collaborators
+        or repository settings.
+  \item Full IDE functionality or arbitrary in-app code editing of the
+        repository.
+  \item A general-purpose chatbot; Ask Quorum is intentionally restricted to
+        the evidence of the selected review.
+  \item Automated CI/CD pipeline configuration (a basic CI pipeline is planned
+        future work, not yet implemented).
+  \item Automated deployment to a production hosting platform.
+  \item Support for languages other than Python for test generation and
+        coverage (Semgrep scanning is language-agnostic, but the AST, test
+        writer, and coverage stages target Python).
+\end{itemize}
+
+These items are not claimed as implemented anywhere in this report; they are
+documented here so that the scope of the project is unambiguous.

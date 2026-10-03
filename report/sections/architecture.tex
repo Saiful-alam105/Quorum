@@ -1,0 +1,146 @@
+\subsection{Overview}
+
+Quorum follows a strict layered architecture. The React dashboard is a
+presentation layer that communicates \textbf{only} with the FastAPI REST API;
+it never accesses PostgreSQL, Docker, Semgrep, the LLM, or GitHub server
+secrets directly. The backend is the system boundary: it owns authentication,
+authorization, GitHub integration, database access, analysis orchestration,
+LLM calls, and sandboxed test execution.
+
+The main boundaries are:
+
+\begin{itemize}
+  \item \textbf{External systems:} GitHub (OAuth, webhooks, REST API) and the
+        Docker daemon that hosts the sandbox.
+  \item \textbf{Application components:} the FastAPI backend (auth, webhook
+        handler, REST API), the orchestrator review pipeline, and the analysis
+        services (Semgrep, LLM-based Security and Test Writer agents).
+  \item \textbf{Persistence:} PostgreSQL, accessed only by the backend.
+  \item \textbf{Frontend:} the React dashboard, connected to the backend REST
+        API only.
+\end{itemize}
+
+Figure~\ref{fig:architecture} shows the layered architecture of the
+implemented system.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  arrow/.style={-{Stealth[length=3mm]}, thick},
+  block/.style={draw=#1!70, rounded corners, fill=#1!6,
+                minimum width=2.2cm, minimum height=2.5cm},
+  label/.style={font=\scriptsize\bfseries, anchor=north, align=center},
+]
+  % ---- Main horizontal chain ----
+  \node[block=blue] (u) at (1.5,0) {};
+    \draw (1.08,0.42) rectangle (1.92,-0.16);            % screen
+    \draw (1.24,-0.24) -- (1.76,-0.24);                  % stand
+    \draw (1.36,-0.34) -- (1.64,-0.34);                  % base
+    \node[label] at (1.5,-0.5) {User /\\Browser};
+  \node[block=gray] (gh) at (4.3,0) {};
+    \draw (4.3,0.18) circle (0.36);
+    \node at (4.3,0.18) {\scriptsize\bfseries GH};
+    \node[label] at (4.3,-0.5) {GitHub};
+  \node[block=quorumviolet] (fa) at (7.1,0) {};
+    \draw (6.68,-0.24) rectangle (7.52,0.44);            % server rack
+    \draw (6.82,-0.02) -- (7.38,-0.02);
+    \draw (6.82,0.12) -- (7.38,0.12);
+    \draw (6.82,0.26) -- (7.38,0.26);
+    \node[label] at (7.1,-0.5) {FastAPI\\Backend};
+  \node[block=orange] (or) at (9.9,0) {};
+    \draw (9.9,0.12) circle (0.28);                      % gear
+    \draw (9.48,0.02) rectangle (9.62,0.22);
+    \draw (10.18,0.02) rectangle (10.32,0.22);
+    \draw (9.8,-0.2) rectangle (10.0,-0.06);
+    \draw (9.8,0.22) rectangle (10.0,0.36);
+    \node[label] at (9.9,-0.5) {Orchestrator\\Pipeline};
+  \node[block=quorumgreen!60!black] (db) at (12.7,0) {};
+    \draw (12.3,-0.22) -- (12.3,0.12);
+    \draw (13.1,-0.22) -- (13.1,0.12);
+    \draw (12.3,0.12) arc (180:360:0.4 and 0.14);
+    \draw (12.3,-0.22) arc (180:360:0.4 and 0.14);
+    \node[label] at (12.7,-0.5) {PostgreSQL};
+
+  % ---- Analysis services (below pipeline) ----
+  \node[block=orange!70!black] (sg) at (6.1,-3.8) {};
+    \draw (5.78,-1.9) -- (6.42,-1.9) -- (6.42,-2.12) -- (6.1,-2.62) -- (5.78,-2.12) -- cycle;
+    \node[label] at (6.1,-2.8) {Semgrep};
+  \node[block=orange!70!black] (llm) at (8.3,-3.8) {};
+    \draw (8.0,-2.0) rectangle (8.6,-2.6);
+    \draw (8.1,-2.1) rectangle (8.5,-2.5);
+    \node[label] at (8.3,-2.8) {OpenAI\\LLM};
+  \node[block=orange!70!black] (sb) at (10.5,-3.8) {};
+    \draw (10.2,-2.0) rectangle (10.8,-2.6);
+    \draw (10.32,-2.12) rectangle (10.68,-2.48);
+    \node[label] at (10.5,-2.8) {Docker\\Sandbox};
+
+  % ---- Dashboard (frontend) ----
+  \node[block=blue] (ui) at (1.5,-3.8) {};
+    \draw (1.08,-1.9) rectangle (1.92,-2.48);            % screen
+    \draw (1.24,-2.56) -- (1.76,-2.56);
+    \draw (1.36,-2.66) -- (1.64,-2.66);
+    \node[label] at (1.5,-2.82) {React\\Dashboard};
+
+  % ---- Arrows (main chain) ----
+  \draw[arrow] (u.east) -- node[above, font=\scriptsize]{visit} (gh.west);
+  \draw[arrow] (gh.east) -- node[above, font=\scriptsize]{OAuth, webhooks, REST} (fa.west);
+  \draw[arrow] (fa.east) -- node[above, font=\scriptsize]{BackgroundTasks} (or.west);
+  \draw[arrow] (or.east) -- node[above, font=\scriptsize]{results} (db.west);
+
+  % ---- Arrows (services up to pipeline) ----
+  \draw[arrow] (sg.north) -- (or.south west);
+  \draw[arrow] (llm.north) -- (or.south);
+  \draw[arrow] (sb.north) -- (or.south east);
+
+  % ---- Dashboard REST arrow ----
+  \draw[arrow, dashed] (ui.north) -- node[left, font=\scriptsize, pos=0.35]{REST only} (fa.south);
+\end{tikzpicture}
+\caption{Quorum architecture as an icon-block flow. The dashboard talks only to
+the FastAPI backend; analysis services are driven by the orchestrator.}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Component Description}
+
+\begin{description}
+  \item[GitHub] is the source of truth for pull requests. It delivers
+  \texttt{pull\_request} webhook events, authorizes the user through OAuth,
+  and provides installation-scoped repository access through the GitHub App.
+  \item[FastAPI Backend] exposes the OAuth flow (\texttt{/auth/*}), the
+  webhook endpoint (\texttt{POST /webhooks/github}, HMAC-verified), and the
+  dashboard REST API (\texttt{/api/*}). It enforces user-level access
+  isolation for every read and write.
+  \item[Orchestrator / Review Pipeline] runs the registered analysis stages in
+  a background task for each pull request. It creates an analysis run, marks
+  it in progress, executes the stages, and records completion or failure.
+  \item[Diff + AST] fetch and parse the pull request diff and the changed
+  Python files to identify modified functions and classes.
+  \item[Context] builds a bounded, prioritized prompt context from the changed
+  files so that the LLM never receives an entire repository.
+  \item[Semgrep] scans the changed files and produces structured JSON findings
+  that form the security evidence.
+  \item[Security Agent] (LLM) reasons over the Semgrep evidence and the code
+  context, and produces structured findings that must be traceable to the
+  evidence; it cannot invent findings.
+  \item[Test Writer Agent] (LLM) generates \texttt{pytest} tests for the
+  modified functions.
+  \item[Docker Sandbox] executes the generated tests in a hardened container
+  (no network, memory/process limits, hard timeout, guaranteed cleanup) and
+  measures coverage before and after.
+  \item[Synthesis] combines the security, test, and coverage results into the
+  deterministic Merge Readiness Score, persists it with its breakdown, and
+  builds the review comment that is posted back to GitHub.
+  \item[PostgreSQL] persists all application data; it is accessed only by the
+  backend.
+  \item[React Web Dashboard] displays data through the FastAPI REST API and
+  never accesses the database, Docker, Semgrep, the LLM, or GitHub directly.
+\end{description}
+
+\subsection{Why the Backend Is the System Boundary}
+
+All privileged operations (GitHub tokens, database access, sandbox
+execution, and LLM calls) require secrets or host access that must never be
+exposed to the browser. By enforcing that the dashboard talks only to the
+FastAPI REST API, the system keeps GitHub App tokens, the database, and the
+analysis infrastructure out of the frontend and behind a single
+authenticated boundary.

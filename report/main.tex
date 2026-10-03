@@ -1,0 +1,94 @@
+% =====================================================================
+% Quorum — Software Project Report
+% CSE 3422 Software Engineering Laboratory — Section C
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,backgrounds,fit}
+
+\definecolor{quorumviolet}{RGB}{113,96,220}
+\definecolor{quorumgreen}{RGB}{62,207,110}
+\definecolor{quorumdark}{RGB}{18,21,28}
+
+% ---------------------------------------------------------------------
+% Title page
+% ---------------------------------------------------------------------
+\title{\vspace{-1.2cm}\textbf{Quorum}\\[0.3cm]
+  \large AI-Powered GitHub Pull Request Review and Analysis System\\[0.2cm]
+  \normalsize Software Project Report\\[0.6cm]}
+\author{
+  Saiful Alam (0112320105)\\
+  Sabbir Ahmed (011222279)\\[0.5cm]
+  \normalsize CSE 3422 --- Software Engineering Laboratory, Section C\\
+  \normalsize Faculty: Zobaer Ibn Razzaque
+}
+\date{\today}
+
+% ---------------------------------------------------------------------
+% Helper: include a screenshot if present, otherwise a placeholder box
+% ---------------------------------------------------------------------
+\newcommand{\reportfigure}[4]{%
+  \begin{figure}[htbp]
+    \centering
+    \IfFileExists{screenshots/#1}{%
+      \includegraphics[width=\textwidth]{screenshots/#1}%
+    }{%
+      \fcolorbox{black!25}{black!6}{%
+        \parbox[c][6cm][c]{0.92\textwidth}{%
+          \centering\itshape Screenshot placeholder ---\\ #2}}%
+    }
+    \caption{#2 --- #4}\label{#3}
+  \end{figure}
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+\newpage
+
+\tableofcontents
+\newpage
+
+\section{Project Introduction / Objective}
+\input{sections/introduction.tex}
+
+\section{Functional Requirements}
+\input{sections/functional_requirements.tex}
+
+\section{Scope of the Project}
+\input{sections/scope.tex}
+
+\section{Technology Stack}
+\input{sections/technology_stack.tex}
+
+\section{Software Architecture}
+\input{sections/architecture.tex}
+
+\section{User Flow}
+\input{sections/user_flow.tex}
+
+\section{Use Case Definition}
+\input{sections/use_cases.tex}
+
+\section{UI Screenshots}
+\input{sections/ui_screenshots.tex}
+
+\end{document}

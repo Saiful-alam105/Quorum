@@ -1,0 +1,96 @@
+\subsection{High-Level User Flow}
+
+Figure~\ref{fig:userflow} shows the user flow as a swimlane diagram with three
+lanes: the \textbf{User / Browser}, the \textbf{Quorum System}, and
+\textbf{GitHub}. GitHub remains the source of truth: the user leaves Quorum
+for GitHub OAuth and for the GitHub App installation flow, and GitHub delivers
+pull request events back to Quorum through webhooks.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  lane/.style={draw=black!40, rounded corners, fill=black!2},
+  lanehdr/.style={draw=black!40, rounded corners, fill=black!10, font=\bfseries\scriptsize},
+  sbox/.style={draw=quorumviolet!70, rounded corners, align=center,
+               fill=quorumviolet!8, text width=3.9cm, inner sep=4pt, font=\scriptsize},
+  gbox/.style={draw=gray, rounded corners, align=center,
+               fill=gray!10, text width=3.9cm, inner sep=4pt, font=\scriptsize},
+  arrow/.style={-{Stealth[length=2.5mm]}, thick},
+]
+  % ---- Lanes ----
+  \draw[draw=black!40, rounded corners] (0,-0.55) rectangle (4.9,-11.5);
+  \draw[draw=black!40, rounded corners] (4.9,-0.55) rectangle (10.5,-11.5);
+  \draw[draw=black!40, rounded corners] (10.5,-0.55) rectangle (15.4,-11.5);
+  \node[lanehdr, minimum width=4.9cm, minimum height=0.55cm] at (2.45,-0.27) {USER / BROWSER};
+  \node[lanehdr, minimum width=5.6cm, minimum height=0.55cm] at (7.7,-0.27) {QUORUM SYSTEM};
+  \node[lanehdr, minimum width=4.9cm, minimum height=0.55cm] at (12.95,-0.27) {GITHUB};
+
+  % ---- Steps ----
+  \node[sbox] (u1) at (2.45,-1.4) {Open Quorum landing page};
+  \node[sbox] (q1) at (7.7,-1.4) {Serve landing page};
+
+  \node[sbox] (u2) at (2.45,-2.8) {Click \emph{Continue with GitHub}};
+  \node[sbox] (q2) at (7.7,-2.8) {Redirect to GitHub OAuth};
+  \node[gbox] (g1) at (12.95,-2.8) {Authorize Quorum};
+
+  \node[sbox] (q3) at (7.7,-4.2) {Create session $\rightarrow$ Dashboard};
+  \node[sbox] (u3) at (2.45,-4.2) {Connect a repository};
+
+  \node[sbox] (q4) at (7.7,-5.6) {Open GitHub App install (popup)};
+  \node[gbox] (g2) at (12.95,-5.6) {Select repositories $\rightarrow$ Save};
+
+  \node[sbox] (q5) at (7.7,-7.0) {Sync repositories + confirmation banner};
+
+  \node[sbox] (u4) at (2.45,-8.4) {Open workspace / create a Pull Request};
+  \node[sbox] (q6) at (7.7,-8.4) {Create PR on GitHub};
+
+  \node[gbox] (g3) at (12.95,-9.8) {PR created $\rightarrow$ deliver webhook};
+  \node[sbox] (q7) at (7.7,-9.8) {Analyze PR (pipeline $\rightarrow$ score)};
+
+  \node[sbox] (q8) at (7.7,-10.9) {Store results + serve REST API};
+  \node[sbox] (u5) at (2.45,-10.9) {View results / Ask Quorum / History};
+
+  % ---- Arrows ----
+  \draw[arrow] (u1) -- (q1);
+  \draw[arrow] (u2) -- (q2);
+  \draw[arrow] (q2) -- node[above, font=\tiny]{redirect} (g1);
+  \draw[arrow] (g1) -- node[above, font=\tiny]{callback} (q3);
+  \draw[arrow] (u3) -- (q4);
+  \draw[arrow] (q4) -- node[above, font=\tiny]{install} (g2);
+  \draw[arrow] (g2) -- node[above, font=\tiny]{save} (q5);
+  \draw[arrow] (u4) -- (q6);
+  \draw[arrow] (q6) -- node[above, font=\tiny]{create} (g3);
+  \draw[arrow] (g3) -- node[above, font=\tiny]{webhook} (q7);
+  \draw[arrow] (q7) -- (q8);
+  \draw[arrow] (q8) -- node[above, font=\tiny]{REST} (u5);
+\end{tikzpicture}
+\caption{Swimlane user flow: the user alternates between Quorum and GitHub,
+and GitHub returns control and events to Quorum.}
+\label{fig:userflow}
+\end{figure}
+
+\subsection{Step-by-Step Explanation}
+
+\begin{enumerate}[leftmargin=1.2em]
+  \item \textbf{Landing page.} A public landing page introduces the product
+        before authentication.
+  \item \textbf{GitHub OAuth.} The user clicks \emph{Continue with GitHub},
+        Quorum redirects to GitHub, and the user authorizes Quorum. GitHub
+        redirects back and Quorum creates a server-side session.
+  \item \textbf{Quorum dashboard.} The signed-in user lands on the dashboard.
+  \item \textbf{Connect repository.} The user connects a repository. The
+        GitHub App install page opens in a popup; when the user selects
+        repositories and saves, GitHub redirects back, Quorum syncs the
+        authorized repositories, and a confirmation banner appears.
+  \item \textbf{Repository workspace / create PR.} The user opens a
+        repository and creates a pull request from Quorum (Base/Compare
+        branches, suggested title) or opens an existing one.
+  \item \textbf{PR creation on GitHub.} Quorum creates the pull request on
+        GitHub through the GitHub App API.
+  \item \textbf{Webhook delivery.} GitHub delivers a \texttt{pull\_request}
+        webhook to Quorum.
+  \item \textbf{Analysis.} The orchestrator runs the review pipeline and
+        stores the results (score, findings, tests, coverage).
+  \item \textbf{Results.} The user views results, asks Ask Quorum questions,
+        and returns to review history later.
+\end{enumerate}
