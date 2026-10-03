@@ -27,7 +27,16 @@
 % ---------------------------------------------------------------------
 % Title page
 % ---------------------------------------------------------------------
-\title{\vspace{-1.2cm}\textbf{Quorum}\\[0.3cm]
+\title{\vspace{-1.5cm}
+  \begin{tikzpicture}[x=0.16cm,y=0.16cm,baseline=-0.5ex]
+    \fill[rounded corners=5, fill=quorumviolet] (0,0) rectangle (24,24);
+    \draw[white, line width=2.2, line cap=round, line join=round]
+      (6,18) circle (3)
+      (18,6) circle (3)
+      (13,18) -- (16,18) arc[start angle=180, end angle=90, radius=2] -- (18,9)
+      (6,18) -- (6,3);
+  \end{tikzpicture}\\[0.7cm]
+  \textbf{Quorum}\\[0.3cm]
   \large AI-Powered GitHub Pull Request Review and Analysis System\\[0.2cm]
   \normalsize Software Project Report\\[0.6cm]}
 \author{
