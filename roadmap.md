@@ -9,7 +9,7 @@ Quorum should:
 - receive GitHub Pull Request events;
 - analyze changed code;
 - use Python AST analysis and Semgrep evidence;
-- use a local LLM through Ollama for security reasoning and test generation;
+- use an LLM (OpenAI active; Ollama optional) for security reasoning and test generation;
 - execute generated tests inside a Docker sandbox;
 - measure test and coverage results;
 - calculate a deterministic Merge Readiness Score from 0–100;
@@ -98,7 +98,7 @@ User can use Ask Quorum to ask questions about the review
 
 ### Where Quorum's analysis components run
 
-Users do **not** install or run Quorum, Ollama, Semgrep, Docker, or the AI agents on their own machines. Those components are part of the Quorum backend/infrastructure and execute there. For local development or a student demonstration, Quorum may run these components on the developer's machine — that is a development/deployment detail and is **not** a requirement for normal Quorum users.
+Users do **not** install or run Quorum, the LLM, Semgrep, Docker, or the AI agents on their own machines. Those components are part of the Quorum backend/infrastructure and execute there. For local development or a student demonstration, Quorum may run these components on the developer's machine — that is a development/deployment detail and is **not** a requirement for normal Quorum users. For local development or a student demonstration, Quorum may run these components on the developer's machine — that is a development/deployment detail and is **not** a requirement for normal Quorum users.
 
 Keep these concepts separate:
 
@@ -153,7 +153,7 @@ All core technologies should be free, open-source, or locally runnable for the s
 | ORM | SQLAlchemy | Database access |
 | Migrations | Alembic | Database migrations |
 | Validation | Pydantic | Request/response/data validation |
-| HTTP client | httpx | GitHub and Ollama communication |
+| HTTP client | httpx | GitHub and LLM communication |
 | Version control | Git + GitHub | Source control |
 | CI | GitHub Actions | Automated tests/checks |
 | Local webhook tunnel | Cloudflare Tunnel | Expose local FastAPI during development |
@@ -295,11 +295,11 @@ Before implementing a task, the coding agent should:
 
 ### Current implementation status
 
-This section reflects the actual repository state (verified against the source, tests, Alembic migrations, and the running local PostgreSQL database). Statuses distinguish **implemented**, **partially implemented**, **verified**, **not yet verified**, **not started**, and **intentionally deferred**.
+This section reflects the actual repository state (verified against the source, tests, Alembic migrations, and the running local PostgreSQL database). **All phases (0–19) are complete**; the few genuinely unstarted items are called out explicitly and labeled as future work.
 
 | Phase | Status |
 | --- | --- |
-| Phase 0 — Project Setup | Partially implemented (repository, Python environment, FastAPI backend, README/roadmap, `.env.example`, `.gitignore`, `requirements.txt` exist; Docker sandbox image built; CI not yet set up) |
+| Phase 0 — Project Setup | Complete (repository, Python environment, FastAPI backend, React/Vite frontend, README/roadmap, `.env.example`, `.gitignore`, `requirements.txt`, Docker sandbox image all present; LLM provider configured via OpenAI. Basic CI is the only unstarted item and is documented as future work) |
 | Phase 1 — FastAPI Skeleton | Implemented and tested (`GET /`, `GET /health`, `POST /webhooks/github`) |
 | Phase 2 — GitHub App + Authentication | Implemented; OAuth login/callback/me/logout and App private-key/JWT verified manually against GitHub; webhook signature covered by automated tests and live webhook delivery exercised through a Cloudflare quick tunnel |
 | Phase 3 — GitHub API Layer | Implemented (all 9 functions) with mocked tests; consumed by the analysis pipeline |
@@ -338,23 +338,23 @@ All roadmap phases are complete. The following repository/workflow upgrade was a
 
 ## Phase 0 — Project Setup (Day 1)
 
-> **Status:** Partially implemented — repository, Python environment, FastAPI backend structure, README/roadmap, `.env.example`, `.gitignore`, and `requirements.txt` exist. Docker, Ollama, a supported local coding model, and CI are not yet set up.
+> **Status:** Complete — repository, Python environment, FastAPI backend structure, React/Vite frontend structure, README/roadmap, `.env.example`, `.gitignore`, and `requirements.txt` exist; the Docker sandbox image is built and the LLM provider is configured (OpenAI active). The only unstarted item is basic CI, which is documented as future work.
 
 Tasks:
 
-- [ ] Create/maintain GitHub repository.
-- [ ] Create Python environment.
-- [ ] Create FastAPI backend structure.
-- [ ] Create React/Vite frontend structure.
-- [ ] Create `README.md`.
-- [ ] Create `roadmap.md`.
-- [ ] Create `.env.example`.
-- [ ] Create `.gitignore`.
-- [ ] Create `requirements.txt`.
-- [ ] Install Docker.
-- [ ] Install Ollama.
-- [ ] Install a supported local coding model.
-- [ ] Add basic CI.
+- [x] Create/maintain GitHub repository.
+- [x] Create Python environment.
+- [x] Create FastAPI backend structure.
+- [x] Create React/Vite frontend structure.
+- [x] Create `README.md`.
+- [x] Create `roadmap.md`.
+- [x] Create `.env.example`.
+- [x] Create `.gitignore`.
+- [x] Create `requirements.txt`.
+- [x] Install/verify Docker (sandbox image built).
+- [x] Configure the LLM provider (OpenAI active; Ollama optional and not in use).
+- [x] Provide an optional local coding model path (Ollama/Qwen) — not in use.
+- [ ] Add basic CI. _(planned, not implemented)_
 
 Definition of done:
 
@@ -362,7 +362,7 @@ Definition of done:
 Python ✓
 Git ✓
 Docker ✓
-Ollama ✓
+LLM provider (OpenAI) ✓
 Node/npm ✓
 React/Vite ✓
 ```
@@ -399,23 +399,24 @@ works and `/health` returns HTTP 200.
 
 Implement:
 
-- [ ] GitHub App registration.
-- [ ] Webhook configuration.
-- [ ] Webhook secret.
-- [ ] App private key handling.
-- [ ] Minimum repository permissions.
-- [ ] Pull Request event subscription.
-- [ ] Issue-comment event subscription.
-- [ ] GitHub webhook signature verification.
-- [ ] GitHub user authentication flow for the web dashboard.
-- [ ] GitHub App/repository authorization flow.
-- [ ] Secure backend-side token handling.
-- [ ] Install the App on a test repository.
-- [ ] Quorum user/account association (persist the authenticated GitHub user).
-- [ ] GitHub App installation/authorization flow (the user installs the App and selects repositories).
-- [ ] Map GitHub installations/repositories to the correct Quorum user.
-- [ ] User-level repository/review access isolation.
-- [ ] GitHub App uninstall/revocation handling.
+- [x] GitHub App registration.
+- [x] Webhook configuration.
+- [x] Webhook secret.
+- [x] App private key handling.
+- [x] Minimum repository permissions.
+- [x] Pull Request event subscription.
+- [ ] Issue-comment event subscription. _(not used; Quorum posts review comments but does not consume `issue_comment` events)_
+- [x] GitHub webhook signature verification.
+- [x] GitHub user authentication flow for the web dashboard.
+- [x] GitHub App/repository authorization flow.
+- [x] Secure backend-side token handling.
+- [x] Install the App on a test repository.
+- [x] Quorum user/account association (persist the authenticated GitHub user).
+- [x] GitHub App installation/authorization flow (the user installs the App and selects repositories).
+- [x] Map GitHub installations/repositories to the correct Quorum user.
+- [x] User-level repository/review access isolation.
+- [x] GitHub App uninstall/revocation handling.
+- [x] Repository discovery, connect/disconnect, and persistent disconnects.
 
 Milestone:
 
@@ -433,7 +434,7 @@ Quorum identifies user/repositories
 
 # Phase 3 — GitHub API Layer (Days 9–11)
 
-> **Status:** Implemented — all 9 functions exist (`get_installation_token`, `get_authenticated_user`, `get_repositories`, `get_repository`, `get_pull_request`, `get_pr_files`, `get_pr_diff`, `get_pr_comments`, `create_pr_comment`) with mocked tests. They are not yet consumed by any pipeline stage; HTTP routes are not required until later phases.
+> **Status:** Implemented and consumed by the pipeline — all functions exist (`get_installation_token`, `get_authenticated_user`, `get_repositories`, `get_repository`, `get_pull_request`, `get_pr_files`, `get_pr_diff`, `get_pr_comments`, `create_pr_comment`) plus branch listing, PR creation, merge, and close, with mocked tests. GitHub calls use a configurable timeout with retries.
 
 Implement a GitHub service layer for:
 
@@ -597,13 +598,13 @@ Coverage Result
 
 ### Requirements
 
-- [ ] Define maximum context/token budgets.
-- [ ] Prefer changed functions/files over the entire repository.
-- [ ] Chunk large files semantically.
-- [ ] Preserve file/line metadata.
-- [ ] Avoid duplicating the same context in multiple prompt sections.
-- [ ] Aggregate chunk-level results before synthesis.
-- [ ] Test with deliberately oversized Pull Requests.
+- [x] Define maximum context/token budgets.
+- [x] Prefer changed functions/files over the entire repository.
+- [x] Chunk large files semantically (bounded representation with truncation).
+- [x] Preserve file/line metadata.
+- [x] Avoid duplicating the same context in multiple prompt sections.
+- [x] Aggregate chunk-level results before synthesis.
+- [x] Test with deliberately oversized Pull Requests.
 
 A larger PR should cause more filtering/chunking/aggregation, not an unbounded prompt.
 
@@ -697,10 +698,10 @@ Output should use a strict structured schema, for example:
 
 Requirements:
 
-- [ ] Evidence must be traceable to input.
-- [ ] File and line references must be preserved.
-- [ ] Avoid unsupported claims.
-- [ ] Validate LLM output with Pydantic.
+- [x] Evidence must be traceable to input.
+- [x] File and line references must be preserved.
+- [x] Avoid unsupported claims (deterministic evidence-traceability filter).
+- [x] Validate LLM output with Pydantic.
 
 ---
 
@@ -710,13 +711,13 @@ Generated tests and untrusted repository code must execute inside a temporary Do
 
 Requirements:
 
-- [ ] no network;
-- [ ] memory limit;
-- [ ] process limit;
-- [ ] hard timeout;
-- [ ] temporary filesystem;
-- [ ] non-privileged execution;
-- [ ] container cleanup.
+- [x] no network;
+- [x] memory limit;
+- [x] process limit;
+- [x] hard timeout;
+- [x] temporary filesystem;
+- [x] non-privileged execution;
+- [x] container cleanup.
 
 Definition of done:
 
@@ -867,7 +868,7 @@ Rules:
 
 - React communicates only with FastAPI.
 - React does not directly access PostgreSQL.
-- React does not directly call Ollama.
+- React does not directly call the LLM.
 - React does not directly call GitHub using server secrets.
 - Backend enforces user/repository authorization.
 - API responses use Pydantic schemas.
@@ -1194,7 +1195,7 @@ Retrieve relevant stored evidence
       ↓
 Build bounded context
       ↓
-Ollama / LLM
+LLM (OpenAI)
       ↓
 Grounded response
 ```
@@ -1277,7 +1278,7 @@ FastAPI
   │
   ├── PostgreSQL
   ├── GitHub
-  ├── Ollama
+  ├── LLM (OpenAI)
   ├── Semgrep
   └── Docker
 ```
@@ -1287,7 +1288,7 @@ Never use:
 ```text
 React → PostgreSQL
 React → Docker
-React → Ollama
+React → LLM
 React → GitHub private API with secrets
 ```
 
@@ -1439,8 +1440,8 @@ backup demo video
                  ┌────────────┴────────────┐
                  ▼                         ▼
           Security Agent            Test Writer Agent
-                 │                         │
-               Ollama                   Ollama
+                  │                         │
+            LLM (OpenAI)              LLM (OpenAI)
                  │                         │
                  │                  Generated Tests
                  │                         │
@@ -1509,49 +1510,49 @@ backup demo video
 
 ## Core backend
 
-- [ ] GitHub App works.
-- [ ] GitHub login/authorization works.
-- [ ] Webhook signature verification works.
-- [ ] PR diff extraction works.
-- [ ] AST extraction works.
-- [ ] Context Builder works.
-- [ ] Semgrep works.
-- [ ] Ollama works.
-- [ ] Security Agent works.
-- [ ] Docker sandbox works.
-- [ ] Test Writer works.
-- [ ] pytest execution works.
-- [ ] Coverage delta works.
-- [ ] Merge Readiness Score works.
-- [ ] GitHub PR comment works.
-- [ ] PostgreSQL stores review data.
+- [x] GitHub App works.
+- [x] GitHub login/authorization works.
+- [x] Webhook signature verification works.
+- [x] PR diff extraction works.
+- [x] AST extraction works.
+- [x] Context Builder works.
+- [x] Semgrep works.
+- [x] LLM provider works (OpenAI active; Ollama optional/not in use).
+- [x] Security Agent works.
+- [x] Docker sandbox works.
+- [x] Test Writer works.
+- [x] pytest execution works.
+- [x] Coverage delta works.
+- [x] Merge Readiness Score works.
+- [x] GitHub PR comment works.
+- [x] PostgreSQL stores review data.
 
 ## Web dashboard
 
-- [ ] Login page.
-- [ ] Main Dashboard.
-- [ ] Repository Page.
-- [ ] PR Review Details.
-- [ ] Security Findings Page.
-- [ ] Test Generation Page.
-- [ ] Review History Page.
-- [ ] Settings Page.
-- [ ] Ask Quorum page.
-- [ ] Frontend consumes FastAPI APIs only.
-- [ ] Loading/error/empty states work.
-- [ ] No fake final data in the completed demo.
+- [x] Login page.
+- [x] Main Dashboard.
+- [x] Repository Page.
+- [x] PR Review Details.
+- [x] Security Findings Page.
+- [x] Test Generation Page (generated tests shown on the PR review details page).
+- [x] Review History Page.
+- [x] Settings Page.
+- [x] Ask Quorum page.
+- [x] Frontend consumes FastAPI APIs only.
+- [x] Loading/error/empty states work.
+- [x] No fake final data in the completed demo.
 
 ## Evaluation and security
 
-- [ ] 15–20 PR evaluation set exists.
-- [ ] Precision/recall/F1 measured.
-- [ ] Test pass rate measured.
-- [ ] Coverage delta measured.
-- [ ] Oversized PR/context handling tested.
-- [ ] Prompt-injection defenses demonstrated.
-- [ ] Sandbox security demonstrated.
-- [ ] Unauthorized repository access prevented.
-- [ ] Demo is reproducible.
+- [x] 15–20 PR evaluation set exists.
+- [x] Precision/recall/F1 measured.
+- [x] Test pass rate measured.
+- [x] Coverage delta measured.
+- [x] Oversized PR/context handling tested.
+- [x] Prompt-injection defenses demonstrated.
+- [x] Sandbox security demonstrated.
+- [x] Unauthorized repository access prevented.
+- [x] Demo is reproducible.
 
 ---
 
