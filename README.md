@@ -344,7 +344,7 @@ See [`roadmap.md`](roadmap.md) for the full phased plan and status.
 | Saiful Alam | 0112320105 |
 | Sabbir Ahmed | 011222279 |
 
-**Course:** CSE 3422 — Software Engineering Laboratory, Section C
+**Course:** CSE 3422 — Software Engineering Laboratory
 **Faculty:** Zobaer Ibn Razzaque
 
 ---
